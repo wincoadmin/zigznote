@@ -96,12 +96,10 @@ export const meetingRepository = {
   }),
 
   findUpcoming: jest.fn(async () => {
-    // Returns array, not paginated result
     return [];
   }),
 
   findRecentCompleted: jest.fn(async () => {
-    // Returns array, not paginated result
     return [];
   }),
 
@@ -187,14 +185,12 @@ export const meetingRepository = {
       in_progress: 0,
       completed: 0,
     },
-    byPlatform: {},
-    totalDurationSeconds: 0,
-    averageDurationSeconds: 0,
+    totalDuration: 0,
+    thisWeek: 0,
+    thisMonth: 0,
   })),
-};
 
-// Split repositories for new governance structure
-export const meetingQueryRepository = {
+  // Query methods (previously in meetingQueryRepository)
   findByOrganization: jest.fn(async (organizationId: string, options?: { page?: number; limit?: number }) => {
     const page = options?.page || 1;
     const limit = options?.limit || 20;
@@ -214,49 +210,13 @@ export const meetingQueryRepository = {
     };
   }),
 
-  findManyPaginated: jest.fn(async (options?: { page?: number; limit?: number }) => {
-    const page = options?.page || 1;
-    const limit = options?.limit || 20;
-    const all = Array.from(meetingsStore.values()).filter((m) => !m.deletedAt);
-    const start = (page - 1) * limit;
-    const data = all.slice(start, start + limit);
-
-    return {
-      data,
-      pagination: {
-        page,
-        limit,
-        total: all.length,
-        totalPages: Math.ceil(all.length / limit),
-        hasMore: start + limit < all.length,
-      },
-    };
-  }),
-
-  findUpcoming: jest.fn(async () => []),
-
-  findRecentCompleted: jest.fn(async () => []),
-
   findMany: jest.fn(async () => Array.from(meetingsStore.values()).filter((m) => !m.deletedAt)),
 
   count: jest.fn(async () => meetingsStore.size),
 
   buildWhereClause: jest.fn(() => ({})),
-};
 
-export const meetingStatsRepository = {
-  getStats: jest.fn(async () => ({
-    total: meetingsStore.size,
-    byStatus: {
-      scheduled: 0,
-      in_progress: 0,
-      completed: 0,
-    },
-    totalDuration: 0,
-    thisWeek: 0,
-    thisMonth: 0,
-  })),
-
+  // Stats methods (previously in meetingStatsRepository)
   getAnalytics: jest.fn(async () => ({
     totalMeetings: meetingsStore.size,
     totalDurationMinutes: 0,
@@ -270,11 +230,16 @@ export const meetingStatsRepository = {
 };
 
 export const transcriptRepository = {
+  // Transcript methods
+  findById: jest.fn(async (id: string) => {
+    return transcriptsStore.get(id) || null;
+  }),
+
   findByMeetingId: jest.fn(async (meetingId: string) => {
     return Array.from(transcriptsStore.values()).find((t) => t.meetingId === meetingId) || null;
   }),
 
-  create: jest.fn(async (data: Partial<MockTranscript>) => {
+  createTranscript: jest.fn(async (data: Partial<MockTranscript>) => {
     const transcript: MockTranscript = {
       id: generateId(),
       meetingId: data.meetingId || '',
@@ -288,7 +253,7 @@ export const transcriptRepository = {
     return transcript;
   }),
 
-  update: jest.fn(async (id: string, data: Partial<MockTranscript>) => {
+  updateTranscript: jest.fn(async (id: string, data: Partial<MockTranscript>) => {
     const transcript = transcriptsStore.get(id);
     if (!transcript) return null;
 
@@ -297,14 +262,29 @@ export const transcriptRepository = {
     return updated;
   }),
 
-  delete: jest.fn(async (id: string) => {
+  deleteTranscript: jest.fn(async (id: string) => {
     return transcriptsStore.delete(id);
   }),
 
-  search: jest.fn(async () => []),
+  transcriptExists: jest.fn(async (meetingId: string) => {
+    return Array.from(transcriptsStore.values()).some((t) => t.meetingId === meetingId);
+  }),
 
+  searchTranscripts: jest.fn(async () => []),
+
+  getWordCountStats: jest.fn(async () => ({
+    totalWords: 0,
+    averageWords: 0,
+    transcriptCount: 0,
+  })),
+
+  // Summary methods
   findSummaryByMeetingId: jest.fn(async (meetingId: string) => {
     return Array.from(summariesStore.values()).find((s) => s.meetingId === meetingId) || null;
+  }),
+
+  findSummaryById: jest.fn(async (id: string) => {
+    return summariesStore.get(id) || null;
   }),
 
   createSummary: jest.fn(async (data: Partial<MockSummary>) => {
@@ -321,73 +301,7 @@ export const transcriptRepository = {
     return summary;
   }),
 
-  updateSummary: jest.fn(async (id: string, data: Partial<MockSummary>) => {
-    const summary = summariesStore.get(id);
-    if (!summary) return null;
-
-    const updated = { ...summary, ...data, updatedAt: new Date() };
-    summariesStore.set(id, updated);
-    return updated;
-  }),
-
-  findActionItemsByMeetingId: jest.fn(async (meetingId: string) => {
-    return Array.from(actionItemsStore.values()).filter((a) => a.meetingId === meetingId);
-  }),
-
-  createActionItem: jest.fn(async (data: Partial<MockActionItem>) => {
-    const item: MockActionItem = {
-      id: generateId(),
-      meetingId: data.meetingId || '',
-      text: data.text || '',
-      assignee: data.assignee || null,
-      dueDate: data.dueDate || null,
-      completed: data.completed || false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    actionItemsStore.set(item.id, item);
-    return item;
-  }),
-
-  updateActionItem: jest.fn(async (id: string, data: Partial<MockActionItem>) => {
-    const item = actionItemsStore.get(id);
-    if (!item) return null;
-
-    const updated = { ...item, ...data, updatedAt: new Date() };
-    actionItemsStore.set(id, updated);
-    return updated;
-  }),
-
-  deleteActionItem: jest.fn(async (id: string) => {
-    return actionItemsStore.delete(id);
-  }),
-};
-
-// Split repositories for summaries and action items
-export const summaryRepository = {
-  findByMeetingId: jest.fn(async (meetingId: string) => {
-    return Array.from(summariesStore.values()).find((s) => s.meetingId === meetingId) || null;
-  }),
-
-  findById: jest.fn(async (id: string) => {
-    return summariesStore.get(id) || null;
-  }),
-
-  create: jest.fn(async (data: Partial<MockSummary>) => {
-    const summary: MockSummary = {
-      id: generateId(),
-      meetingId: data.meetingId || '',
-      content: data.content || {},
-      modelUsed: data.modelUsed || 'test-model',
-      promptVersion: data.promptVersion || null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    summariesStore.set(summary.id, summary);
-    return summary;
-  }),
-
-  update: jest.fn(async (meetingId: string, data: Partial<MockSummary>) => {
+  updateSummary: jest.fn(async (meetingId: string, data: Partial<MockSummary>) => {
     const summary = Array.from(summariesStore.values()).find((s) => s.meetingId === meetingId);
     if (!summary) return null;
 
@@ -396,7 +310,7 @@ export const summaryRepository = {
     return updated;
   }),
 
-  upsert: jest.fn(async (data: Partial<MockSummary>) => {
+  upsertSummary: jest.fn(async (data: Partial<MockSummary>) => {
     const existing = Array.from(summariesStore.values()).find((s) => s.meetingId === data.meetingId);
     if (existing) {
       const updated = { ...existing, ...data, updatedAt: new Date() };
@@ -416,35 +330,34 @@ export const summaryRepository = {
     return summary;
   }),
 
-  delete: jest.fn(async (meetingId: string) => {
+  deleteSummary: jest.fn(async (meetingId: string) => {
     const summary = Array.from(summariesStore.values()).find((s) => s.meetingId === meetingId);
     if (summary) summariesStore.delete(summary.id);
   }),
 
-  exists: jest.fn(async (meetingId: string) => {
+  summaryExists: jest.fn(async (meetingId: string) => {
     return Array.from(summariesStore.values()).some((s) => s.meetingId === meetingId);
   }),
-};
 
-export const actionItemRepository = {
-  findByMeetingId: jest.fn(async (meetingId: string) => {
+  // Action item methods
+  findActionItemsByMeetingId: jest.fn(async (meetingId: string) => {
     return Array.from(actionItemsStore.values()).filter((a) => a.meetingId === meetingId);
   }),
 
-  findById: jest.fn(async (id: string) => {
+  findActionItemById: jest.fn(async (id: string) => {
     return actionItemsStore.get(id) || null;
   }),
 
-  findByAssignee: jest.fn(async () => ({
+  findActionItemsByAssignee: jest.fn(async () => ({
     data: [],
     pagination: { page: 1, limit: 20, total: 0, totalPages: 0, hasMore: false },
   })),
 
-  findPending: jest.fn(async () => []),
+  findPendingActionItems: jest.fn(async () => []),
 
-  findOverdue: jest.fn(async () => []),
+  findOverdueActionItems: jest.fn(async () => []),
 
-  create: jest.fn(async (data: Partial<MockActionItem>) => {
+  createActionItem: jest.fn(async (data: Partial<MockActionItem>) => {
     const item: MockActionItem = {
       id: generateId(),
       meetingId: data.meetingId || '',
@@ -459,7 +372,7 @@ export const actionItemRepository = {
     return item;
   }),
 
-  createMany: jest.fn(async (items: Partial<MockActionItem>[]) => {
+  createActionItems: jest.fn(async (items: Partial<MockActionItem>[]) => {
     return items.map((data) => {
       const item: MockActionItem = {
         id: generateId(),
@@ -476,7 +389,7 @@ export const actionItemRepository = {
     });
   }),
 
-  update: jest.fn(async (id: string, data: Partial<MockActionItem>) => {
+  updateActionItem: jest.fn(async (id: string, data: Partial<MockActionItem>) => {
     const item = actionItemsStore.get(id);
     if (!item) return null;
 
@@ -485,7 +398,7 @@ export const actionItemRepository = {
     return updated;
   }),
 
-  complete: jest.fn(async (id: string) => {
+  completeActionItem: jest.fn(async (id: string) => {
     const item = actionItemsStore.get(id);
     if (!item) return null;
 
@@ -494,7 +407,7 @@ export const actionItemRepository = {
     return item;
   }),
 
-  uncomplete: jest.fn(async (id: string) => {
+  uncompleteActionItem: jest.fn(async (id: string) => {
     const item = actionItemsStore.get(id);
     if (!item) return null;
 
@@ -503,16 +416,16 @@ export const actionItemRepository = {
     return item;
   }),
 
-  delete: jest.fn(async (id: string) => {
+  deleteActionItem: jest.fn(async (id: string) => {
     actionItemsStore.delete(id);
   }),
 
-  deleteByMeetingId: jest.fn(async (meetingId: string) => {
+  deleteActionItemsByMeetingId: jest.fn(async (meetingId: string) => {
     const items = Array.from(actionItemsStore.entries()).filter(([, v]) => v.meetingId === meetingId);
     items.forEach(([k]) => actionItemsStore.delete(k));
   }),
 
-  getStats: jest.fn(async () => ({
+  getActionItemStats: jest.fn(async () => ({
     total: actionItemsStore.size,
     completed: 0,
     pending: actionItemsStore.size,

@@ -3,17 +3,12 @@
  * @domain Meeting Management
  * @description Business logic for meeting operations including CRUD, access control, and related data
  * @invariants All operations require organizationId for multi-tenant access control
- * @split-plan Consider splitting transcript/summary methods to separate service if file grows
  * @last-reviewed 2026-01-04
  */
 
 import {
   meetingRepository,
-  meetingQueryRepository,
-  meetingStatsRepository,
   transcriptRepository,
-  summaryRepository,
-  actionItemRepository,
 } from '@zigznote/database';
 import type { Meeting, Transcript, Summary, ActionItem } from '@zigznote/database';
 import { logger } from '../utils/logger';
@@ -102,7 +97,7 @@ export class MeetingService {
   async list(query: ListMeetingsQuery): Promise<ListMeetingsResult> {
     logger.debug({ query }, 'Listing meetings');
 
-    const result = await meetingQueryRepository.findManyPaginated(
+    const result = await meetingRepository.findManyPaginated(
       { page: query.page, limit: query.limit },
       {
         organizationId: query.organizationId,
@@ -133,7 +128,7 @@ export class MeetingService {
   async getUpcoming(organizationId: string, limit = 10): Promise<MeetingResponse[]> {
     logger.debug({ organizationId, limit }, 'Getting upcoming meetings');
 
-    const meetings = await meetingQueryRepository.findUpcoming(organizationId, limit);
+    const meetings = await meetingRepository.findUpcoming(organizationId, limit);
     return meetings.map((m) => this.toMeetingResponse(m));
   }
 
@@ -148,7 +143,7 @@ export class MeetingService {
   ): Promise<MeetingResponse[]> {
     logger.debug({ organizationId, limit }, 'Getting recent completed meetings');
 
-    const meetings = await meetingQueryRepository.findRecentCompleted(
+    const meetings = await meetingRepository.findRecentCompleted(
       organizationId,
       limit
     );
@@ -290,7 +285,7 @@ export class MeetingService {
     thisMonth: number;
   }> {
     logger.debug({ organizationId }, 'Getting meeting stats');
-    return meetingStatsRepository.getStats(organizationId);
+    return meetingRepository.getStats(organizationId);
   }
 
   /**
@@ -336,7 +331,7 @@ export class MeetingService {
       throw errors.forbidden('Access denied to this meeting');
     }
 
-    return summaryRepository.findByMeetingId(meetingId);
+    return transcriptRepository.findSummaryByMeetingId(meetingId);
   }
 
   /**
@@ -359,7 +354,7 @@ export class MeetingService {
       throw errors.forbidden('Access denied to this meeting');
     }
 
-    return actionItemRepository.findByMeetingId(meetingId);
+    return transcriptRepository.findActionItemsByMeetingId(meetingId);
   }
 
   /**

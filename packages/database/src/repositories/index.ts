@@ -26,33 +26,13 @@ export {
   meetingRepository,
   type MeetingInclude,
   type MeetingWithRelations,
-} from './meetingRepository';
-
-export {
-  MeetingQueryRepository,
-  meetingQueryRepository,
-} from './meetingQueryRepository';
-
-export {
-  MeetingStatsRepository,
-  meetingStatsRepository,
   type MeetingStats,
   type MeetingAnalytics,
-} from './meetingStatsRepository';
+} from './meetingRepository';
 
 export {
   TranscriptRepository,
   transcriptRepository,
   type TranscriptInclude,
-} from './transcriptRepository';
-
-export {
-  SummaryRepository,
-  summaryRepository,
-} from './summaryRepository';
-
-export {
-  ActionItemRepository,
-  actionItemRepository,
   type ActionItemStats,
-} from './actionItemRepository';
+} from './transcriptRepository';
