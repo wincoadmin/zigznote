@@ -30,28 +30,62 @@
 
 ---
 
-## 2. File Size Tiers
+## 2. File Size Guidance
 
-File size is a **risk signal**. Larger files are harder to maintain.
+**Principle: Domain Cohesion > Line Counts**
 
-| Tier | LOC | Rule |
-|------|-----|------|
-| 🟢 **Green** | 0–200 | Ideal — no action needed |
-| 🟡 **Yellow** | 200–400 | Acceptable — add ownership comment if complex |
-| 🔴 **Red** | 400–600 | Needs attention — create split plan |
-| ⬛ **Black** | >600 | Split REQUIRED before adding more code |
+File size is a **smell, not a rule**. A 1000-line file that handles one domain completely is better than five 200-line files that fragment the same concept.
 
-### Ownership Comment (for Yellow+ files)
+### The Decision Framework
+
+```
+Q: Can I explain this file's purpose in ONE sentence?
+   YES → Keep it together (any size)
+   NO  → Split by responsibility (not by line count)
+```
+
+### File Size Tiers (Guidance, Not Rules)
+
+| Tier | LOC | Guidance |
+|------|-----|----------|
+| 🟢 **Green** | 0–200 | Typical for most files |
+| 🟡 **Yellow** | 200–400 | Fine if single responsibility |
+| 🔴 **Red** | 400–600 | Review: one domain? If yes, keep it |
+| ⬛ **Black** | >600 | Ask: one sentence description? If yes, keep it |
+
+### Examples
+
+| File | Size | Verdict |
+|------|------|---------|
+| `meetingRepository.ts` — all meeting data access | 800 LOC | ✅ Keep — one entity |
+| `meetings.routes.ts` — all meeting endpoints | 600 LOC | ✅ Keep — one domain |
+| `transcriptService.ts` — transcription only | 500 LOC | ✅ Keep — one responsibility |
+| `utils.ts` — random helper functions | 300 LOC | 🚨 Split — multiple purposes |
+| `apiService.ts` — calls 5 different APIs | 400 LOC | 🚨 Split — multiple services |
+
+### When to Split
+
+- File handles **multiple unrelated domains**
+- Different parts change for **different reasons**
+- Hard to name because it does **multiple things**
+- Tests require mocking **unrelated systems**
+
+### When NOT to Split
+
+- File handles **one entity/domain completely**
+- Splitting would require **cross-file imports** to understand one concept
+- File can be described: "This handles all X operations"
+
+### Ownership Comment (for files >400 LOC)
 
 Add to top of file:
 
 ```typescript
 /**
  * @ownership
- * @domain Meeting Transcription
- * @description Handles transcript processing and storage
- * @invariants Segments must maintain chronological order
- * @split-plan Extract speaker diarization to separate service
+ * @domain Meeting Data Access
+ * @description Handles all database operations for meetings
+ * @single-responsibility YES — one entity, complete coverage
  * @last-reviewed 2025-01-15
  */
 ```
@@ -573,7 +607,7 @@ After completing any task, report using this format:
 ## 9. Common Anti-Patterns to Avoid
 
 ### ❌ God Files
-Files over 400 LOC that do too much. Split by domain.
+Files that handle **multiple unrelated domains**. Size doesn't matter if it's one domain — but if a file does "everything," split by responsibility.
 
 ### ❌ Business Logic in Controllers
 Controllers should only handle HTTP. Move logic to services.

@@ -75,7 +75,7 @@ GOVERNANCE (Read GOVERNANCE.md first):
 - Delete or Justify: Remove unused code or document why it must exist
 
 COMPLEXITY LIMITS:
-- Files: < 400 lines (split if larger)
+- Files: Keep single-responsibility (large files OK if one domain)
 - Functions: < 50 lines (extract sub-functions if larger)
 - Parameters: ≤ 4 (use options object for more)
 - Nesting: ≤ 3 levels (use early returns)
@@ -151,7 +151,7 @@ Before proceeding, confirm you have read and will follow:
 5. Run tests and ensure they pass before completing
 6. Follow the engineering principles in STARTER_PROMPTS.md
 7. Check for duplicates before creating new code
-8. Follow file size tiers (Green: 0-200, Yellow: 200-400, Red: 400-600)
+8. Domain cohesion > line counts (large files OK if single responsibility)
 9. Update PHASES.md at the end of this phase
 
 === TASK LIST (Execute All) ===

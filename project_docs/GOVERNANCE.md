@@ -53,26 +53,58 @@ Implement the **smallest correct solution** that satisfies requirements.
 | Nesting depth | 3 levels | Extract early returns |
 | Cyclomatic complexity | 10 | Simplify logic |
 
-### 2.4 File Size Tiers (Risk Signal)
+### 2.4 File Size Guidance (Domain Cohesion > Line Counts)
 
-File size is a **risk signal**. Larger files are harder to maintain.
+File size is a **smell, not a rule**. The goal is **domain cohesion** — one file should own one responsibility completely.
 
-| Tier | LOC | Rule |
-|------|-----|------|
-| 🟢 **Green** | 0–200 | Ideal — no action needed |
-| 🟡 **Yellow** | 200–400 | Acceptable — add ownership comment if complex |
-| 🔴 **Red** | 400–600 | Needs attention — create split plan before adding code |
-| ⬛ **Black** | >600 | Split REQUIRED before adding more code |
+**The Principle:**
+```
+Large file + ONE domain/responsibility → ✅ Fine (add ownership comment)
+Large file + MULTIPLE responsibilities → 🚨 Split by responsibility
+Small files + fragmented domain → 🚨 Worse than one big file
+```
 
-If a file exceeds 400 LOC, add an ownership comment at the top:
+| Situation | Action |
+|-----------|--------|
+| Router with all domain routes (1000 LOC) | ✅ Keep together — one domain |
+| Repository for one entity (800 LOC) | ✅ Keep together — one entity |
+| Service handling one domain (600 LOC) | ✅ Keep together — add ownership comment |
+| Controller mixing multiple domains | 🚨 Split by domain |
+| "Utils" file with unrelated functions | 🚨 Split by purpose |
+| Service doing business logic + HTTP calls + logging | 🚨 Split by responsibility |
+
+### File Size Tiers (Guidance Only)
+
+| Tier | LOC | Guidance |
+|------|-----|----------|
+| 🟢 **Green** | 0–200 | Ideal for most files |
+| 🟡 **Yellow** | 200–400 | Fine if single responsibility — add ownership comment |
+| 🔴 **Red** | 400–600 | Review: is this ONE domain? If yes, keep it |
+| ⬛ **Black** | >600 | Ask: "Can I explain this file's purpose in one sentence?" If yes, keep it |
+
+### When to Split
+
+Split when you answer "yes" to any of these:
+- Does this file handle multiple unrelated domains?
+- Do different parts of this file change for different reasons?
+- Is it hard to name this file because it does multiple things?
+- Would tests for this file require mocking unrelated systems?
+
+### When NOT to Split
+
+Keep together when:
+- File handles one entity/domain completely
+- Splitting would require cross-file imports to understand one concept
+- The file can be described in one sentence: "This handles all X operations"
+
+### Ownership Comment (for files >400 LOC)
 
 ```typescript
 /**
  * @ownership
  * @domain [Domain Name]
- * @description [What this file does]
- * @invariants [What must never change]
- * @split-plan [How it should be split]
+ * @description [One sentence: what this file does]
+ * @single-responsibility YES — handles all [X] operations
  * @last-reviewed [Date]
  */
 ```

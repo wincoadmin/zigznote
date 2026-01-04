@@ -130,7 +130,7 @@ api.zigznote.com        →  apps/api     (Shared API)
 ### Code Style
 - **Naming**: Descriptive names, no abbreviations (except id, url, etc.)
 - **Functions**: < 50 lines, single responsibility
-- **Files**: < 400 lines, one main export per file
+- **Files**: Single responsibility (large files OK if one domain)
 - **Imports**: Use barrel exports (index.ts) for clean imports
 
 ### Documentation
