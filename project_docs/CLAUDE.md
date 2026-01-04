@@ -365,15 +365,64 @@ If Phase 0/1 were completed before production simulation was added, run the **"R
 | `RESEARCH.md` | Full technical teardown of Circleback and competitors |
 | `PROJECT_BRIEF.md` | Condensed requirements and milestones |
 | `STARTER_PROMPTS.md` | Phase-by-phase prompts for Claude Code |
+| `BRANDING.md` | Complete brand identity, colors, typography, UI patterns |
+| `GOVERNANCE.md` | **Development governance rules and quality standards** |
+| `ERROR_HANDLING.md` | **Error handling patterns and Sentry monitoring setup** |
+| `PATTERNS.md` | **Code templates, naming conventions, and checklists** |
+| `PHASES.md` | **Phase overview, status tracking, and change log (UPDATE AFTER EACH PHASE)** |
 | `PHASE_X_COMPLETE.md` | Phase completion summaries (created as you build) |
+
+---
+
+## ⚖️ Development Governance (MANDATORY)
+
+Claude Code must follow the rules in `GOVERNANCE.md`. Key principles:
+
+### Read-First Rule
+Before making ANY changes:
+1. Read existing files in the area you're modifying
+2. Check for existing patterns and conventions
+3. Identify potential duplicates
+4. Plan minimal changes
+
+### Duplication Prevention
+Before writing code, verify:
+- [ ] No duplicate components/functions exist
+- [ ] No conflicting implementations
+- [ ] Existing code can't be reused or extended
+
+### Complexity Limits
+| Metric | Limit |
+|--------|-------|
+| File length | 400 lines max |
+| Function length | 50 lines max |
+| Parameters | 4 max (use options object) |
+| Nesting depth | 3 levels max |
+
+### Pre-Commit Checklist
+Before every commit:
+- [ ] All tests pass
+- [ ] Linting passes
+- [ ] Type checking passes
+- [ ] No console.logs or commented code
+- [ ] Changes match commit scope
+
+### Error Handling (Non-Negotiable)
+- All errors must use custom error classes (see `ERROR_HANDLING.md`)
+- All errors must include trace ID
+- All errors must be logged with context
+- All unexpected errors must be sent to Sentry
+- Never swallow errors silently
 
 ---
 
 ## ⚠️ Important Notes
 
-1. **Never skip tests** - Every function needs tests before moving on
-2. **Mock external APIs** - Tests should never make real API calls
-3. **Follow the phases** - Each phase builds on the previous
-4. **Create handoff files** - PHASE_X_COMPLETE.md ensures continuity
-5. **Use ultrathink** - For architecture decisions and complex debugging
-6. **80%+ coverage** - Non-negotiable minimum for all code
+1. **Read GOVERNANCE.md first** - Follow development discipline rules
+2. **Never skip tests** - Every function needs tests before moving on
+3. **Mock external APIs** - Tests should never make real API calls
+4. **Follow the phases** - Each phase builds on the previous
+5. **Create handoff files** - PHASE_X_COMPLETE.md ensures continuity
+6. **Use ultrathink** - For architecture decisions and complex debugging
+7. **80%+ coverage** - Non-negotiable minimum for all code
+8. **Check for duplicates** - Before writing new code, verify it doesn't exist

@@ -10,6 +10,10 @@ This starter kit contains everything you need to build **zigznote** — your AI 
 | `PROJECT_BRIEF.md` | Requirements, feature checklist, and technical specs |
 | `RESEARCH.md` | Technical teardown of Circleback, Fireflies, and competitors |
 | `BRANDING.md` | **Complete brand identity** — colors, typography, UI patterns, logo specs |
+| `GOVERNANCE.md` | **Development discipline** — quality rules, complexity limits, commit protocol |
+| `ERROR_HANDLING.md` | **Error patterns** — custom errors, Sentry setup, logging, debugging |
+| `PATTERNS.md` | **Code templates** — naming conventions, templates, checklists |
+| `PHASES.md` | **Phase tracker** — status, deliverables, change log (update after each phase) |
 | `STARTER_PROMPTS.md` | Autonomous phase prompts (one prompt per phase, runs start-to-finish) |
 
 ## 🚀 Quick Start
@@ -24,7 +28,7 @@ cd zigznote
 
 ### Step 2: Copy All Files
 
-Copy all 5 `.md` files into your `zigznote` folder:
+Copy all 9 `.md` files into your `zigznote` folder:
 
 ```
 zigznote/
@@ -32,6 +36,10 @@ zigznote/
 ├── PROJECT_BRIEF.md
 ├── RESEARCH.md
 ├── BRANDING.md
+├── GOVERNANCE.md
+├── ERROR_HANDLING.md
+├── PATTERNS.md
+├── PHASES.md
 └── STARTER_PROMPTS.md
 ```
 
@@ -59,14 +67,16 @@ Each phase runs autonomously from start to finish — just wait for it to comple
 
 | Phase | What Gets Built |
 |-------|-----------------|
-| **Phase 0** | Project setup, monorepo, Docker, CI/CD |
-| **Phase 1** | Database, API server, authentication |
-| **Phase 2** | Google Calendar integration |
-| **Phase 3** | Meeting bots (Recall.ai), transcription (Deepgram) |
-| **Phase 4** | AI summarization (Claude/GPT) |
+| **Phase 0** | Project setup, monorepo, Docker, CI/CD, error infrastructure |
+| **Phase 1** | Database schema, repositories, Express API, job queues |
+| **Phase 2** | Clerk authentication, Google Calendar OAuth |
+| **Phase 3** | Meeting bots (Recall.ai), transcription (Deepgram), WebSocket |
+| **Phase 4** | AI summarization (Claude/GPT), action item extraction |
 | **Phase 5** | Frontend dashboard with zigznote branding |
-| **Phase 6** | Integrations (Slack, HubSpot, Webhooks) |
-| **Phase 7** | Search and final polish |
+| **Phase 6** | Integrations (Slack, HubSpot), billing (Stripe, Flutterwave) |
+| **Phase 7** | Admin panel (API keys, user management, billing overrides) |
+| **Phase 8** | Search (full-text + semantic), help assistant, polish |
+| **Phase 8.5** | Hardening, security audit, load testing, accessibility |
 
 ## 🎨 Brand Identity
 

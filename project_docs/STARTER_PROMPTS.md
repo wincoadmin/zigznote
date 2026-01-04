@@ -19,7 +19,16 @@ This file contains **self-contained phase prompts** designed for autonomous exec
 
 Before starting, ensure you have:
 
-- [ ] All 5 starter kit files in your project folder (CLAUDE.md, PROJECT_BRIEF.md, RESEARCH.md, STARTER_PROMPTS.md, README.md)
+- [ ] All 9 starter kit files in your project folder:
+  - CLAUDE.md (project context)
+  - PROJECT_BRIEF.md (requirements)
+  - RESEARCH.md (competitor analysis)
+  - BRANDING.md (brand identity)
+  - GOVERNANCE.md (development rules)
+  - ERROR_HANDLING.md (error patterns)
+  - PATTERNS.md (code templates & checklists)
+  - PHASES.md (phase tracker & change log)
+  - STARTER_PROMPTS.md (this file)
 - [ ] Docker Desktop running (for PostgreSQL and Redis)
 - [ ] Node.js 20+ installed
 - [ ] pnpm installed (`npm install -g pnpm`)
@@ -59,6 +68,18 @@ Use these commands to manage context during long sessions:
 Every piece of code generated must follow these principles for AI+human maintainability:
 
 ```
+GOVERNANCE (Read GOVERNANCE.md first):
+- Read-First Rule: Always read existing code before making changes
+- Duplication Prevention: Check for existing implementations before writing new code
+- Minimum Code Rule: Implement smallest correct solution, no speculative features
+- Delete or Justify: Remove unused code or document why it must exist
+
+COMPLEXITY LIMITS:
+- Files: < 400 lines (split if larger)
+- Functions: < 50 lines (extract sub-functions if larger)
+- Parameters: ≤ 4 (use options object for more)
+- Nesting: ≤ 3 levels (use early returns)
+
 ARCHITECTURE:
 - SOLID principles (Single Responsibility, Open/Closed, Liskov, Interface Segregation, Dependency Inversion)
 - Clean Architecture (separate concerns: routes → controllers → services → repositories)
@@ -67,27 +88,40 @@ ARCHITECTURE:
 
 CODE STYLE:
 - Descriptive variable/function names (no abbreviations except common ones like id, url)
-- Functions < 50 lines, files < 400 lines
 - One export per file for main modules
 - Barrel exports (index.ts) for clean imports
 
 DOCUMENTATION:
 - JSDoc comments on all public functions
 - README.md in each major folder explaining purpose
-- Inline comments for complex logic (explain WHY, not WHAT)
+- Inline comments explain WHY, not WHAT
 - Type definitions are self-documenting
 
-ERROR HANDLING:
+ERROR HANDLING (Read ERROR_HANDLING.md):
 - Custom error classes extending base AppError
+- All errors include: code, message, traceId, context
 - Centralized error handling middleware
-- All async functions wrapped in try/catch or error boundary
-- User-friendly error messages, detailed logs for debugging
+- All async functions wrapped in try/catch
+- User-friendly messages, detailed logs for debugging
+- Never swallow errors silently
+- Sentry integration for production monitoring
 
 TESTING:
 - Test file next to source file (*.test.ts)
 - Descriptive test names: "should [expected behavior] when [condition]"
 - AAA pattern: Arrange, Act, Assert
 - Mock external dependencies, never real APIs in tests
+- 80%+ coverage minimum, 90%+ for auth/security code
+
+PRE-COMMIT VERIFICATION:
+Before every commit, verify:
+- [ ] All tests pass (pnpm test)
+- [ ] Linting passes (pnpm lint)
+- [ ] Type checking passes (pnpm typecheck)
+- [ ] No console.logs left in code
+- [ ] No commented-out code
+- [ ] No TODO without issue reference
+- [ ] Changes match commit message scope
 ```
 
 ---
@@ -98,9 +132,16 @@ TESTING:
 **Model: Start with ultrathink for architecture, then default for implementation**
 
 ```
-ultrathink: Read CLAUDE.md, PROJECT_BRIEF.md, and RESEARCH.md completely. Understand the full scope of this AI meeting assistant project.
+ultrathink: Read CLAUDE.md, PROJECT_BRIEF.md, RESEARCH.md, GOVERNANCE.md, ERROR_HANDLING.md, PATTERNS.md, and PHASES.md completely. Understand the full scope of this AI meeting assistant project and the governance rules.
 
-You are now beginning an autonomous build of an AI meeting assistant. This is PHASE 0: PROJECT INITIALIZATION.
+You are now beginning an autonomous build of zigznote (AI meeting assistant). This is PHASE 0: PROJECT INITIALIZATION.
+
+=== GOVERNANCE ACKNOWLEDGEMENT ===
+Before proceeding, confirm you have read and will follow:
+- GOVERNANCE.md (development discipline rules)
+- ERROR_HANDLING.md (error patterns and monitoring)
+- PATTERNS.md (naming conventions, templates, checklists)
+- PHASES.md (update status and decisions after completing each phase)
 
 === EXECUTION RULES ===
 1. DO NOT STOP until all tasks are complete and verified
@@ -109,6 +150,9 @@ You are now beginning an autonomous build of an AI meeting assistant. This is PH
 4. Create all files with proper content (no placeholders)
 5. Run tests and ensure they pass before completing
 6. Follow the engineering principles in STARTER_PROMPTS.md
+7. Check for duplicates before creating new code
+8. Follow file size tiers (Green: 0-200, Yellow: 200-400, Red: 400-600)
+9. Update PHASES.md at the end of this phase
 
 === TASK LIST (Execute All) ===
 
@@ -628,7 +672,69 @@ Create GitHub Actions workflow (.github/workflows/ci.yml):
 - Fail if coverage below threshold
 - **Verify TZ=UTC in CI environment**
 
-**0.7 Initial Verification**
+**0.7 Error Handling Infrastructure (CRITICAL)**
+
+Read ERROR_HANDLING.md for patterns. Create comprehensive error handling in packages/shared/:
+
+```
+packages/shared/src/
+├── errors/
+│   ├── base.ts          # AppError base class
+│   ├── http.ts          # HTTP error classes (ValidationError, NotFoundError, etc.)
+│   ├── domain.ts        # Domain-specific errors (MeetingError, TranscriptionError, etc.)
+│   └── index.ts         # Barrel export
+├── logger/
+│   ├── index.ts         # Pino logger setup
+│   └── formatters.ts    # Log formatters
+└── monitoring/
+    ├── sentry.ts        # Sentry initialization (backend)
+    ├── sentry-client.ts # Sentry initialization (frontend)
+    └── trace.ts         # Trace ID utilities
+```
+
+Create base error class with:
+- Error code (machine-readable)
+- HTTP status code
+- isOperational flag (expected vs unexpected)
+- Context object (sanitized)
+- Trace ID support
+- toJSON() for API responses
+
+Create HTTP error classes:
+- ValidationError (400)
+- AuthenticationError (401)
+- AuthorizationError (403)
+- NotFoundError (404)
+- ConflictError (409)
+- RateLimitError (429)
+- InternalError (500)
+- ExternalServiceError (502)
+
+Create logger with:
+- Pino for structured logging
+- Redaction of sensitive fields (passwords, tokens, keys)
+- Request context (traceId, userId)
+- Different formats for dev (pretty) vs prod (JSON)
+
+Create monitoring utilities:
+- Sentry initialization for both backend and frontend
+- Trace ID generation middleware
+- Error sanitization helpers
+
+Add environment variables to .env.example:
+```bash
+# Error Tracking (Optional but recommended)
+SENTRY_DSN=
+NEXT_PUBLIC_SENTRY_DSN=
+LOG_LEVEL=info
+```
+
+Write tests for:
+- All error classes serialize correctly
+- Logger redacts sensitive data
+- Trace IDs are generated and propagated
+
+**0.8 Initial Verification**
 Run these commands and verify they work:
 ```bash
 pnpm install
@@ -640,18 +746,27 @@ pnpm test
 node -e "console.log(process.env.TZ, new Date().toISOString())"
 ```
 
-**0.8 Create Phase Completion File**
+**0.9 Create Phase Completion File**
 Create PHASE_0_COMPLETE.md with:
 - Summary of what was created
 - All configuration decisions made
 - Commands to verify setup
 - Production simulation features enabled
+- Error handling infrastructure created
 - Any notes for next phase
 
-**0.9 Git Commit**
+**0.10 Update PHASES.md**
+Update PHASES.md to reflect Phase 0 completion:
+- Change Phase 0 status from ⬜ to ✅
+- Fill in "Key Decisions Made" section
+- Fill in "Actual Changes from Plan" if any deviations
+- Update Summary Table
+- Add entry to Change Log
+
+**0.11 Git Commit**
 ```bash
 git add .
-git commit -m "feat: initialize monorepo with pnpm, turborepo, production-simulated docker, and testing infrastructure"
+git commit -m "feat: initialize monorepo with pnpm, turborepo, production-simulated docker, error handling, and testing infrastructure"
 ```
 
 === VERIFICATION CHECKLIST ===
@@ -666,8 +781,12 @@ Before completing, verify ALL of these:
 - [ ] TZ environment variable is UTC
 - [ ] Environment validation script exists
 - [ ] .env.example has all variables documented
+- [ ] Error classes exist in packages/shared/src/errors/
+- [ ] Logger exists in packages/shared/src/logger/
+- [ ] Sentry setup exists in packages/shared/src/monitoring/
 - [ ] All files have real content (no TODOs or placeholders)
 - [ ] PHASE_0_COMPLETE.md exists with summary
+- [ ] PHASES.md updated with Phase 0 status and decisions
 - [ ] Git commit created
 
 === CONTEXT HANDOFF ===
@@ -675,7 +794,7 @@ When complete, run:
 ```
 /compact
 
-Summary: Completed Phase 0 - Project Initialization. Created monorepo structure with pnpm workspaces, Turborepo, Docker (PostgreSQL + Redis), Jest testing infrastructure, and GitHub Actions CI. All commands verified working. Ready for Phase 1: Database Setup.
+Summary: Completed Phase 0 - Project Initialization. Created monorepo structure with pnpm workspaces, Turborepo, Docker (PostgreSQL + Redis), error handling infrastructure, Jest testing, and GitHub Actions CI. All commands verified working. Ready for Phase 1: Database Setup.
 ```
 
 DO NOT STOP until all verification items are checked.
@@ -824,8 +943,9 @@ src/
 │   ├── database.ts      # DB config
 │   └── cors.ts          # CORS config
 ├── middleware/
-│   ├── errorHandler.ts  # Global error handler
-│   ├── requestLogger.ts # Pino logging
+│   ├── errorHandler.ts  # Global error handler (uses @zigznote/shared/errors)
+│   ├── traceId.ts       # Trace ID middleware (uses @zigznote/shared/monitoring)
+│   ├── requestLogger.ts # Pino logging (uses @zigznote/shared/logger)
 │   ├── validateRequest.ts # Zod validation
 │   ├── rateLimit.ts     # Rate limiting
 │   └── auth.ts          # Auth placeholder
@@ -838,10 +958,6 @@ src/
 ├── controllers/         # Request handlers
 ├── services/           # Business logic
 ├── repositories/       # Data access (import from packages/database)
-├── utils/
-│   ├── errors.ts       # Custom error classes
-│   ├── response.ts     # Response formatters
-│   └── asyncHandler.ts # Async wrapper
 └── types/
     ├── express.d.ts    # Express type extensions
     └── api.ts          # API types
@@ -849,11 +965,15 @@ src/
 
 Implement:
 - Express app with all middleware configured
+- **Import error classes from @zigznote/shared/errors**
+- **Import logger from @zigznote/shared/logger**
+- **Initialize Sentry from @zigznote/shared/monitoring**
+- **Trace ID middleware on all requests**
 - Error handling with proper HTTP status codes
 - Request validation using Zod schemas
 - Rate limiting (100 requests/min default)
 - Health check endpoint returning DB and Redis status
-- Structured logging with pino
+- Structured logging with trace IDs
 - Graceful shutdown handling
 
 **1.6 API Routes (Scaffolding)**
@@ -923,7 +1043,16 @@ Create PHASE_1_COMPLETE.md with:
 - Any design decisions made
 - Commands to verify everything works
 
-**1.12 Git Commit**
+**1.12 Update PHASES.md**
+
+Update PHASES.md to reflect Phase 1 completion:
+- Change Phase 1 status from ⬜ to ✅
+- Fill in "Key Decisions Made" section (schema choices, patterns used)
+- Fill in "Actual Changes from Plan" if any deviations
+- Update Summary Table
+- Add entry to Change Log
+
+**1.13 Git Commit**
 
 ```bash
 git add .
@@ -942,6 +1071,7 @@ Before completing, verify ALL of these:
 - [ ] No TypeScript errors
 - [ ] No ESLint errors
 - [ ] PHASE_1_COMPLETE.md exists
+- [ ] PHASES.md updated with Phase 1 status and decisions
 - [ ] Git commit created
 
 === CONTEXT HANDOFF ===
@@ -1094,14 +1224,23 @@ Create PHASE_2_COMPLETE.md with:
 - Test coverage report
 - Integration testing notes
 
-**2.9 Git Commit**
+**2.9 Update PHASES.md**
+
+Update PHASES.md to reflect Phase 2 completion:
+- Change Phase 2 status from ⬜ to ✅
+- Fill in "Key Decisions Made" section
+- Fill in "Actual Changes from Plan" if any deviations
+- Update Summary Table
+- Add entry to Change Log
+
+**2.10 Git Commit**
 
 ```bash
 git add .
 git commit -m "feat: add Clerk authentication, Google Calendar OAuth, and calendar sync"
 ```
 
-**2.10 Edge Case Tests (CRITICAL)**
+**2.11 Edge Case Tests (CRITICAL)**
 
 Create additional tests for edge cases that could cause production issues:
 
@@ -1215,6 +1354,7 @@ describe('Calendar Sync Edge Cases', () => {
 - [ ] All tests pass with > 85% coverage on auth
 - [ ] No real API calls in tests
 - [ ] PHASE_2_COMPLETE.md exists
+- [ ] PHASES.md updated with Phase 2 status and decisions
 - [ ] Git commit created
 
 === CONTEXT HANDOFF ===
@@ -1421,14 +1561,23 @@ Create PHASE_3_COMPLETE.md with:
 - Test coverage report
 - Webhook endpoint documentation
 
-**3.9 Git Commit**
+**3.9 Update PHASES.md**
+
+Update PHASES.md to reflect Phase 3 completion:
+- Change Phase 3 status from ⬜ to ✅
+- Fill in "Key Decisions Made" section
+- Fill in "Actual Changes from Plan" if any deviations
+- Update Summary Table
+- Add entry to Change Log
+
+**3.10 Git Commit**
 
 ```bash
 git add .
 git commit -m "feat: add Recall.ai bot management, Deepgram transcription, and real-time WebSocket updates"
 ```
 
-**3.10 Edge Case Tests (CRITICAL)**
+**3.11 Edge Case Tests (CRITICAL)**
 
 Create additional tests for meeting bot and transcription edge cases:
 
@@ -1588,6 +1737,7 @@ describe('Transcription Edge Cases', () => {
 - [ ] All external APIs mocked in tests
 - [ ] Test coverage > 85%
 - [ ] PHASE_3_COMPLETE.md exists
+- [ ] PHASES.md updated with Phase 3 status and decisions
 - [ ] Git commit created
 
 === CONTEXT HANDOFF ===
@@ -1798,14 +1948,23 @@ Create PHASE_4_COMPLETE.md with:
 - Test coverage report
 - Example summary outputs
 
-**4.10 Git Commit**
+**4.10 Update PHASES.md**
+
+Update PHASES.md to reflect Phase 4 completion:
+- Change Phase 4 status from ⬜ to ✅
+- Fill in "Key Decisions Made" section
+- Fill in "Actual Changes from Plan" if any deviations
+- Update Summary Table
+- Add entry to Change Log
+
+**4.11 Git Commit**
 
 ```bash
 git add .
 git commit -m "feat: add AI summarization with Claude/GPT-4o-mini, action item extraction, and custom insights"
 ```
 
-**4.11 Edge Case Tests (CRITICAL)**
+**4.12 Edge Case Tests (CRITICAL)**
 
 Create additional tests for summarization edge cases:
 
@@ -1934,6 +2093,7 @@ describe('Summarization Edge Cases', () => {
 - [ ] All LLM calls mocked in tests
 - [ ] Test coverage > 85%
 - [ ] PHASE_4_COMPLETE.md exists
+- [ ] PHASES.md updated with Phase 4 status and decisions
 - [ ] Git commit created
 
 === CONTEXT HANDOFF ===
@@ -2282,14 +2442,23 @@ Create PHASE_5_COMPLETE.md with:
 - Accessibility notes
 - Known limitations
 
-**5.15 Git Commit**
+**5.15 Update PHASES.md**
+
+Update PHASES.md to reflect Phase 5 completion:
+- Change Phase 5 status from ⬜ to ✅
+- Fill in "Key Decisions Made" section
+- Fill in "Actual Changes from Plan" if any deviations
+- Update Summary Table
+- Add entry to Change Log
+
+**5.16 Git Commit**
 
 ```bash
 git add .
 git commit -m "feat: complete frontend dashboard with meeting list, detail view, player, transcript, and summary panels"
 ```
 
-**5.16 Edge Case Tests (CRITICAL)**
+**5.17 Edge Case Tests (CRITICAL)**
 
 Create additional tests for frontend edge cases:
 
@@ -2517,6 +2686,7 @@ describe('Frontend Edge Cases', () => {
 - [ ] Test coverage > 80%
 - [ ] Accessibility passes
 - [ ] PHASE_5_COMPLETE.md exists
+- [ ] PHASES.md updated with Phase 5 status and decisions
 - [ ] Git commit created
 
 === CONTEXT HANDOFF ===
@@ -3669,14 +3839,23 @@ Test payment providers (both Stripe and Flutterwave):
 
 Create PHASE_6_COMPLETE.md
 
-**6.17 Git Commit**
+**6.17 Update PHASES.md**
+
+Update PHASES.md to reflect Phase 6 completion:
+- Change Phase 6 status from ⬜ to ✅
+- Fill in "Key Decisions Made" section
+- Fill in "Actual Changes from Plan" if any deviations
+- Update Summary Table
+- Add entry to Change Log
+
+**6.18 Git Commit**
 
 ```bash
 git add .
 git commit -m "feat: add Slack, HubSpot integrations, webhook system, and payment provider abstraction (Stripe + Flutterwave)"
 ```
 
-**6.18 Edge Case Tests (CRITICAL)**
+**6.19 Edge Case Tests (CRITICAL)**
 
 Create additional tests for integration and billing edge cases:
 
@@ -3910,6 +4089,8 @@ describe('Billing Edge Cases', () => {
 - [ ] Settings UI works
 - [ ] All tests pass > 85% coverage
 - [ ] PHASE_6_COMPLETE.md exists
+- [ ] PHASES.md updated with Phase 6 status and decisions
+- [ ] Git commit created
 
 === CONTEXT HANDOFF ===
 When complete, run:
@@ -4679,14 +4860,23 @@ Create PHASE_7_COMPLETE.md with:
 - Test coverage report
 - Setup instructions for first admin
 
-**7.20 Git Commit**
+**7.20 Update PHASES.md**
+
+Update PHASES.md to reflect Phase 7 completion:
+- Change Phase 7 status from ⬜ to ✅
+- Fill in "Key Decisions Made" section
+- Fill in "Actual Changes from Plan" if any deviations
+- Update Summary Table
+- Add entry to Change Log
+
+**7.21 Git Commit**
 
 ```bash
 git add .
 git commit -m "feat: add complete admin panel with API key management, user management, billing overrides, and audit logging"
 ```
 
-**7.21 Edge Case Tests (CRITICAL)**
+**7.22 Edge Case Tests (CRITICAL)**
 
 Create additional tests for admin panel edge cases:
 
@@ -4937,6 +5127,7 @@ describe('Admin Panel Edge Cases', () => {
 - [ ] All admin actions require authentication
 - [ ] Test coverage > 85% (90%+ on auth)
 - [ ] PHASE_7_COMPLETE.md exists
+- [ ] PHASES.md updated with Phase 7 status and decisions
 - [ ] Git commit created
 
 === CONTEXT HANDOFF ===
@@ -5064,7 +5255,7 @@ UI:
 
 **8.5 In-App Help Assistant (CRITICAL)**
 
-> Note: This is section 8.5 within Phase 8. The separate "Phase 8.5: Hardening" is a distinct phase that comes after Phase 8.
+> Note: This is section 8.5 within Phase 8. The separate "Phase 8.5: Hardening & Stress Testing" is a distinct phase that comes after Phase 8, with its own task numbering.
 
 Build an AI-powered help system for users who need guidance using zigznote.
 
@@ -5393,7 +5584,7 @@ Create comprehensive tests:
 - Escalation works
 - User preferences respected
 
-**8.7 Final Testing**
+**8.6 Final Testing**
 
 Run comprehensive test suite:
 
@@ -5412,7 +5603,7 @@ pnpm test:e2e
 
 Fix any failing tests or coverage gaps.
 
-**8.8 Production Documentation**
+**8.7 Production Documentation**
 
 Create documentation in docs/:
 
@@ -5450,7 +5641,7 @@ Create documentation in docs/:
 
 Create .env.production.example with all required variables.
 
-**8.9 Performance Optimization**
+**8.8 Performance Optimization**
 
 Review and optimize:
 - Database queries (add missing indexes)
@@ -5459,7 +5650,7 @@ Review and optimize:
 - Image optimization
 - Caching strategy (Redis)
 
-**8.10 Security Review**
+**8.9 Security Review**
 
 Final security checklist:
 - [ ] All endpoints require authentication
@@ -5476,7 +5667,25 @@ Final security checklist:
 - [ ] Help assistant input validation working
 - [ ] Help assistant response filtering working
 
-**8.11 Final Commit**
+**8.10 Create Phase Completion File**
+
+Create PHASE_8_COMPLETE.md with:
+- Search implementation summary
+- Help system architecture
+- Performance optimization results
+- Security review summary
+- Test coverage report
+
+**8.11 Update PHASES.md**
+
+Update PHASES.md to reflect Phase 8 completion:
+- Change Phase 8 status from ⬜ to ✅
+- Fill in "Key Decisions Made" section
+- Fill in "Actual Changes from Plan" if any deviations
+- Update Summary Table
+- Add entry to Change Log
+
+**8.12 Final Commit**
 
 ```bash
 git add .
@@ -5498,6 +5707,9 @@ git commit -m "feat: complete zigznote MVP with search, help assistant, and prod
 - [ ] Admin guide complete
 - [ ] Security checklist passed
 - [ ] Performance acceptable (< 200ms API, < 3s page load)
+- [ ] PHASE_8_COMPLETE.md exists
+- [ ] PHASES.md updated with Phase 8 status and decisions
+- [ ] Git commit created
 
 === PROJECT COMPLETE ===
 When complete, run:
@@ -5556,7 +5768,7 @@ The production-simulated environment was set up in Phase 0. Now you will:
 
 === TASK LIST (Execute All) ===
 
-**8.5.1 User Behavior Edge Cases**
+**H.1 User Behavior Edge Cases**
 
 Create tests for real user behavior scenarios:
 
@@ -5679,7 +5891,7 @@ describe('User Behavior Edge Cases', () => {
 });
 ```
 
-**8.5.2 Security Penetration Testing**
+**H.2 Security Penetration Testing**
 
 Run OWASP Top 10 security tests:
 
@@ -5836,7 +6048,7 @@ describe('Security Penetration Tests', () => {
 });
 ```
 
-**8.5.3 Load & Stress Testing**
+**H.3 Load & Stress Testing**
 
 Create load tests using k6 or Artillery:
 
@@ -5896,7 +6108,7 @@ export function websocketTest() {
 }
 ```
 
-**8.5.4 Chaos Engineering**
+**H.4 Chaos Engineering**
 
 Implement fault injection tests:
 
@@ -5984,7 +6196,7 @@ describe('Chaos Engineering Tests', () => {
 });
 ```
 
-**8.5.5 Accessibility Audit (WCAG 2.1 AA)**
+**H.5 Accessibility Audit (WCAG 2.1 AA)**
 
 ```typescript
 // tests/accessibility/wcag-audit.test.ts
@@ -6035,7 +6247,7 @@ describe('Accessibility Audit', () => {
 });
 ```
 
-**8.5.6 Performance Benchmarks**
+**H.6 Performance Benchmarks**
 
 ```typescript
 // tests/performance/benchmarks.test.ts
@@ -6091,7 +6303,7 @@ describe('Performance Benchmarks', () => {
 });
 ```
 
-**8.5.7 E2E Critical Path Tests**
+**H.7 E2E Critical Path Tests**
 
 ```typescript
 // tests/e2e/critical-paths.test.ts
@@ -6134,7 +6346,7 @@ describe('Critical Path E2E Tests', () => {
 });
 ```
 
-**8.5.8 Production Readiness Checklist**
+**H.8 Production Readiness Checklist**
 
 Create and verify comprehensive production checklist:
 
@@ -6442,7 +6654,7 @@ pnpm test:smoke --env=production
 - [ ] Third-party integrations stable
 ```
 
-**8.5.9 Create Hardening Report**
+**H.9 Create Hardening Report**
 
 Create PHASE_8_5_COMPLETE.md with:
 - Test coverage report (target: 95%+ critical paths)
@@ -6453,7 +6665,16 @@ Create PHASE_8_5_COMPLETE.md with:
 - Known edge cases and handling
 - Production readiness checklist status
 
-**8.5.10 Git Commit**
+**H.10 Update PHASES.md**
+
+Update PHASES.md to reflect Phase 8.5 completion:
+- Change Phase 8.5 status from ⬜ to ✅
+- Fill in "Key Decisions Made" section
+- Fill in "Actual Changes from Plan" if any deviations
+- Update Summary Table
+- Add entry to Change Log
+
+**H.11 Git Commit**
 
 ```bash
 git add .
@@ -6474,6 +6695,7 @@ git commit -m "feat: comprehensive hardening with edge case tests, security audi
 - [ ] Production readiness checklist complete
 - [ ] docs/production-checklist.md created
 - [ ] PHASE_8_5_COMPLETE.md exists
+- [ ] PHASES.md updated with Phase 8.5 status and decisions
 - [ ] Git commit created
 
 === CONTEXT HANDOFF ===
