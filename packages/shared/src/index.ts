@@ -9,3 +9,6 @@ export * from './utils';
 
 // Queue definitions
 export * from './queues';
+
+// Configuration
+export * from './config';

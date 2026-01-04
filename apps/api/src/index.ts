@@ -1,6 +1,10 @@
 import { createApp } from './app';
 import { config } from './config';
 import { logger } from './utils/logger';
+import { validateEnvironment, getCurrentPhase } from '@zigznote/shared';
+
+// Validate environment variables before starting
+validateEnvironment(getCurrentPhase());
 
 const app = createApp();
 
