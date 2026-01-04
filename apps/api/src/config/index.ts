@@ -85,6 +85,24 @@ export const config = {
    * Encryption key for storing sensitive data
    */
   encryptionKey: process.env.ENCRYPTION_KEY || 'dev-encryption-key-32-chars-!!!',
+
+  /**
+   * Recall.ai configuration for meeting bots
+   */
+  recall: {
+    apiKey: process.env.RECALL_API_KEY || '',
+    webhookSecret: process.env.RECALL_WEBHOOK_SECRET || '',
+    baseUrl: process.env.RECALL_BASE_URL || 'https://us-west-2.recall.ai/api/v1',
+    botName: process.env.RECALL_BOT_NAME || 'zigznote Assistant',
+  },
+
+  /**
+   * Deepgram configuration for transcription
+   */
+  deepgram: {
+    apiKey: process.env.DEEPGRAM_API_KEY || '',
+    baseUrl: process.env.DEEPGRAM_BASE_URL || 'https://api.deepgram.com/v1',
+  },
 };
 
 export type Config = typeof config;

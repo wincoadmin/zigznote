@@ -5,8 +5,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { meetingService } from '../services/meetingService';
+import { recallService } from '../services/recallService';
 import { errors } from '../utils/errors';
 import type { AuthenticatedRequest } from '../middleware';
+import { meetingRepository } from '@zigznote/database';
 
 /**
  * Validation schemas for meeting endpoints
@@ -305,6 +307,150 @@ export class MeetingController {
       res.json({
         success: true,
         data: actionItems,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Create and send a bot to join a meeting
+   * POST /api/v1/meetings/:id/bot
+   */
+  async createBot(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const { id } = req.params;
+      if (!id) {
+        throw errors.badRequest('Meeting ID is required');
+      }
+
+      const organizationId = authReq.auth!.organizationId;
+
+      // Get the meeting and verify ownership
+      const meeting = await meetingService.getById(id, organizationId);
+
+      if (!meeting.meetingUrl) {
+        throw errors.badRequest('Meeting URL is required to send a bot');
+      }
+
+      // Check if bot already exists for this meeting
+      if (meeting.botId) {
+        const existingStatus = await recallService.getBotStatus(meeting.botId);
+        if (existingStatus.status !== 'ended' && existingStatus.status !== 'error') {
+          res.json({
+            success: true,
+            data: {
+              botId: meeting.botId,
+              status: existingStatus.status,
+              message: 'Bot already exists for this meeting',
+            },
+          });
+          return;
+        }
+      }
+
+      // Parse optional body params
+      const { botName, joinAt } = req.body || {};
+
+      // Create the bot
+      const botStatus = await recallService.createBot({
+        meetingUrl: meeting.meetingUrl,
+        botName: botName || undefined,
+        joinAt: joinAt ? new Date(joinAt) : undefined,
+      });
+
+      // Update meeting with bot ID
+      await meetingRepository.update(id, { botId: botStatus.id });
+
+      res.status(201).json({
+        success: true,
+        data: {
+          botId: botStatus.id,
+          status: botStatus.status,
+          meetingUrl: meeting.meetingUrl,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get bot status for a meeting
+   * GET /api/v1/meetings/:id/bot
+   */
+  async getBotStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const { id } = req.params;
+      if (!id) {
+        throw errors.badRequest('Meeting ID is required');
+      }
+
+      const organizationId = authReq.auth!.organizationId;
+
+      // Get the meeting and verify ownership
+      const meeting = await meetingService.getById(id, organizationId);
+
+      if (!meeting.botId) {
+        throw errors.notFound('Bot not found for this meeting');
+      }
+
+      // Get bot status from Recall.ai
+      const botStatus = await recallService.getBotStatus(meeting.botId);
+
+      // Get recording info if available
+      let recording = null;
+      if (botStatus.recordingAvailable) {
+        recording = await recallService.getRecording(meeting.botId);
+      }
+
+      res.json({
+        success: true,
+        data: {
+          botId: meeting.botId,
+          status: botStatus.status,
+          joinedAt: botStatus.joinedAt,
+          leftAt: botStatus.leftAt,
+          errorMessage: botStatus.errorMessage,
+          recording,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Stop and remove bot from a meeting
+   * DELETE /api/v1/meetings/:id/bot
+   */
+  async stopBot(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const { id } = req.params;
+      if (!id) {
+        throw errors.badRequest('Meeting ID is required');
+      }
+
+      const organizationId = authReq.auth!.organizationId;
+
+      // Get the meeting and verify ownership
+      const meeting = await meetingService.getById(id, organizationId);
+
+      if (!meeting.botId) {
+        throw errors.notFound('Bot not found for this meeting');
+      }
+
+      // Stop the bot
+      await recallService.stopBot(meeting.botId);
+
+      res.json({
+        success: true,
+        data: {
+          message: 'Bot stopped successfully',
+        },
       });
     } catch (error) {
       next(error);

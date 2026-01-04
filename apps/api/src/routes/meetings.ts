@@ -92,3 +92,23 @@ meetingsRouter.get('/:id/summary', meetingController.getSummary.bind(meetingCont
  * @description Get action items extracted from a meeting
  */
 meetingsRouter.get('/:id/action-items', meetingController.getActionItems.bind(meetingController));
+
+/**
+ * @route POST /api/v1/meetings/:id/bot
+ * @description Create and send a bot to join the meeting
+ * @body {string} botName - Optional custom bot name
+ * @body {Date} joinAt - Optional scheduled join time
+ */
+meetingsRouter.post('/:id/bot', meetingController.createBot.bind(meetingController));
+
+/**
+ * @route GET /api/v1/meetings/:id/bot
+ * @description Get the bot status for a meeting
+ */
+meetingsRouter.get('/:id/bot', meetingController.getBotStatus.bind(meetingController));
+
+/**
+ * @route DELETE /api/v1/meetings/:id/bot
+ * @description Stop and remove the bot from a meeting
+ */
+meetingsRouter.delete('/:id/bot', meetingController.stopBot.bind(meetingController));

@@ -1,7 +1,14 @@
-import { Worker, Job } from 'bullmq';
+/**
+ * Transcription worker service
+ * Processes audio files through Deepgram for transcription with speaker diarization
+ */
+
+import { Worker } from 'bullmq';
 import Redis from 'ioredis';
 import pino from 'pino';
 import dotenv from 'dotenv';
+import { processTranscriptionJob, handleJobFailure, cleanup } from './processor';
+import type { TranscriptionJob, TranscriptionResult } from './types';
 
 dotenv.config();
 
@@ -18,67 +25,7 @@ const logger = pino({
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const QUEUE_NAME = 'transcription';
-
-interface TranscriptionJob {
-  meetingId: string;
-  audioUrl: string;
-  language?: string;
-}
-
-interface TranscriptionResult {
-  meetingId: string;
-  transcript: {
-    segments: Array<{
-      speaker: string;
-      text: string;
-      startMs: number;
-      endMs: number;
-      confidence: number;
-    }>;
-    fullText: string;
-    wordCount: number;
-    language: string;
-  };
-}
-
-/**
- * Process transcription job
- * In Phase 0, this is a placeholder that will be implemented with Deepgram in Phase 3
- */
-async function processTranscription(job: Job<TranscriptionJob>): Promise<TranscriptionResult> {
-  const { meetingId, audioUrl, language = 'en' } = job.data;
-
-  logger.info({ meetingId, audioUrl }, 'Processing transcription job');
-
-  // TODO: Phase 3 - Implement Deepgram transcription
-  // const deepgram = new Deepgram(process.env.DEEPGRAM_API_KEY);
-  // const transcription = await deepgram.transcription.preRecorded(
-  //   { url: audioUrl },
-  //   { punctuate: true, diarize: true, language }
-  // );
-
-  // Placeholder response for Phase 0
-  const result: TranscriptionResult = {
-    meetingId,
-    transcript: {
-      segments: [
-        {
-          speaker: 'Speaker 1',
-          text: 'This is a placeholder transcript segment.',
-          startMs: 0,
-          endMs: 5000,
-          confidence: 0.95,
-        },
-      ],
-      fullText: 'This is a placeholder transcript segment.',
-      wordCount: 7,
-      language,
-    },
-  };
-
-  logger.info({ meetingId }, 'Transcription completed');
-  return result;
-}
+const CONCURRENCY = parseInt(process.env.TRANSCRIPTION_CONCURRENCY || '5', 10);
 
 /**
  * Start the transcription worker
@@ -90,41 +37,86 @@ function startWorker(): void {
 
   const worker = new Worker<TranscriptionJob, TranscriptionResult>(
     QUEUE_NAME,
-    processTranscription,
+    processTranscriptionJob,
     {
       connection,
-      concurrency: 5,
+      concurrency: CONCURRENCY,
+      // Job lock settings
+      lockDuration: 300000, // 5 minutes - transcription can take time
+      stalledInterval: 60000, // Check for stalled jobs every minute
     }
   );
 
   worker.on('completed', (job, result) => {
-    logger.info({ jobId: job.id, meetingId: result.meetingId }, 'Job completed');
+    logger.info(
+      {
+        jobId: job.id,
+        meetingId: result.meetingId,
+        wordCount: result.wordCount,
+        durationMs: result.durationMs,
+      },
+      'Transcription job completed'
+    );
   });
 
-  worker.on('failed', (job, err) => {
-    logger.error({ jobId: job?.id, error: err.message }, 'Job failed');
+  worker.on('failed', async (job, err) => {
+    logger.error(
+      { jobId: job?.id, error: err.message, attempts: job?.attemptsMade },
+      'Transcription job failed'
+    );
+
+    // Handle permanent failure (all retries exhausted)
+    if (job && job.attemptsMade >= (job.opts.attempts || 3)) {
+      await handleJobFailure(job, err);
+    }
   });
 
   worker.on('error', (err) => {
     logger.error({ error: err.message }, 'Worker error');
   });
 
-  logger.info('Transcription worker started');
+  worker.on('stalled', (jobId) => {
+    logger.warn({ jobId }, 'Job stalled - will be reprocessed');
+  });
+
+  logger.info(
+    { concurrency: CONCURRENCY, queue: QUEUE_NAME },
+    'Transcription worker started'
+  );
 
   // Graceful shutdown
-  process.on('SIGTERM', async () => {
-    logger.info('SIGTERM received, shutting down worker');
-    await worker.close();
-    await connection.quit();
-    process.exit(0);
-  });
+  const shutdown = async (signal: string): Promise<void> => {
+    logger.info({ signal }, 'Shutdown signal received');
 
-  process.on('SIGINT', async () => {
-    logger.info('SIGINT received, shutting down worker');
-    await worker.close();
-    await connection.quit();
-    process.exit(0);
-  });
+    try {
+      // Close worker first to stop accepting new jobs
+      await worker.close();
+      logger.info('Worker closed');
+
+      // Cleanup processor resources
+      await cleanup();
+      logger.info('Processor resources cleaned up');
+
+      // Close Redis connection
+      await connection.quit();
+      logger.info('Redis connection closed');
+
+      process.exit(0);
+    } catch (error) {
+      logger.error({ error }, 'Error during shutdown');
+      process.exit(1);
+    }
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
+// Start the worker
 startWorker();
+
+// Export for testing
+export { processTranscriptionJob } from './processor';
+export { deepgramService } from './deepgramService';
+export * from './types';
+export * from './utils';

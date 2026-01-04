@@ -13,6 +13,7 @@ import { clerkAuthMiddleware } from './middleware/auth';
 import { healthRouter } from './routes/health';
 import { apiRouter } from './routes/api';
 import clerkWebhookRouter from './routes/webhooks/clerk';
+import recallWebhookRouter from './routes/webhooks/recall';
 
 /**
  * Creates and configures the Express application
@@ -57,6 +58,7 @@ export function createApp(): Express {
 
   // Webhook routes (no auth required, signature verified internally)
   app.use('/webhooks/clerk', clerkWebhookRouter);
+  app.use('/webhooks/recall', recallWebhookRouter);
 
   // Clerk auth middleware (only for API routes)
   // Skip in test environment if no Clerk key is configured
