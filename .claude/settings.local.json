@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm install:*)",
+      "Bash(docker-compose:*)",
+      "Bash(docker ps:*)",
+      "Bash(pnpm db:generate:*)",
+      "Bash(pnpm build:*)",
+      "Bash(npx turbo:*)",
+      "Bash(pnpm test:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "name": "zigznote",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI meeting assistant - Your meetings, simplified",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/zigznote.git"
+  },
+  "author": "zigznote",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.14.2",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "dev:api": "turbo run dev --filter=@zigznote/api",
+    "dev:web": "turbo run dev --filter=@zigznote/web",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "test": "turbo run test",
+    "test:coverage": "turbo run test:coverage",
+    "test:watch": "turbo run test:watch",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean && rimraf node_modules",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "db:generate": "pnpm --filter @zigznote/database generate",
+    "db:migrate": "pnpm --filter @zigznote/database migrate:dev",
+    "db:migrate:prod": "pnpm --filter @zigznote/database migrate:deploy",
+    "db:push": "pnpm --filter @zigznote/database push",
+    "db:seed": "pnpm --filter @zigznote/database seed",
+    "db:studio": "pnpm --filter @zigznote/database studio",
+    "db:reset": "pnpm --filter @zigznote/database reset",
+    "docker:up": "docker-compose -f docker/docker-compose.yml up -d",
+    "docker:down": "docker-compose -f docker/docker-compose.yml down",
+    "docker:logs": "docker-compose -f docker/docker-compose.yml logs -f",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.10",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.11",
+    "prettier": "^3.4.2",
+    "rimraf": "^6.0.1",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  }
+}

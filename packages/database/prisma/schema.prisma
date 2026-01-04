@@ -1,0 +1,270 @@
+// zigznote Database Schema
+// AI Meeting Assistant - Production Ready
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "fullTextIndex"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// Users and Organizations
+// ============================================
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  plan      String   @default("free") // free, pro, enterprise
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users                  User[]
+  meetings               Meeting[]
+  integrationConnections IntegrationConnection[]
+  automationRules        AutomationRule[]
+  webhooks               Webhook[]
+
+  @@map("organizations")
+}
+
+model User {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  email          String   @unique
+  name           String?
+  clerkId        String?  @unique @map("clerk_id")
+  role           String   @default("member") // admin, member
+  avatarUrl      String?  @map("avatar_url")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  calendarConnections CalendarConnection[]
+  meetingsCreated     Meeting[]            @relation("MeetingCreator")
+
+  @@index([organizationId])
+  @@index([clerkId])
+  @@map("users")
+}
+
+// ============================================
+// Calendar Integration
+// ============================================
+
+model CalendarConnection {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  provider      String // google, microsoft
+  accessToken   String?   @map("access_token")
+  refreshToken  String?   @map("refresh_token")
+  tokenExpires  DateTime? @map("token_expires_at")
+  calendarId    String?   @map("calendar_id")
+  syncEnabled   Boolean   @default(true) @map("sync_enabled")
+  lastSyncedAt  DateTime? @map("last_synced_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@map("calendar_connections")
+}
+
+// ============================================
+// Meetings
+// ============================================
+
+model Meeting {
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  createdById     String?   @map("created_by")
+  title           String
+  platform        String? // zoom, meet, teams, webex, other
+  meetingUrl      String?   @map("meeting_url")
+  recordingUrl    String?   @map("recording_url")
+  startTime       DateTime? @map("start_time")
+  endTime         DateTime? @map("end_time")
+  durationSeconds Int?      @map("duration_seconds")
+  status          String    @default("scheduled") // scheduled, recording, processing, completed, failed
+  botId           String?   @map("bot_id") // Recall.ai bot ID
+  calendarEventId String?   @map("calendar_event_id")
+  metadata        Json      @default("{}")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User?                @relation("MeetingCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  participants MeetingParticipant[]
+  transcript   Transcript?
+  summary      Summary?
+  actionItems  ActionItem[]
+  embeddings   TranscriptEmbedding[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([startTime])
+  @@index([createdById])
+  @@map("meetings")
+}
+
+model MeetingParticipant {
+  id           String  @id @default(uuid())
+  meetingId    String  @map("meeting_id")
+  name         String
+  email        String?
+  speakerLabel String? @map("speaker_label") // Speaker 1, Speaker 2, etc.
+  isHost       Boolean @default(false) @map("is_host")
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@index([meetingId])
+  @@map("meeting_participants")
+}
+
+// ============================================
+// Transcripts and Content
+// ============================================
+
+model Transcript {
+  id        String   @id @default(uuid())
+  meetingId String   @unique @map("meeting_id")
+  segments  Json // [{speaker, text, start_ms, end_ms, confidence}]
+  fullText  String   @map("full_text")
+  wordCount Int      @map("word_count")
+  language  String   @default("en")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@map("transcripts")
+}
+
+model Summary {
+  id            String   @id @default(uuid())
+  meetingId     String   @unique @map("meeting_id")
+  content       Json // {executive_summary, topics[], decisions[], questions[]}
+  modelUsed     String   @map("model_used")
+  promptVersion String?  @map("prompt_version")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@map("summaries")
+}
+
+model ActionItem {
+  id          String    @id @default(uuid())
+  meetingId   String    @map("meeting_id")
+  text        String
+  assignee    String?
+  dueDate     DateTime? @map("due_date")
+  completed   Boolean   @default(false)
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@index([meetingId])
+  @@index([completed])
+  @@map("action_items")
+}
+
+// ============================================
+// Search and Embeddings
+// ============================================
+
+model TranscriptEmbedding {
+  id         String   @id @default(uuid())
+  meetingId  String   @map("meeting_id")
+  chunkIndex Int      @map("chunk_index")
+  chunkText  String   @map("chunk_text")
+  embedding  Bytes? // Vector stored as bytes (will use pgvector extension)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@index([meetingId])
+  @@map("transcript_embeddings")
+}
+
+// ============================================
+// Integrations
+// ============================================
+
+model IntegrationConnection {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  provider       String // slack, hubspot, salesforce, notion, etc.
+  credentials    Json     @default("{}") // Encrypted tokens
+  settings       Json     @default("{}")
+  connectedAt    DateTime @default(now()) @map("connected_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, provider])
+  @@map("integration_connections")
+}
+
+model AutomationRule {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  name           String
+  trigger        String // meeting.completed, summary.generated, etc.
+  conditions     Json     @default("{}")
+  actions        Json // [{type: 'slack.send', config: {...}}]
+  enabled        Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([trigger])
+  @@map("automation_rules")
+}
+
+// ============================================
+// Webhooks
+// ============================================
+
+model Webhook {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  url            String
+  events         String[] // ['meeting.completed', 'summary.generated']
+  signingSecret  String   @map("signing_secret")
+  enabled        Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  logs         WebhookLog[]
+
+  @@index([organizationId])
+  @@map("webhooks")
+}
+
+model WebhookLog {
+  id             String   @id @default(uuid())
+  webhookId      String   @map("webhook_id")
+  event          String
+  payload        Json
+  responseStatus Int?     @map("response_status")
+  responseBody   String?  @map("response_body")
+  deliveredAt    DateTime @default(now()) @map("delivered_at")
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId])
+  @@index([deliveredAt])
+  @@map("webhook_logs")
+}

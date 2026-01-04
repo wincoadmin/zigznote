@@ -1,0 +1,153 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Primary Green */
+    --color-primary-50: #ecfdf5;
+    --color-primary-100: #d1fae5;
+    --color-primary-200: #a7f3d0;
+    --color-primary-300: #6ee7b7;
+    --color-primary-400: #34d399;
+    --color-primary-500: #10b981;
+    --color-primary-600: #059669;
+    --color-primary-700: #047857;
+    --color-primary-800: #065f46;
+    --color-primary-900: #064e3b;
+
+    /* Semantic Colors */
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-error: #ef4444;
+    --color-info: #3b82f6;
+
+    /* Meeting Status */
+    --color-scheduled: #64748b;
+    --color-recording: #ef4444;
+    --color-processing: #f59e0b;
+    --color-completed: #10b981;
+
+    /* Light mode defaults */
+    --background: #f8fafc;
+    --foreground: #0f172a;
+    --card: #ffffff;
+    --card-foreground: #0f172a;
+    --border: #e2e8f0;
+    --muted: #f1f5f9;
+    --muted-foreground: #64748b;
+  }
+
+  .dark {
+    --background: #0f172a;
+    --foreground: #f8fafc;
+    --card: #1e293b;
+    --card-foreground: #f8fafc;
+    --border: #334155;
+    --muted: #1e293b;
+    --muted-foreground: #94a3b8;
+
+    /* Primary slightly lighter for dark mode */
+    --color-primary-500: #34d399;
+  }
+
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  /* Primary Button */
+  .btn-primary {
+    @apply bg-primary-500 text-white font-medium px-5 py-2.5 rounded-md shadow-primary transition-all duration-200;
+  }
+  .btn-primary:hover {
+    @apply bg-primary-600 -translate-y-0.5 shadow-primary-lg;
+  }
+  .btn-primary:active {
+    @apply scale-[0.98];
+  }
+
+  /* Secondary Button */
+  .btn-secondary {
+    @apply bg-primary-50 text-primary-700 border border-primary-200 font-medium px-5 py-2.5 rounded-md transition-all duration-200;
+  }
+  .btn-secondary:hover {
+    @apply bg-primary-100;
+  }
+
+  /* Ghost Button */
+  .btn-ghost {
+    @apply bg-transparent text-slate-600 font-medium px-5 py-2.5 rounded-md transition-all duration-200;
+  }
+  .btn-ghost:hover {
+    @apply bg-slate-100;
+  }
+
+  /* Card */
+  .card {
+    @apply bg-white rounded-lg shadow-md border border-slate-100 p-6 transition-all duration-200;
+  }
+  .card:hover {
+    @apply shadow-lg -translate-y-0.5;
+  }
+  .card-highlighted {
+    @apply border-l-4 border-l-primary-500;
+  }
+
+  /* Input */
+  .input {
+    @apply bg-slate-50 border border-slate-200 rounded-md px-3.5 py-2.5 text-base transition-all duration-200;
+  }
+  .input:focus {
+    @apply border-primary-500 ring-2 ring-primary-100 outline-none;
+  }
+
+  /* Tag/Badge */
+  .tag {
+    @apply bg-primary-100 text-primary-700 text-xs font-medium px-2.5 py-1 rounded-full;
+  }
+  .tag-neutral {
+    @apply bg-slate-100 text-slate-600;
+  }
+
+  /* Progress Bar */
+  .progress-bar {
+    @apply bg-slate-200 rounded-full h-2 overflow-hidden;
+  }
+  .progress-fill {
+    @apply bg-gradient-to-r from-primary-400 to-primary-500 h-full rounded-full transition-all duration-500;
+  }
+
+  /* Skeleton Loading */
+  .skeleton {
+    @apply bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 bg-[length:200%_100%] animate-shimmer rounded;
+  }
+}
+
+@layer utilities {
+  /* Gradient backgrounds */
+  .gradient-primary {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 50%, #6ee7b7 100%);
+  }
+  .gradient-subtle {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  }
+  .gradient-mesh {
+    background:
+      radial-gradient(at 40% 20%, #d1fae5 0px, transparent 50%),
+      radial-gradient(at 80% 0%, #a7f3d0 0px, transparent 50%),
+      radial-gradient(at 0% 50%, #ecfdf5 0px, transparent 50%);
+  }
+
+  /* Recording indicator pulse */
+  .recording-pulse {
+    @apply animate-pulse;
+  }
+}
