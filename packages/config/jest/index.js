@@ -3,6 +3,7 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   testMatch: ['**/*.test.ts', '**/*.spec.ts'],
+  setupFilesAfterEnv: ['@zigznote/config/jest/setup.ts'],
   transform: {
     '^.+\\.tsx?$': [
       'ts-jest',
