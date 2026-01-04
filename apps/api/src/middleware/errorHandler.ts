@@ -1,8 +1,20 @@
+/**
+ * Global error handler middleware
+ * Formats errors consistently, logs them, and sends to Sentry
+ */
+
 import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
 import { ZodError } from 'zod';
-import { AppError } from '../utils/errors';
-import { logger } from '../utils/logger';
+import {
+  AppError,
+  ValidationError as SharedValidationError,
+  RateLimitError,
+  captureError,
+  createLogger,
+} from '@zigznote/shared';
 import { config } from '../config';
+
+const logger = createLogger({ component: 'errorHandler' });
 
 /**
  * Global error handler middleware
@@ -15,14 +27,26 @@ export const errorHandler: ErrorRequestHandler = (
   _next: NextFunction
 ): void => {
   const requestId = req.headers['x-request-id'] as string;
+  const traceId = err instanceof AppError ? err.context.traceId : requestId;
 
-  // Log the error
+  // Log the error with context
   logger.error({
     err,
+    traceId,
     requestId,
     method: req.method,
     url: req.url,
+    userId: (req as unknown as { userId?: string }).userId,
   });
+
+  // Capture non-operational errors in Sentry
+  if (!(err instanceof AppError && err.isOperational)) {
+    captureError(err, {
+      requestId,
+      method: req.method,
+      url: req.url,
+    });
+  }
 
   // Handle Zod validation errors
   if (err instanceof ZodError) {
@@ -32,10 +56,42 @@ export const errorHandler: ErrorRequestHandler = (
         code: 'VALIDATION_ERROR',
         message: 'Invalid request data',
         details: err.errors.map((e) => ({
-          path: e.path.join('.'),
+          field: e.path.join('.'),
           message: e.message,
         })),
       },
+      traceId,
+      requestId,
+    });
+    return;
+  }
+
+  // Handle shared ValidationError
+  if (err instanceof SharedValidationError) {
+    res.status(err.statusCode).json({
+      success: false,
+      error: {
+        code: err.code,
+        message: err.message,
+        validationErrors: err.validationErrors,
+      },
+      traceId: err.context.traceId,
+      requestId,
+    });
+    return;
+  }
+
+  // Handle RateLimitError with Retry-After header
+  if (err instanceof RateLimitError) {
+    res.setHeader('Retry-After', err.retryAfter.toString());
+    res.status(err.statusCode).json({
+      success: false,
+      error: {
+        code: err.code,
+        message: err.message,
+        retryAfter: err.retryAfter,
+      },
+      traceId: err.context.traceId,
       requestId,
     });
     return;
@@ -48,8 +104,8 @@ export const errorHandler: ErrorRequestHandler = (
       error: {
         code: err.code,
         message: err.message,
-        ...(err.details && { details: err.details }),
       },
+      traceId: err.context.traceId,
       requestId,
     });
     return;
@@ -69,6 +125,7 @@ export const errorHandler: ErrorRequestHandler = (
       message,
       ...(config.nodeEnv !== 'production' && { stack: err.stack }),
     },
+    traceId,
     requestId,
   });
 };

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { AppError } from '../utils/errors';
+import { NotFoundError } from '@zigznote/shared';
 
 /**
  * Handles requests to non-existent routes
@@ -9,11 +9,5 @@ export const notFoundHandler = (
   _res: Response,
   next: NextFunction
 ): void => {
-  next(
-    new AppError({
-      statusCode: 404,
-      code: 'NOT_FOUND',
-      message: `Route ${req.method} ${req.path} not found`,
-    })
-  );
+  next(new NotFoundError(`Route ${req.method} ${req.path}`));
 };

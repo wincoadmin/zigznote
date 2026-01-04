@@ -8,7 +8,22 @@
       "Bash(pnpm build:*)",
       "Bash(npx turbo:*)",
       "Bash(pnpm test:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: initialize monorepo with pnpm, turborepo, docker, and testing infrastructure\n\nPhase 0: Project Initialization\n\n- Set up pnpm workspaces monorepo structure\n- Configure Turborepo for build orchestration\n- Create Express.js API app with Clean Architecture\n- Create Next.js 14 web app with App Router and zigznote branding\n- Add Prisma database package with complete schema\n- Add shared types, constants, and utilities package\n- Add shared config package \\(ESLint, TypeScript, Jest\\)\n- Create transcription and summarization worker services\n- Set up Docker Compose with PostgreSQL 15 \\(pgvector\\) and Redis 7\n- Configure GitHub Actions CI/CD pipeline\n- Add architecture, API reference, and deployment docs\n- All 22 tests passing \\(11 API, 11 web\\)\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(pnpm generate:*)",
+      "Bash(pnpm --filter @zigznote/database generate:*)",
+      "Bash(pnpm --filter @zigznote/shared build:*)",
+      "Bash(pnpm --filter @zigznote/database build:*)",
+      "Bash(pnpm --filter @zigznote/api build:*)",
+      "Bash(pnpm --filter @zigznote/web build:*)",
+      "Bash(pnpm --filter @zigznote/api test:*)",
+      "Bash(pnpm --filter @zigznote/web test)",
+      "Bash(git reset:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: implement Phase 1 database and core backend infrastructure\n\nPhase 1: Database & Core Backend\n\nDatabase Layer:\n- Enhanced Prisma schema with soft delete support \\(deletedAt fields\\)\n- Added indexes for query optimization\n- Created comprehensive repositories \\(meeting, user, organization, transcript\\)\n- Implemented pagination utilities \\(offset and cursor-based\\)\n- Added full-text search utilities for PostgreSQL\n- Created transaction utilities with retry logic\n\nAPI Layer:\n- Implemented full Meeting CRUD with filtering and pagination\n- Added meeting endpoints: /upcoming, /recent, /stats\n- Added transcript, summary, and action-items endpoints\n- Created rate limiting middleware \\(standard, strict, expensive\\)\n- Added Zod-based request validation middleware\n- Integrated real database connectivity in health checks\n\nJob Queue Infrastructure:\n- Set up BullMQ queues \\(transcription, summarization, webhook, calendar_sync\\)\n- Created type-safe job data interfaces\n- Added queue management and statistics functions\n\nTesting:\n- Created comprehensive API test suite with mocked database\n- All 29 tests passing \\(18 API, 11 web\\)\n- Added database repository test files\n\nDocumentation:\n- Updated API reference with new endpoints\n- Created PHASE_1_COMPLETE.md handoff document\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nchore: reorganize project documentation into project_docs folder\n\n- Move documentation files to project_docs/ folder \\(removes old root-level copies\\)\n- Add STARTER_PROMPTS.md with comprehensive phase-by-phase build prompts\n- Updated files include latest changes\n\nFiles moved:\n- BRANDING.md -> project_docs/BRANDING.md\n- CLAUDE.md -> project_docs/CLAUDE.md\n- PROJECT_BRIEF.md -> project_docs/PROJECT_BRIEF.md\n- README.md -> project_docs/README.md\n- RESEARCH.md -> project_docs/RESEARCH.md\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nchore: upgrade Docker to production-simulated config\n\n- PostgreSQL with password authentication \\(zigznote_user\\)\n- Redis with password authentication\n- Resource limits \\(512MB Postgres, 128MB Redis\\)\n- Test database uses tmpfs for speed\n- Updated health checks with correct credentials\n- Updated .env.example with new connection strings\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Bash(find:*)"
     ]
   }
 }

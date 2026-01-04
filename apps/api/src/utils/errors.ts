@@ -1,59 +1,48 @@
 /**
- * Custom application error class with status codes and error codes
+ * Error utilities for the API
+ * Re-exports shared errors and provides convenience factory functions
  */
-export interface AppErrorOptions {
-  statusCode: number;
-  code: string;
-  message: string;
-  details?: Record<string, unknown>;
-}
 
-export class AppError extends Error {
-  public readonly statusCode: number;
-  public readonly code: string;
-  public readonly details?: Record<string, unknown>;
+import {
+  AppError,
+  BadRequestError,
+  UnauthorizedError,
+  ForbiddenError,
+  NotFoundError,
+  ConflictError,
+  RateLimitError,
+  ServiceUnavailableError,
+  MeetingNotFoundError,
+  TranscriptNotFoundError,
+  SummaryNotFoundError,
+} from '@zigznote/shared';
 
-  constructor(options: AppErrorOptions) {
-    super(options.message);
-    this.name = 'AppError';
-    this.statusCode = options.statusCode;
-    this.code = options.code;
-    this.details = options.details;
-
-    // Maintains proper stack trace for where error was thrown
-    Error.captureStackTrace(this, this.constructor);
-  }
-}
+// Re-export AppError for backward compatibility
+export { AppError };
 
 /**
  * Common error factory functions
+ * These provide a simpler API for common error cases
  */
 export const errors = {
-  badRequest: (message: string, details?: Record<string, unknown>) =>
-    new AppError({ statusCode: 400, code: 'BAD_REQUEST', message, details }),
+  badRequest: (message: string) => new BadRequestError(message),
 
-  unauthorized: (message = 'Unauthorized') =>
-    new AppError({ statusCode: 401, code: 'UNAUTHORIZED', message }),
+  unauthorized: (message = 'Authentication required') => new UnauthorizedError(message),
 
-  forbidden: (message = 'Forbidden') =>
-    new AppError({ statusCode: 403, code: 'FORBIDDEN', message }),
+  forbidden: (message = 'Access denied') => new ForbiddenError(message),
 
-  notFound: (resource: string) =>
-    new AppError({
-      statusCode: 404,
-      code: 'NOT_FOUND',
-      message: `${resource} not found`,
-    }),
+  notFound: (resource: string) => new NotFoundError(resource),
 
-  conflict: (message: string) =>
-    new AppError({ statusCode: 409, code: 'CONFLICT', message }),
+  conflict: (message: string) => new ConflictError(message),
 
-  tooManyRequests: (message = 'Too many requests') =>
-    new AppError({ statusCode: 429, code: 'TOO_MANY_REQUESTS', message }),
+  tooManyRequests: (retryAfter = 60) => new RateLimitError(retryAfter),
 
-  internal: (message = 'Internal server error') =>
-    new AppError({ statusCode: 500, code: 'INTERNAL_ERROR', message }),
+  serviceUnavailable: (service: string) => new ServiceUnavailableError(service),
 
-  serviceUnavailable: (message = 'Service temporarily unavailable') =>
-    new AppError({ statusCode: 503, code: 'SERVICE_UNAVAILABLE', message }),
+  // Domain-specific errors
+  meetingNotFound: (meetingId: string) => new MeetingNotFoundError(meetingId),
+
+  transcriptNotFound: (meetingId: string) => new TranscriptNotFoundError(meetingId),
+
+  summaryNotFound: (meetingId: string) => new SummaryNotFoundError(meetingId),
 };

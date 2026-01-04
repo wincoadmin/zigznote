@@ -1,11 +1,19 @@
 /**
- * Meeting service for business logic
- * Uses the database repository for data access
+ * @ownership
+ * @domain Meeting Management
+ * @description Business logic for meeting operations including CRUD, access control, and related data
+ * @invariants All operations require organizationId for multi-tenant access control
+ * @split-plan Consider splitting transcript/summary methods to separate service if file grows
+ * @last-reviewed 2026-01-04
  */
 
 import {
   meetingRepository,
+  meetingQueryRepository,
+  meetingStatsRepository,
   transcriptRepository,
+  summaryRepository,
+  actionItemRepository,
 } from '@zigznote/database';
 import type { Meeting, Transcript, Summary, ActionItem } from '@zigznote/database';
 import { logger } from '../utils/logger';
@@ -94,7 +102,7 @@ export class MeetingService {
   async list(query: ListMeetingsQuery): Promise<ListMeetingsResult> {
     logger.debug({ query }, 'Listing meetings');
 
-    const result = await meetingRepository.findManyPaginated(
+    const result = await meetingQueryRepository.findManyPaginated(
       { page: query.page, limit: query.limit },
       {
         organizationId: query.organizationId,
@@ -125,7 +133,7 @@ export class MeetingService {
   async getUpcoming(organizationId: string, limit = 10): Promise<MeetingResponse[]> {
     logger.debug({ organizationId, limit }, 'Getting upcoming meetings');
 
-    const meetings = await meetingRepository.findUpcoming(organizationId, limit);
+    const meetings = await meetingQueryRepository.findUpcoming(organizationId, limit);
     return meetings.map((m) => this.toMeetingResponse(m));
   }
 
@@ -140,7 +148,7 @@ export class MeetingService {
   ): Promise<MeetingResponse[]> {
     logger.debug({ organizationId, limit }, 'Getting recent completed meetings');
 
-    const meetings = await meetingRepository.findRecentCompleted(
+    const meetings = await meetingQueryRepository.findRecentCompleted(
       organizationId,
       limit
     );
@@ -282,7 +290,7 @@ export class MeetingService {
     thisMonth: number;
   }> {
     logger.debug({ organizationId }, 'Getting meeting stats');
-    return meetingRepository.getStats(organizationId);
+    return meetingStatsRepository.getStats(organizationId);
   }
 
   /**
@@ -328,7 +336,7 @@ export class MeetingService {
       throw errors.forbidden('Access denied to this meeting');
     }
 
-    return transcriptRepository.findSummaryByMeetingId(meetingId);
+    return summaryRepository.findByMeetingId(meetingId);
   }
 
   /**
@@ -351,7 +359,7 @@ export class MeetingService {
       throw errors.forbidden('Access denied to this meeting');
     }
 
-    return transcriptRepository.findActionItemsByMeetingId(meetingId);
+    return actionItemRepository.findByMeetingId(meetingId);
   }
 
   /**
