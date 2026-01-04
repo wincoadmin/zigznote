@@ -1,0 +1,25 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="zigznote-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#34D399"/>
+      <stop offset="100%" style="stop-color:#10B981"/>
+    </linearGradient>
+  </defs>
+  <!-- Stylized Z that flows into a note shape -->
+  <path
+    d="M6 6h18L8 20h6v6h12L10 26v-6H6V6z"
+    fill="url(#zigznote-gradient)"
+  />
+  <!-- Simplified abstract Z mark with note corner -->
+  <path
+    d="M8 8h12l-8 8h4l-4 8h12v-4l-4-4h-4l8-8H8v8z"
+    fill="url(#zigznote-gradient)"
+    opacity="0"
+  />
+  <!-- Clean geometric Z with note fold -->
+  <rect x="6" y="6" width="20" height="3" rx="1" fill="url(#zigznote-gradient)"/>
+  <rect x="6" y="23" width="20" height="3" rx="1" fill="url(#zigznote-gradient)"/>
+  <path d="M20 6L9 26" stroke="url(#zigznote-gradient)" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- Note fold corner -->
+  <path d="M22 22L26 26V22H22Z" fill="#10B981" opacity="0.6"/>
+</svg>

@@ -1,6 +1,24 @@
-import { forwardRef, ButtonHTMLAttributes } from 'react';
+import { forwardRef, ButtonHTMLAttributes, ReactElement, cloneElement, isValidElement, ReactNode } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
+
+// Simple Slot implementation for asChild pattern
+interface SlotProps {
+  children: ReactNode;
+  className?: string;
+}
+
+function Slot({ children, className, ...props }: SlotProps & Record<string, unknown>) {
+  if (isValidElement(children)) {
+    const childProps = children.props as Record<string, unknown>;
+    return cloneElement(children as ReactElement<Record<string, unknown>>, {
+      ...props,
+      ...childProps,
+      className: cn(className, childProps?.className as string | undefined),
+    });
+  }
+  return <>{children}</>;
+}
 
 const buttonVariants = cva(
   'inline-flex items-center justify-center gap-2 rounded-md font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
@@ -36,13 +54,24 @@ export interface ButtonProps
   extends ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   isLoading?: boolean;
+  asChild?: boolean;
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, isLoading, children, disabled, ...props }, ref) => {
+  ({ className, variant, size, isLoading, children, disabled, asChild = false, ...props }, ref) => {
+    const classes = cn(buttonVariants({ variant, size, className }));
+
+    if (asChild && isValidElement(children)) {
+      return (
+        <Slot className={classes} {...props}>
+          {children}
+        </Slot>
+      );
+    }
+
     return (
       <button
-        className={cn(buttonVariants({ variant, size, className }))}
+        className={classes}
         ref={ref}
         disabled={disabled || isLoading}
         {...props}

@@ -1,5 +1,8 @@
 import '@testing-library/jest-dom';
 
+// MSW server is initialized in individual tests when needed
+// Tests that need API mocking should import and setup the server themselves
+
 // Mock Next.js router
 jest.mock('next/navigation', () => ({
   useRouter: () => ({

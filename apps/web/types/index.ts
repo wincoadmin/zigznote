@@ -20,6 +20,8 @@ export interface Organization {
   createdAt: string;
 }
 
+export type MeetingStatus = 'scheduled' | 'recording' | 'processing' | 'completed' | 'failed';
+
 export interface Meeting {
   id: string;
   organizationId: string;
@@ -30,7 +32,7 @@ export interface Meeting {
   startTime?: string;
   endTime?: string;
   durationSeconds?: number;
-  status: 'scheduled' | 'recording' | 'processing' | 'completed';
+  status: MeetingStatus;
   botId?: string;
   createdAt: string;
   updatedAt: string;

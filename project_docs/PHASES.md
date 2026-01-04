@@ -239,7 +239,7 @@
 
 ## Phase 5: Frontend Dashboard
 
-**Status:** ⬜ Not Started
+**Status:** ✅ Complete
 **Estimated Time:** 90-120 minutes
 
 ### Planned Deliverables
@@ -265,10 +265,23 @@
 | `/settings` | User and org settings |
 
 ### Key Decisions Made
-_To be filled after phase completion_
+- **Route Groups**: Used `(dashboard)` route group for shared layout
+- **React Query**: For data fetching with cache sync
+- **CVA**: Class Variance Authority for component variants
+- **WebSocket**: Socket.IO with automatic reconnection
+- **MSW**: Mock Service Worker for API mocking in tests
+- **asChild Pattern**: Slot-based composition for Button component
 
 ### Actual Changes from Plan
-_To be filled after phase completion_
+- Dark mode not implemented in this phase (deferred to Phase 8)
+- Settings page is placeholder (will be implemented in Phase 6)
+- 119 tests passing (84% of target), some edge case tests deferred
+- Added design tokens file (lib/design-tokens.ts)
+- Created WebSocket hooks (useWebSocket, useMeetingUpdates)
+
+### Test Coverage
+- Web: 119 tests passing
+- **Total: 332 tests**
 
 ### Handoff File
 `PHASE_5_COMPLETE.md`

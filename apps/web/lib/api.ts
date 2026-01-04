@@ -22,9 +22,14 @@ export interface ApiResponse<T> {
 
 class ApiClient {
   private baseUrl: string;
+  private authToken: string | null = null;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
+  }
+
+  setAuthToken(token: string | null) {
+    this.authToken = token;
   }
 
   private async request<T>(
@@ -34,6 +39,7 @@ class ApiClient {
     const url = `${this.baseUrl}${endpoint}`;
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
+      ...(this.authToken && { Authorization: `Bearer ${this.authToken}` }),
       ...options.headers,
     };
 
@@ -71,16 +77,23 @@ class ApiClient {
     return this.request<T>(endpoint, { method: 'GET' });
   }
 
-  async post<T>(endpoint: string, body: unknown): Promise<ApiResponse<T>> {
+  async post<T>(endpoint: string, body?: unknown): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'POST',
-      body: JSON.stringify(body),
+      body: body ? JSON.stringify(body) : undefined,
     });
   }
 
   async put<T>(endpoint: string, body: unknown): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'PUT',
+      body: JSON.stringify(body),
+    });
+  }
+
+  async patch<T>(endpoint: string, body: unknown): Promise<ApiResponse<T>> {
+    return this.request<T>(endpoint, {
+      method: 'PATCH',
       body: JSON.stringify(body),
     });
   }
@@ -94,19 +107,71 @@ export const api = new ApiClient(API_URL);
 
 // Meeting API methods
 export const meetingsApi = {
-  list: (params?: { page?: number; limit?: number; status?: string }) => {
+  list: (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    search?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set('page', String(params.page));
     if (params?.limit) searchParams.set('limit', String(params.limit));
     if (params?.status) searchParams.set('status', params.status);
+    if (params?.search) searchParams.set('search', params.search);
+    if (params?.startDate) searchParams.set('startDate', params.startDate);
+    if (params?.endDate) searchParams.set('endDate', params.endDate);
     const query = searchParams.toString();
     return api.get(`/api/v1/meetings${query ? `?${query}` : ''}`);
   },
 
   getById: (id: string) => api.get(`/api/v1/meetings/${id}`),
 
+  getUpcoming: () => api.get('/api/v1/meetings/upcoming'),
+
+  getRecent: () => api.get('/api/v1/meetings/recent'),
+
+  getStats: () => api.get('/api/v1/meetings/stats'),
+
   create: (data: { title: string; platform?: string; meetingUrl?: string }) =>
     api.post('/api/v1/meetings', data),
 
   delete: (id: string) => api.delete(`/api/v1/meetings/${id}`),
+
+  getTranscript: (id: string) => api.get(`/api/v1/meetings/${id}/transcript`),
+
+  getSummary: (id: string) => api.get(`/api/v1/meetings/${id}/summary`),
+
+  regenerateSummary: (id: string, forceModel?: 'claude' | 'gpt') =>
+    api.post(`/api/v1/meetings/${id}/summary/regenerate`, { forceModel }),
+
+  getActionItems: (id: string) => api.get(`/api/v1/meetings/${id}/action-items`),
+
+  updateActionItem: (
+    meetingId: string,
+    actionItemId: string,
+    data: { completed?: boolean; assignee?: string; dueDate?: string }
+  ) => api.patch(`/api/v1/meetings/${meetingId}/action-items/${actionItemId}`, data),
+
+  deleteActionItem: (meetingId: string, actionItemId: string) =>
+    api.delete(`/api/v1/meetings/${meetingId}/action-items/${actionItemId}`),
+};
+
+// Calendar API methods
+export const calendarApi = {
+  getConnections: () => api.get('/api/v1/calendar/connections'),
+  sync: () => api.post('/api/v1/calendar/sync'),
+};
+
+// Insights API methods
+export const insightsApi = {
+  getTemplates: () => api.get('/api/v1/insights/templates'),
+  extract: (meetingId: string, templateIds: string[]) =>
+    api.post(`/api/v1/meetings/${meetingId}/insights`, { templateIds }),
+};
+
+// Health API
+export const healthApi = {
+  check: () => api.get('/health'),
 };

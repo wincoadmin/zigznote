@@ -10,10 +10,13 @@ const config = {
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   testMatch: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx'],
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/$1',
+    // More specific patterns first
+    '^@/tests/(.*)$': '<rootDir>/tests/$1',
     '^@/components/(.*)$': '<rootDir>/components/$1',
     '^@/lib/(.*)$': '<rootDir>/lib/$1',
     '^@/hooks/(.*)$': '<rootDir>/hooks/$1',
+    // Catch-all last
+    '^@/(.*)$': '<rootDir>/$1',
   },
   collectCoverageFrom: [
     'app/**/*.{ts,tsx}',
