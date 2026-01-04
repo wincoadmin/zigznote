@@ -24,6 +24,8 @@
     "migrate:reset": "prisma migrate reset",
     "push": "prisma db push",
     "seed": "tsx prisma/seed.ts",
+    "seed:minimal": "tsx prisma/seed.ts --scale=minimal",
+    "seed:load-test": "tsx prisma/seed.ts --scale=load-test",
     "studio": "prisma studio",
     "reset": "prisma migrate reset --force",
     "lint": "eslint src --ext .ts",
