@@ -17,7 +17,7 @@ describe('SummaryPanel', () => {
 
   it('should render loading skeleton when isLoading is true', () => {
     render(<SummaryPanel isLoading />);
-    expect(document.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(document.querySelectorAll('.animate-shimmer').length).toBeGreaterThan(0);
   });
 
   it('should render empty state when no summary', () => {
@@ -39,7 +39,8 @@ describe('SummaryPanel', () => {
   it('should render summary content', () => {
     render(<SummaryPanel summary={mockSummary} />);
 
-    expect(screen.getByText('Summary')).toBeInTheDocument();
+    // Check for the Summary tab and executive summary content
+    expect(screen.getByRole('tab', { name: /Summary/i })).toBeInTheDocument();
     expect(screen.getByText(mockSummary.content.executiveSummary)).toBeInTheDocument();
   });
 

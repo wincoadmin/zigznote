@@ -131,4 +131,15 @@ function ToastItem({ toast, onClose }: ToastItemProps) {
   );
 }
 
-export { ToastContainer };
+// Standalone Toast component for testing
+interface ToastComponentProps {
+  toast: Toast;
+  onDismiss: (id: string) => void;
+}
+
+function ToastComponent({ toast, onDismiss }: ToastComponentProps) {
+  return <ToastItem toast={toast} onClose={() => onDismiss(toast.id)} />;
+}
+
+export { ToastContainer, ToastComponent as Toast };
+export type { Toast as ToastData };

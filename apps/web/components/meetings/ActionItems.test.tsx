@@ -6,7 +6,7 @@ describe('ActionItems', () => {
 
   it('should render loading skeleton when isLoading is true', () => {
     render(<ActionItems isLoading />);
-    expect(document.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(document.querySelectorAll('.animate-shimmer').length).toBeGreaterThan(0);
   });
 
   it('should render empty state when no action items', () => {

@@ -12,7 +12,7 @@ describe('Button', () => {
   it('should render with secondary variant', () => {
     render(<Button variant="secondary">Secondary</Button>);
     const button = screen.getByRole('button', { name: /secondary/i });
-    expect(button).toHaveClass('bg-slate-50');
+    expect(button).toHaveClass('bg-primary-50');
   });
 
   it('should render with outline variant', () => {

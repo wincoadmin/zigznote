@@ -12,8 +12,8 @@ describe('StatsCards', () => {
   it('should render loading skeletons when isLoading is true', () => {
     render(<StatsCards isLoading />);
 
-    // Should have 4 skeleton cards
-    expect(document.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    // Should have skeleton elements with animate-shimmer class
+    expect(document.querySelectorAll('.animate-shimmer').length).toBeGreaterThan(0);
   });
 
   it('should render all stat cards with data', () => {

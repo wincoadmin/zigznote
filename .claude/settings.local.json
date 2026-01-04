@@ -23,7 +23,23 @@
       "Bash(git commit -m \"$\\(cat <<''EOF''\nchore: reorganize project documentation into project_docs folder\n\n- Move documentation files to project_docs/ folder \\(removes old root-level copies\\)\n- Add STARTER_PROMPTS.md with comprehensive phase-by-phase build prompts\n- Updated files include latest changes\n\nFiles moved:\n- BRANDING.md -> project_docs/BRANDING.md\n- CLAUDE.md -> project_docs/CLAUDE.md\n- PROJECT_BRIEF.md -> project_docs/PROJECT_BRIEF.md\n- README.md -> project_docs/README.md\n- RESEARCH.md -> project_docs/RESEARCH.md\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nchore: upgrade Docker to production-simulated config\n\n- PostgreSQL with password authentication \\(zigznote_user\\)\n- Redis with password authentication\n- Resource limits \\(512MB Postgres, 128MB Redis\\)\n- Test database uses tmpfs for speed\n- Updated health checks with correct credentials\n- Updated .env.example with new connection strings\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(git push:*)",
+      "Bash(./node_modules/.bin/turbo:*)",
+      "Bash(pnpm exec turbo:*)",
+      "Bash(cmd.exe /c \"node_modules\\\\.bin\\\\turbo.CMD --version\")",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm prisma generate:*)",
+      "Bash(pnpm --filter @zigznote/api add:*)",
+      "Bash(pnpm --filter @zigznote/transcription build:*)",
+      "Bash(pnpm --filter @zigznote/transcription-worker build:*)",
+      "Bash(pnpm --filter @zigznote/transcription-worker test)",
+      "Bash(pnpm --filter @zigznote/summarization-worker build)",
+      "Bash(pnpm --filter @zigznote/summarization-worker test)",
+      "Bash(pnpm --filter @zigznote/web test -- --passWithNoTests --maxWorkers=2)",
+      "Bash(pnpm --filter @zigznote/web add:*)",
+      "Bash(cat:*)",
+      "Bash(pnpm --filter @zigznote/web test:*)"
     ]
   }
 }
