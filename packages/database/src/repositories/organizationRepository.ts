@@ -78,6 +78,24 @@ export class OrganizationRepository {
   }
 
   /**
+   * Finds an organization by Clerk ID
+   * @param clerkId - Clerk organization ID
+   * @param include - Relations to include
+   */
+  async findByClerkId(
+    clerkId: string,
+    include?: OrganizationInclude
+  ): Promise<Organization | null> {
+    return prisma.organization.findFirst({
+      where: {
+        clerkId,
+        deletedAt: null,
+      },
+      include,
+    });
+  }
+
+  /**
    * Finds all organizations matching the filter
    * @param filter - Filter options
    * @param include - Relations to include
@@ -137,12 +155,13 @@ export class OrganizationRepository {
    * @param include - Relations to include in returned record
    */
   async create(
-    data: CreateOrganizationInput,
+    data: CreateOrganizationInput & { clerkId?: string },
     include?: OrganizationInclude
   ): Promise<Organization> {
     return prisma.organization.create({
       data: {
         name: data.name,
+        clerkId: data.clerkId,
         plan: data.plan ?? 'free',
         settings: data.settings ?? {},
       },

@@ -18,6 +18,7 @@ datasource db {
 model Organization {
   id        String    @id @default(uuid())
   name      String
+  clerkId   String?   @unique @map("clerk_id")
   plan      String    @default("free") // free, pro, enterprise
   settings  Json      @default("{}")
   createdAt DateTime  @default(now()) @map("created_at")
@@ -30,6 +31,7 @@ model Organization {
   automationRules        AutomationRule[]
   webhooks               Webhook[]
 
+  @@index([clerkId])
   @@index([deletedAt])
   @@map("organizations")
 }

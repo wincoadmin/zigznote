@@ -1,12 +1,17 @@
 /**
  * Meeting routes
+ * All routes require authentication
  */
 
 import { Router } from 'express';
 import type { Router as IRouter } from 'express';
 import { meetingController } from '../controllers/meetingController';
+import { requireAuth } from '../middleware';
 
 export const meetingsRouter: IRouter = Router();
+
+// All meeting routes require authentication
+meetingsRouter.use(requireAuth);
 
 /**
  * @route GET /api/v1/meetings

@@ -6,6 +6,7 @@ import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { meetingService } from '../services/meetingService';
 import { errors } from '../utils/errors';
+import type { AuthenticatedRequest } from '../middleware';
 
 /**
  * Validation schemas for meeting endpoints
@@ -44,28 +45,6 @@ const listMeetingsSchema = z.object({
 });
 
 /**
- * Get organization ID from request
- * In Phase 2, this will come from authenticated user
- * For now, uses header or query param for testing
- */
-function getOrganizationId(req: Request): string {
-  const orgId =
-    (req.headers['x-organization-id'] as string) ||
-    (req.query.organizationId as string) ||
-    'demo-org-id'; // Default for development
-
-  return orgId;
-}
-
-/**
- * Get user ID from request
- * In Phase 2, this will come from authenticated user
- */
-function getUserId(req: Request): string | undefined {
-  return (req.headers['x-user-id'] as string) || undefined;
-}
-
-/**
  * Controller for meeting-related HTTP endpoints
  */
 export class MeetingController {
@@ -75,8 +54,9 @@ export class MeetingController {
    */
   async list(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      const authReq = req as AuthenticatedRequest;
       const query = listMeetingsSchema.parse(req.query);
-      const organizationId = getOrganizationId(req);
+      const organizationId = authReq.auth!.organizationId;
 
       const result = await meetingService.list({
         organizationId,
@@ -99,7 +79,8 @@ export class MeetingController {
    */
   async getUpcoming(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const organizationId = getOrganizationId(req);
+      const authReq = req as AuthenticatedRequest;
+      const organizationId = authReq.auth!.organizationId;
       const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
 
       const meetings = await meetingService.getUpcoming(organizationId, limit);
@@ -119,7 +100,8 @@ export class MeetingController {
    */
   async getRecent(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const organizationId = getOrganizationId(req);
+      const authReq = req as AuthenticatedRequest;
+      const organizationId = authReq.auth!.organizationId;
       const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
 
       const meetings = await meetingService.getRecentCompleted(organizationId, limit);
@@ -139,7 +121,8 @@ export class MeetingController {
    */
   async getStats(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const organizationId = getOrganizationId(req);
+      const authReq = req as AuthenticatedRequest;
+      const organizationId = authReq.auth!.organizationId;
       const stats = await meetingService.getStats(organizationId);
 
       res.json({
@@ -157,12 +140,13 @@ export class MeetingController {
    */
   async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      const authReq = req as AuthenticatedRequest;
       const { id } = req.params;
       if (!id) {
         throw errors.badRequest('Meeting ID is required');
       }
 
-      const organizationId = getOrganizationId(req);
+      const organizationId = authReq.auth!.organizationId;
       const meeting = await meetingService.getById(id, organizationId);
 
       res.json({
@@ -180,9 +164,10 @@ export class MeetingController {
    */
   async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      const authReq = req as AuthenticatedRequest;
       const data = createMeetingSchema.parse(req.body);
-      const organizationId = getOrganizationId(req);
-      const createdById = getUserId(req);
+      const organizationId = authReq.auth!.organizationId;
+      const createdById = authReq.auth!.userId;
 
       const meeting = await meetingService.create({
         organizationId,
@@ -205,13 +190,14 @@ export class MeetingController {
    */
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      const authReq = req as AuthenticatedRequest;
       const { id } = req.params;
       if (!id) {
         throw errors.badRequest('Meeting ID is required');
       }
 
       const data = updateMeetingSchema.parse(req.body);
-      const organizationId = getOrganizationId(req);
+      const organizationId = authReq.auth!.organizationId;
 
       const meeting = await meetingService.update(id, organizationId, data);
 
@@ -230,12 +216,13 @@ export class MeetingController {
    */
   async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      const authReq = req as AuthenticatedRequest;
       const { id } = req.params;
       if (!id) {
         throw errors.badRequest('Meeting ID is required');
       }
 
-      const organizationId = getOrganizationId(req);
+      const organizationId = authReq.auth!.organizationId;
       await meetingService.delete(id, organizationId);
 
       res.status(204).send();
@@ -250,12 +237,13 @@ export class MeetingController {
    */
   async getTranscript(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      const authReq = req as AuthenticatedRequest;
       const { id } = req.params;
       if (!id) {
         throw errors.badRequest('Meeting ID is required');
       }
 
-      const organizationId = getOrganizationId(req);
+      const organizationId = authReq.auth!.organizationId;
       const transcript = await meetingService.getTranscript(id, organizationId);
 
       if (!transcript) {
@@ -277,12 +265,13 @@ export class MeetingController {
    */
   async getSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      const authReq = req as AuthenticatedRequest;
       const { id } = req.params;
       if (!id) {
         throw errors.badRequest('Meeting ID is required');
       }
 
-      const organizationId = getOrganizationId(req);
+      const organizationId = authReq.auth!.organizationId;
       const summary = await meetingService.getSummary(id, organizationId);
 
       if (!summary) {
@@ -304,12 +293,13 @@ export class MeetingController {
    */
   async getActionItems(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      const authReq = req as AuthenticatedRequest;
       const { id } = req.params;
       if (!id) {
         throw errors.badRequest('Meeting ID is required');
       }
 
-      const organizationId = getOrganizationId(req);
+      const organizationId = authReq.auth!.organizationId;
       const actionItems = await meetingService.getActionItems(id, organizationId);
 
       res.json({

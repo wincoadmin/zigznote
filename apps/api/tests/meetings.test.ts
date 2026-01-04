@@ -4,6 +4,36 @@ import { createApp } from '../src/app';
 // Mock the database module
 jest.mock('@zigznote/database');
 
+// Mock the auth middleware to add auth info to requests
+jest.mock('../src/middleware/auth', () => {
+  const originalModule = jest.requireActual('../src/middleware/auth');
+  return {
+    ...originalModule,
+    clerkAuthMiddleware: (_req: unknown, _res: unknown, next: () => void) => next(),
+    requireAuth: (req: { auth?: Record<string, string> }, _res: unknown, next: () => void) => {
+      req.auth = {
+        userId: 'test-user-id',
+        clerkUserId: 'clerk-test-user-id',
+        organizationId: 'test-org-id',
+        email: 'test@example.com',
+        role: 'member',
+      };
+      next();
+    },
+    optionalAuth: (req: { auth?: Record<string, string> }, _res: unknown, next: () => void) => {
+      req.auth = {
+        userId: 'test-user-id',
+        clerkUserId: 'clerk-test-user-id',
+        organizationId: 'test-org-id',
+        email: 'test@example.com',
+        role: 'member',
+      };
+      next();
+    },
+    requireAdmin: (_req: unknown, _res: unknown, next: () => void) => next(),
+  };
+});
+
 describe('Meeting Routes', () => {
   const app = createApp();
 

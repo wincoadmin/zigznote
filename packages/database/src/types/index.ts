@@ -65,6 +65,7 @@ export interface MeetingFilterOptions extends BaseFilterOptions {
   startTimeFrom?: Date;
   startTimeTo?: Date;
   search?: string;
+  calendarEventId?: string;
 }
 
 /**
@@ -151,9 +152,11 @@ export interface CreateUserInput {
  * Update user input
  */
 export interface UpdateUserInput {
+  email?: string;
   name?: string;
   role?: string;
   avatarUrl?: string;
+  organizationId?: string;
 }
 
 /**

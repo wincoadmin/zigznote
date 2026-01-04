@@ -100,7 +100,7 @@
 
 ## Phase 2: Authentication & Calendar
 
-**Status:** ⬜ Not Started
+**Status:** ✅ Complete
 **Estimated Time:** 45-60 minutes
 
 ### Planned Deliverables
@@ -119,10 +119,20 @@
 | Google Calendar API | Calendar sync |
 
 ### Key Decisions Made
-_To be filled after phase completion_
+- **Auth Flow**: Clerk SDK + webhooks for user sync, not JWT tokens
+- **Token Storage**: AES-256-GCM encryption with PBKDF2 key derivation (100,000 iterations)
+- **Calendar Sync**: Background jobs with BullMQ, not synchronous
+- **Multi-tenant**: Organization-scoped via Clerk organizations
+- **Express Typing**: Use Request type with casting to AuthenticatedRequest inside handlers
+- **Test Mocking**: Mock auth middleware entirely in Jest to avoid Clerk dependency
 
 ### Actual Changes from Plan
-_To be filled after phase completion_
+- Added encryption utility for secure token storage
+- Calendar connection CRUD operations added
+- Meeting link extraction supports Zoom, Meet, Teams, Webex
+- Added rate limiting middleware (standard, strict, expensive tiers)
+- Health routes moved before auth middleware for unauthenticated access
+- 18 tests passing (4 health, 14 meeting with mocked auth)
 
 ### Handoff File
 `PHASE_2_COMPLETE.md`
@@ -378,7 +388,7 @@ _To be filled after phase completion_
 |-------|------|--------|-----------|
 | 0 | Project Initialization | ✅ | 15-20 min |
 | 1 | Database & Core Backend | ✅ | 45-60 min |
-| 2 | Authentication & Calendar | ⬜ | 45-60 min |
+| 2 | Authentication & Calendar | ✅ | 45-60 min |
 | 3 | Meeting Bots & Transcription | ⬜ | 60-90 min |
 | 4 | AI Summarization | ⬜ | 45-60 min |
 | 5 | Frontend Dashboard | ⬜ | 90-120 min |
@@ -399,6 +409,7 @@ _To be filled after phase completion_
 | 2026-01-04 | Phase 1 | Database and core backend complete |
 | 2026-01-04 | Retrofit | Production quality upgrade - Docker, error handling, file splits |
 | 2026-01-04 | Retrofit | Governance alignment - error infrastructure, logger, Sentry setup |
+| 2026-01-04 | Phase 2 | Authentication (Clerk) and Calendar Integration (Google) complete |
 
 ---
 

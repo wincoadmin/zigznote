@@ -1,13 +1,15 @@
 import { Router } from 'express';
 import type { Router as IRouter } from 'express';
 import { meetingsRouter } from './meetings';
+import calendarRouter from './calendar';
 
 export const apiRouter: IRouter = Router();
 
 /**
- * API version prefix
+ * API version prefix - v1 routes
  */
 apiRouter.use('/v1/meetings', meetingsRouter);
+apiRouter.use('/v1/calendar', calendarRouter);
 
 /**
  * API root - returns API information

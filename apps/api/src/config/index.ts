@@ -12,8 +12,9 @@ const configSchema = z.object({
   databaseUrl: z.string().optional(),
   redisUrl: z.string().optional(),
   corsOrigins: z.array(z.string()).default(['http://localhost:3000']),
-  jwtSecret: z.string().optional(),
   logLevel: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  apiUrl: z.string().default('http://localhost:3001'),
+  webUrl: z.string().default('http://localhost:3000'),
 });
 
 const parseConfig = () => {
@@ -28,8 +29,9 @@ const parseConfig = () => {
     databaseUrl: process.env.DATABASE_URL,
     redisUrl: process.env.REDIS_URL,
     corsOrigins,
-    jwtSecret: process.env.JWT_SECRET,
     logLevel: process.env.LOG_LEVEL,
+    apiUrl: process.env.API_URL,
+    webUrl: process.env.WEB_URL,
   });
 
   if (!result.success) {
@@ -41,8 +43,9 @@ const parseConfig = () => {
         databaseUrl: undefined,
         redisUrl: undefined,
         corsOrigins: ['http://localhost:3000'],
-        jwtSecret: undefined,
         logLevel: 'error' as const,
+        apiUrl: 'http://localhost:3001',
+        webUrl: 'http://localhost:3000',
       };
     }
     console.error('Invalid configuration:', result.error.format());
@@ -52,6 +55,36 @@ const parseConfig = () => {
   return result.data;
 };
 
-export const config = parseConfig();
+const baseConfig = parseConfig();
+
+/**
+ * Application configuration
+ */
+export const config = {
+  ...baseConfig,
+
+  /**
+   * Clerk authentication configuration
+   */
+  clerk: {
+    secretKey: process.env.CLERK_SECRET_KEY || '',
+    publishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '',
+    webhookSecret: process.env.CLERK_WEBHOOK_SECRET || '',
+  },
+
+  /**
+   * Google OAuth configuration
+   */
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID || '',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    redirectUri: process.env.GOOGLE_REDIRECT_URI || `${baseConfig.apiUrl}/api/calendar/google/callback`,
+  },
+
+  /**
+   * Encryption key for storing sensitive data
+   */
+  encryptionKey: process.env.ENCRYPTION_KEY || 'dev-encryption-key-32-chars-!!!',
+};
 
 export type Config = typeof config;

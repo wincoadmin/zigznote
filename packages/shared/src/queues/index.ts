@@ -101,9 +101,15 @@ export interface WebhookJobData {
 }
 
 export interface CalendarSyncJobData {
+  /** Type of sync operation */
+  syncType: 'single' | 'user' | 'all';
+  /** Calendar connection ID (for single sync) */
+  connectionId?: string;
+  /** User ID (for user sync) */
   userId?: string;
+  /** Organization ID for meeting creation */
   organizationId?: string;
-  calendarConnectionId: string;
+  /** Date range for sync */
   syncFrom?: Date;
   syncTo?: Date;
 }

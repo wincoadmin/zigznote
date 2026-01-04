@@ -36,3 +36,10 @@ export {
   type TranscriptInclude,
   type ActionItemStats,
 } from './transcriptRepository';
+
+export {
+  CalendarRepository,
+  calendarRepository,
+  type CreateCalendarConnectionInput,
+  type UpdateCalendarConnectionInput,
+} from './calendarRepository';

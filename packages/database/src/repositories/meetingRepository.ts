@@ -383,6 +383,10 @@ export class MeetingRepository {
       where.title = { contains: filter.search, mode: 'insensitive' };
     }
 
+    if (filter?.calendarEventId) {
+      where.calendarEventId = filter.calendarEventId;
+    }
+
     return where;
   }
 

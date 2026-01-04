@@ -16,6 +16,11 @@ export {
   getQueueStats,
 } from './queues';
 
+export {
+  createCalendarSyncWorker,
+  schedulePeriodicCalendarSync,
+} from './calendarSyncWorker';
+
 // Re-export shared queue definitions
 export {
   QUEUE_NAMES,
