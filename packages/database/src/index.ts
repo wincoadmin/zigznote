@@ -15,4 +15,14 @@ export type {
   AutomationRule,
   Webhook,
   WebhookLog,
+  Prisma,
 } from '@prisma/client';
+
+// Export repositories
+export * from './repositories';
+
+// Export types
+export * from './types';
+
+// Export utilities
+export * from './utils';

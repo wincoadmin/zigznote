@@ -8,6 +8,7 @@ import { config } from './config';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFoundHandler';
 import { requestIdMiddleware } from './middleware/requestId';
+import { standardRateLimit } from './middleware/rateLimit';
 import { healthRouter } from './routes/health';
 import { apiRouter } from './routes/api';
 
@@ -17,6 +18,9 @@ import { apiRouter } from './routes/api';
  */
 export function createApp(): Express {
   const app = express();
+
+  // Trust proxy for rate limiting behind reverse proxy
+  app.set('trust proxy', 1);
 
   // Security middleware
   app.use(helmet());
@@ -36,6 +40,9 @@ export function createApp(): Express {
 
   // Request ID tracking
   app.use(requestIdMiddleware);
+
+  // Rate limiting
+  app.use('/api', standardRateLimit);
 
   // Logging
   if (config.nodeEnv !== 'test') {

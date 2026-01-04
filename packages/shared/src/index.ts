@@ -6,3 +6,6 @@ export * from './constants';
 
 // Utilities
 export * from './utils';
+
+// Queue definitions
+export * from './queues';

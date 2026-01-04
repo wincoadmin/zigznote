@@ -136,11 +136,112 @@ Create a new meeting.
 }
 ```
 
+#### PUT /api/v1/meetings/:id
+
+Update a meeting.
+
+**Request Body:**
+```json
+{
+  "title": "Updated Title",
+  "platform": "meet",
+  "status": "completed"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "title": "Updated Title",
+    "status": "completed",
+    "updatedAt": "2024-01-15T15:00:00Z"
+  }
+}
+```
+
 #### DELETE /api/v1/meetings/:id
 
-Delete a meeting.
+Delete a meeting (soft delete).
 
 **Response:** `204 No Content`
+
+#### GET /api/v1/meetings/upcoming
+
+Get upcoming scheduled meetings.
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| limit | number | 10 | Maximum number to return |
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "title": "Weekly Standup",
+      "status": "scheduled",
+      "startTime": "2024-01-16T09:00:00Z"
+    }
+  ]
+}
+```
+
+#### GET /api/v1/meetings/recent
+
+Get recent completed meetings.
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| limit | number | 10 | Maximum number to return |
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "title": "Product Review",
+      "status": "completed",
+      "endTime": "2024-01-15T15:00:00Z"
+    }
+  ]
+}
+```
+
+#### GET /api/v1/meetings/stats
+
+Get meeting statistics for the organization.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "total": 150,
+    "byStatus": {
+      "scheduled": 5,
+      "in_progress": 1,
+      "completed": 140,
+      "failed": 4
+    },
+    "byPlatform": {
+      "zoom": 100,
+      "meet": 35,
+      "teams": 15
+    },
+    "totalDurationSeconds": 540000,
+    "averageDurationSeconds": 3600
+  }
+}
+```
 
 ---
 
@@ -216,6 +317,32 @@ Regenerate the summary with optional custom prompt.
 ```json
 {
   "customPrompt": "Focus on technical decisions"
+}
+```
+
+---
+
+### Action Items
+
+#### GET /api/v1/meetings/:id/action-items
+
+Get action items extracted from a meeting.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "meetingId": "uuid",
+      "text": "Prepare Q1 roadmap presentation",
+      "assignee": "john@example.com",
+      "dueDate": "2024-01-20T00:00:00Z",
+      "completed": false,
+      "createdAt": "2024-01-15T14:30:00Z"
+    }
+  ]
 }
 ```
 

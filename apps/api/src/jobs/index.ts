@@ -1,47 +1,25 @@
 /**
- * Background job definitions
- * Jobs will be implemented with BullMQ in later phases
+ * Background job definitions and queue exports
  */
 
-export const JOB_NAMES = {
-  TRANSCRIPTION: 'transcription',
-  SUMMARIZATION: 'summarization',
-  CALENDAR_SYNC: 'calendar-sync',
-  WEBHOOK_DELIVERY: 'webhook-delivery',
-} as const;
+export {
+  getRedisConnection,
+  getTranscriptionQueue,
+  getSummarizationQueue,
+  getWebhookQueue,
+  getCalendarSyncQueue,
+  queueTranscriptionJob,
+  queueSummarizationJob,
+  queueWebhookJob,
+  queueCalendarSyncJob,
+  closeQueues,
+  getQueueStats,
+} from './queues';
 
-export type JobName = (typeof JOB_NAMES)[keyof typeof JOB_NAMES];
-
-/**
- * Job queue configuration
- */
-export const JOB_OPTIONS = {
-  [JOB_NAMES.TRANSCRIPTION]: {
-    attempts: 3,
-    backoff: {
-      type: 'exponential' as const,
-      delay: 1000,
-    },
-  },
-  [JOB_NAMES.SUMMARIZATION]: {
-    attempts: 3,
-    backoff: {
-      type: 'exponential' as const,
-      delay: 1000,
-    },
-  },
-  [JOB_NAMES.CALENDAR_SYNC]: {
-    attempts: 5,
-    backoff: {
-      type: 'exponential' as const,
-      delay: 5000,
-    },
-  },
-  [JOB_NAMES.WEBHOOK_DELIVERY]: {
-    attempts: 5,
-    backoff: {
-      type: 'exponential' as const,
-      delay: 1000,
-    },
-  },
-};
+// Re-export shared queue definitions
+export {
+  QUEUE_NAMES,
+  JOB_TYPES,
+  DEFAULT_JOB_OPTIONS,
+  JOB_PRIORITY,
+} from '@zigznote/shared';

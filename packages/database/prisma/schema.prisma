@@ -16,12 +16,13 @@ datasource db {
 // ============================================
 
 model Organization {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   name      String
-  plan      String   @default("free") // free, pro, enterprise
-  settings  Json     @default("{}")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  plan      String    @default("free") // free, pro, enterprise
+  settings  Json      @default("{}")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
 
   users                  User[]
   meetings               Meeting[]
@@ -29,19 +30,21 @@ model Organization {
   automationRules        AutomationRule[]
   webhooks               Webhook[]
 
+  @@index([deletedAt])
   @@map("organizations")
 }
 
 model User {
-  id             String   @id @default(uuid())
-  organizationId String   @map("organization_id")
-  email          String   @unique
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  email          String    @unique
   name           String?
-  clerkId        String?  @unique @map("clerk_id")
-  role           String   @default("member") // admin, member
-  avatarUrl      String?  @map("avatar_url")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  clerkId        String?   @unique @map("clerk_id")
+  role           String    @default("member") // admin, member
+  avatarUrl      String?   @map("avatar_url")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
 
   organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   calendarConnections CalendarConnection[]
@@ -49,6 +52,7 @@ model User {
 
   @@index([organizationId])
   @@index([clerkId])
+  @@index([deletedAt])
   @@map("users")
 }
 
@@ -96,6 +100,7 @@ model Meeting {
   metadata        Json      @default("{}")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
 
   organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   createdBy    User?                @relation("MeetingCreator", fields: [createdById], references: [id], onDelete: SetNull)
@@ -109,6 +114,7 @@ model Meeting {
   @@index([status])
   @@index([startTime])
   @@index([createdById])
+  @@index([deletedAt])
   @@map("meetings")
 }
 

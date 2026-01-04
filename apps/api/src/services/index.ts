@@ -1,7 +1,8 @@
-export { MeetingService } from './meetingService';
+export { MeetingService, meetingService } from './meetingService';
 export type {
-  Meeting,
+  MeetingResponse,
   CreateMeetingData,
+  UpdateMeetingData,
   ListMeetingsQuery,
   ListMeetingsResult,
 } from './meetingService';
