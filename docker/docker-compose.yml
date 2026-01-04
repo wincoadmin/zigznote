@@ -1,14 +1,14 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
+  # PostgreSQL Database - Production-simulated
   postgres:
     image: pgvector/pgvector:pg15
     container_name: zigznote-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: zigznote_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SecureDevPassword123!}
       POSTGRES_DB: zigznote
     ports:
       - "5432:5432"
@@ -16,50 +16,61 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U zigznote_user -d zigznote"]
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
-  # PostgreSQL Test Database (separate instance on different port)
+  # PostgreSQL Test Database (separate instance, tmpfs for speed)
   postgres-test:
     image: pgvector/pgvector:pg15
     container_name: zigznote-postgres-test
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: zigznote_test
+      POSTGRES_PASSWORD: test_password
       POSTGRES_DB: zigznote_test
     ports:
       - "5433:5432"
-    volumes:
-      - postgres_test_data:/var/lib/postgresql/data
+    tmpfs:
+      - /var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U zigznote_test -d zigznote_test"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Redis for caching and job queues
+  # Redis for caching and job queues - Production-simulated
   redis:
     image: redis:7-alpine
     container_name: zigznote-redis
     restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD:-DevRedisPassword123!}
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-DevRedisPassword123!}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-    command: redis-server --appendonly yes
+    deploy:
+      resources:
+        limits:
+          memory: 128M
 
 volumes:
   postgres_data:
-    driver: local
-  postgres_test_data:
     driver: local
   redis_data:
     driver: local
