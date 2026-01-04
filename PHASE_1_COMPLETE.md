@@ -157,4 +157,53 @@ The BullMQ job queues are ready but need worker implementations in Phase 3+.
 
 ---
 
+## Retrofit: Production Quality Upgrade
+
+The following upgrades were applied to bring earlier phases up to production standards:
+
+### Docker Upgrades
+- PostgreSQL with password authentication (`POSTGRES_PASSWORD`)
+- Redis with password authentication (`REDIS_PASSWORD`)
+- Resource limits (512MB Postgres, 128MB Redis)
+- Health checks configured for all services
+- Separate test database with tmpfs for fast tests
+- pgAdmin included for database management
+
+### Environment Handling
+- Environment validation at startup (`@zigznote/shared/config/env-validator`)
+- TZ=UTC enforced via `enforceUTC()` function
+- Phase-aware validation (only requires env vars for current phase)
+- Graceful warnings for missing non-critical variables
+
+### Testing Upgrades
+- Jest setup forces UTC timezone globally
+- Database edge case tests added (`packages/database/tests/edge-cases.test.ts`):
+  - Connection handling (concurrent queries, reconnection)
+  - Data integrity (foreign keys, unique constraints)
+  - Transaction handling (rollback, concurrent updates)
+  - Large data handling (large text, JSON arrays)
+  - Query performance validation
+  - Soft delete behavior
+- Multi-scale seeding available for different test scenarios
+
+### Commands Added
+- `pnpm --filter @zigznote/database seed:minimal` - Quick seed with minimal data
+- `pnpm --filter @zigznote/database seed:load-test` - Load test with 100 orgs, 2000 users, 100k meetings
+
+### New Files
+- `packages/shared/src/config/env-validator.ts` - Environment validation
+- `packages/database/tests/edge-cases.test.ts` - Edge case tests
+- `packages/config/jest/setup.ts` - Jest global setup with UTC
+
+### Modified Files
+- `docker/docker-compose.yml` - Production-simulated configuration
+- `.env.example` - Updated with new credentials format
+- `apps/api/src/index.ts` - Environment validation at startup
+- `packages/database/prisma/seed.ts` - Multi-scale seeding
+- `packages/database/package.json` - New seed scripts
+
+*Retrofit completed on January 4, 2026*
+
+---
+
 *Phase 1 completed on January 4, 2026*
