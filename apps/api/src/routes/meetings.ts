@@ -94,6 +94,47 @@ meetingsRouter.get('/:id/summary', meetingController.getSummary.bind(meetingCont
 meetingsRouter.get('/:id/action-items', meetingController.getActionItems.bind(meetingController));
 
 /**
+ * @route PATCH /api/v1/meetings/:id/action-items/:actionItemId
+ * @description Update an action item (mark complete, change assignee, etc.)
+ * @body {string} text - Action item text
+ * @body {string} assignee - Person responsible
+ * @body {Date} dueDate - Due date
+ * @body {boolean} completed - Completion status
+ */
+meetingsRouter.patch(
+  '/:id/action-items/:actionItemId',
+  meetingController.updateActionItem.bind(meetingController)
+);
+
+/**
+ * @route DELETE /api/v1/meetings/:id/action-items/:actionItemId
+ * @description Delete an action item
+ */
+meetingsRouter.delete(
+  '/:id/action-items/:actionItemId',
+  meetingController.deleteActionItem.bind(meetingController)
+);
+
+/**
+ * @route POST /api/v1/meetings/:id/summary/regenerate
+ * @description Regenerate the AI summary for a meeting
+ * @body {string} forceModel - Optional: "claude" or "gpt" to force a specific model
+ */
+meetingsRouter.post(
+  '/:id/summary/regenerate',
+  meetingController.regenerateSummary.bind(meetingController)
+);
+
+/**
+ * @route POST /api/v1/meetings/:id/insights
+ * @description Extract custom insights from a meeting
+ * @body {string} templateId - ID of the insight template to use
+ * @body {string} forceModel - Optional: "claude" or "gpt" to force a specific model
+ */
+import { insightsController } from '../controllers/insightsController';
+meetingsRouter.post('/:id/insights', insightsController.extractInsights.bind(insightsController));
+
+/**
  * @route POST /api/v1/meetings/:id/bot
  * @description Create and send a bot to join the meeting
  * @body {string} botName - Optional custom bot name

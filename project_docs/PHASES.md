@@ -189,7 +189,7 @@
 
 ## Phase 4: AI Summarization
 
-**Status:** ⬜ Not Started
+**Status:** ✅ Complete
 **Estimated Time:** 45-60 minutes
 
 ### Planned Deliverables
@@ -210,10 +210,27 @@
 | OpenAI GPT-4o-mini | Fallback summarization |
 
 ### Key Decisions Made
-_To be filled after phase completion_
+- **Model Selection Threshold**: 5000 words - shorter transcripts use GPT-4o-mini for cost, longer use Claude for quality
+- **Chunking Strategy**: 4000 words per chunk for long transcripts
+- **Zod Validation**: Type-safe output parsing with detailed error messages
+- **JSON Mode**: Both providers support structured JSON output
+- **Fallback Logic**: Primary provider → Retry 3x → Fallback to alternate provider
+- **Due Date Parsing**: Support for relative dates ("next Monday", "in 2 weeks", "EOW")
 
 ### Actual Changes from Plan
-_To be filled after phase completion_
+- Added 5 built-in insight templates (Sales Signals, Interview Notes, Project Status, Customer Feedback, Meeting Effectiveness)
+- Added insights endpoint at `/api/v1/insights/templates`
+- Added action item PATCH/DELETE endpoints for UI management
+- Structured output includes sentiment analysis
+- Prompt versioning implemented (v1.0.0)
+- 95 tests for summarization worker alone
+
+### Test Coverage
+- Summarization Worker: 95 tests
+- API: 74 tests
+- Transcription Worker: 33 tests
+- Web: 11 tests
+- **Total: 213 tests**
 
 ### Handoff File
 `PHASE_4_COMPLETE.md`
@@ -406,7 +423,7 @@ _To be filled after phase completion_
 | 1 | Database & Core Backend | ✅ | 45-60 min |
 | 2 | Authentication & Calendar | ✅ | 45-60 min |
 | 3 | Meeting Bots & Transcription | ✅ | 60-90 min |
-| 4 | AI Summarization | ⬜ | 45-60 min |
+| 4 | AI Summarization | ✅ | 45-60 min |
 | 5 | Frontend Dashboard | ⬜ | 90-120 min |
 | 6 | Integrations & Billing | ⬜ | 90-120 min |
 | 7 | Admin Panel | ⬜ | 90-120 min |
@@ -427,6 +444,7 @@ _To be filled after phase completion_
 | 2026-01-04 | Retrofit | Governance alignment - error infrastructure, logger, Sentry setup |
 | 2026-01-04 | Phase 2 | Authentication (Clerk) and Calendar Integration (Google) complete |
 | 2026-01-04 | Phase 3 | Meeting bots (Recall.ai) and transcription (Deepgram) complete |
+| 2026-01-04 | Phase 4 | AI Summarization (Claude/GPT) with insights and action items complete |
 
 ---
 

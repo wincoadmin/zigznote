@@ -1,7 +1,15 @@
-import { Worker, Job } from 'bullmq';
+/**
+ * Summarization Worker Service
+ * Processes summarization jobs from the BullMQ queue
+ */
+
+import { Worker } from 'bullmq';
 import Redis from 'ioredis';
 import pino from 'pino';
 import dotenv from 'dotenv';
+import { QUEUE_NAMES } from '@zigznote/shared';
+import { processSummarizationJob, handleJobFailure } from './processor';
+import type { SummarizationJob, SummarizationResult } from './types';
 
 dotenv.config();
 
@@ -17,124 +25,100 @@ const logger = pino({
 });
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
-const QUEUE_NAME = 'summarization';
-
-interface SummarizationJob {
-  meetingId: string;
-  transcript: string;
-  options?: {
-    customPrompt?: string;
-    extractActionItems?: boolean;
-    extractDecisions?: boolean;
-  };
-}
-
-interface SummarizationResult {
-  meetingId: string;
-  summary: {
-    executiveSummary: string;
-    topics: Array<{
-      title: string;
-      summary: string;
-    }>;
-    decisions: string[];
-    questions: string[];
-    actionItems: Array<{
-      text: string;
-      assignee?: string;
-    }>;
-  };
-  modelUsed: string;
-}
-
-/**
- * Process summarization job
- * In Phase 0, this is a placeholder that will be implemented with Claude in Phase 4
- */
-async function processSummarization(
-  job: Job<SummarizationJob>
-): Promise<SummarizationResult> {
-  const { meetingId, transcript, options } = job.data;
-
-  logger.info({ meetingId, transcriptLength: transcript.length }, 'Processing summarization job');
-
-  // TODO: Phase 4 - Implement Claude summarization
-  // const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  // const message = await anthropic.messages.create({
-  //   model: 'claude-3-5-sonnet-20241022',
-  //   max_tokens: 4096,
-  //   messages: [{ role: 'user', content: summarizationPrompt }],
-  // });
-
-  // Placeholder response for Phase 0
-  const result: SummarizationResult = {
-    meetingId,
-    summary: {
-      executiveSummary: 'This is a placeholder summary for the meeting.',
-      topics: [
-        {
-          title: 'Main Topic',
-          summary: 'Discussion points and key takeaways.',
-        },
-      ],
-      decisions: ['Placeholder decision item'],
-      questions: ['What are the next steps?'],
-      actionItems: options?.extractActionItems
-        ? [{ text: 'Follow up on action item', assignee: 'Team' }]
-        : [],
-    },
-    modelUsed: 'placeholder',
-  };
-
-  logger.info({ meetingId }, 'Summarization completed');
-  return result;
-}
+const CONCURRENCY = parseInt(process.env.SUMMARIZATION_CONCURRENCY || '2', 10);
 
 /**
  * Start the summarization worker
  */
 function startWorker(): void {
+  // Validate required environment variables
+  const hasAnthropicKey = !!process.env.ANTHROPIC_API_KEY;
+  const hasOpenAIKey = !!process.env.OPENAI_API_KEY;
+
+  if (!hasAnthropicKey && !hasOpenAIKey) {
+    logger.error('No LLM API keys configured. Set ANTHROPIC_API_KEY or OPENAI_API_KEY');
+    process.exit(1);
+  }
+
+  logger.info(
+    {
+      hasAnthropicKey,
+      hasOpenAIKey,
+      concurrency: CONCURRENCY,
+    },
+    'Starting summarization worker'
+  );
+
   const connection = new Redis(REDIS_URL, {
     maxRetriesPerRequest: null,
   });
 
   const worker = new Worker<SummarizationJob, SummarizationResult>(
-    QUEUE_NAME,
-    processSummarization,
+    QUEUE_NAMES.SUMMARIZATION,
+    processSummarizationJob,
     {
       connection,
-      concurrency: 3,
+      concurrency: CONCURRENCY,
+      lockDuration: 300000, // 5 minutes for long summaries
     }
   );
 
   worker.on('completed', (job, result) => {
-    logger.info({ jobId: job.id, meetingId: result.meetingId }, 'Job completed');
+    logger.info(
+      {
+        jobId: job.id,
+        meetingId: result.meetingId,
+        summaryId: result.summaryId,
+        actionItemCount: result.actionItemCount,
+        tokensUsed: result.tokensUsed,
+        modelUsed: result.modelUsed,
+        processingTimeMs: result.processingTimeMs,
+      },
+      'Summarization job completed'
+    );
   });
 
-  worker.on('failed', (job, err) => {
-    logger.error({ jobId: job?.id, error: err.message }, 'Job failed');
+  worker.on('failed', async (job, err) => {
+    if (job) {
+      logger.error(
+        {
+          jobId: job.id,
+          meetingId: job.data.meetingId,
+          error: err.message,
+          attempts: job.attemptsMade,
+        },
+        'Summarization job failed'
+      );
+
+      // Handle permanent failure
+      if (job.attemptsMade >= (job.opts.attempts || 3)) {
+        await handleJobFailure(job, err);
+      }
+    } else {
+      logger.error({ error: err.message }, 'Job failed without job reference');
+    }
   });
 
   worker.on('error', (err) => {
     logger.error({ error: err.message }, 'Worker error');
   });
 
+  worker.on('stalled', (jobId) => {
+    logger.warn({ jobId }, 'Job stalled');
+  });
+
   logger.info('Summarization worker started');
 
   // Graceful shutdown
-  process.on('SIGTERM', async () => {
-    logger.info('SIGTERM received, shutting down worker');
+  const shutdown = async (signal: string) => {
+    logger.info({ signal }, 'Shutdown signal received');
     await worker.close();
     await connection.quit();
     process.exit(0);
-  });
+  };
 
-  process.on('SIGINT', async () => {
-    logger.info('SIGINT received, shutting down worker');
-    await worker.close();
-    await connection.quit();
-    process.exit(0);
-  });
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 startWorker();

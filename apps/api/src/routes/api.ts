@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { Router as IRouter } from 'express';
 import { meetingsRouter } from './meetings';
 import calendarRouter from './calendar';
+import { insightsRouter } from './insights';
 
 export const apiRouter: IRouter = Router();
 
@@ -10,6 +11,7 @@ export const apiRouter: IRouter = Router();
  */
 apiRouter.use('/v1/meetings', meetingsRouter);
 apiRouter.use('/v1/calendar', calendarRouter);
+apiRouter.use('/v1/insights', insightsRouter);
 
 /**
  * API root - returns API information

@@ -11,6 +11,9 @@ import {
   transcriptRepository,
 } from '@zigznote/database';
 import type { Meeting, Transcript, Summary, ActionItem } from '@zigznote/database';
+import { Queue } from 'bullmq';
+import Redis from 'ioredis';
+import { QUEUE_NAMES } from '@zigznote/shared';
 import { logger } from '../utils/logger';
 import { errors } from '../utils/errors';
 
@@ -84,6 +87,29 @@ export interface ListMeetingsResult {
     totalPages: number;
     hasMore: boolean;
   };
+}
+
+// Redis connection for job queue
+const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+let redisConnection: Redis | null = null;
+let summarizationQueue: Queue | null = null;
+
+function getRedisConnection(): Redis {
+  if (!redisConnection) {
+    redisConnection = new Redis(REDIS_URL, {
+      maxRetriesPerRequest: null,
+    });
+  }
+  return redisConnection;
+}
+
+function getSummarizationQueue(): Queue {
+  if (!summarizationQueue) {
+    summarizationQueue = new Queue(QUEUE_NAMES.SUMMARIZATION, {
+      connection: getRedisConnection(),
+    });
+  }
+  return summarizationQueue;
 }
 
 /**
@@ -355,6 +381,132 @@ export class MeetingService {
     }
 
     return transcriptRepository.findActionItemsByMeetingId(meetingId);
+  }
+
+  /**
+   * Regenerate summary for a meeting
+   * @param meetingId - Meeting ID
+   * @param organizationId - Organization ID (for access control)
+   * @param options - Optional parameters (model preference)
+   */
+  async regenerateSummary(
+    meetingId: string,
+    organizationId: string,
+    options?: { forceModel?: 'claude' | 'gpt' }
+  ): Promise<{ jobId: string; message: string }> {
+    logger.debug({ meetingId, options }, 'Regenerating meeting summary');
+
+    // Verify access
+    const meeting = await meetingRepository.findById(meetingId);
+    if (!meeting) {
+      throw errors.notFound('Meeting');
+    }
+    if (meeting.organizationId !== organizationId) {
+      throw errors.forbidden('Access denied to this meeting');
+    }
+
+    // Check if transcript exists
+    const transcript = await transcriptRepository.findByMeetingId(meetingId);
+    if (!transcript) {
+      throw errors.badRequest('No transcript available for this meeting');
+    }
+
+    // Queue summarization job
+    const queue = getSummarizationQueue();
+    const job = await queue.add('regenerate', {
+      meetingId,
+      transcriptId: transcript.id,
+      forceModel: options?.forceModel,
+    });
+
+    logger.info({ meetingId, jobId: job.id }, 'Summary regeneration queued');
+
+    return {
+      jobId: job.id || 'unknown',
+      message: 'Summary regeneration has been queued',
+    };
+  }
+
+  /**
+   * Update an action item
+   * @param meetingId - Meeting ID
+   * @param actionItemId - Action item ID
+   * @param organizationId - Organization ID (for access control)
+   * @param data - Update data
+   */
+  async updateActionItem(
+    meetingId: string,
+    actionItemId: string,
+    organizationId: string,
+    data: {
+      text?: string;
+      assignee?: string;
+      dueDate?: Date;
+      completed?: boolean;
+    }
+  ): Promise<ActionItem> {
+    logger.debug({ meetingId, actionItemId, data }, 'Updating action item');
+
+    // Verify meeting access
+    const meeting = await meetingRepository.findById(meetingId);
+    if (!meeting) {
+      throw errors.notFound('Meeting');
+    }
+    if (meeting.organizationId !== organizationId) {
+      throw errors.forbidden('Access denied to this meeting');
+    }
+
+    // Verify action item exists and belongs to meeting
+    const actionItem = await transcriptRepository.findActionItemById(actionItemId);
+    if (!actionItem) {
+      throw errors.notFound('Action item');
+    }
+    if (actionItem.meetingId !== meetingId) {
+      throw errors.forbidden('Action item does not belong to this meeting');
+    }
+
+    // Update the action item
+    const updated = await transcriptRepository.updateActionItem(actionItemId, data);
+
+    logger.info({ actionItemId, completed: data.completed }, 'Action item updated');
+
+    return updated;
+  }
+
+  /**
+   * Delete an action item
+   * @param meetingId - Meeting ID
+   * @param actionItemId - Action item ID
+   * @param organizationId - Organization ID (for access control)
+   */
+  async deleteActionItem(
+    meetingId: string,
+    actionItemId: string,
+    organizationId: string
+  ): Promise<void> {
+    logger.debug({ meetingId, actionItemId }, 'Deleting action item');
+
+    // Verify meeting access
+    const meeting = await meetingRepository.findById(meetingId);
+    if (!meeting) {
+      throw errors.notFound('Meeting');
+    }
+    if (meeting.organizationId !== organizationId) {
+      throw errors.forbidden('Access denied to this meeting');
+    }
+
+    // Verify action item exists and belongs to meeting
+    const actionItem = await transcriptRepository.findActionItemById(actionItemId);
+    if (!actionItem) {
+      throw errors.notFound('Action item');
+    }
+    if (actionItem.meetingId !== meetingId) {
+      throw errors.forbidden('Action item does not belong to this meeting');
+    }
+
+    await transcriptRepository.deleteActionItem(actionItemId);
+
+    logger.info({ actionItemId }, 'Action item deleted');
   }
 
   /**

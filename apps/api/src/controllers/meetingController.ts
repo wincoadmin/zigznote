@@ -456,6 +456,102 @@ export class MeetingController {
       next(error);
     }
   }
+
+  /**
+   * Regenerate summary for a meeting
+   * POST /api/v1/meetings/:id/summary/regenerate
+   */
+  async regenerateSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const { id } = req.params;
+      if (!id) {
+        throw errors.badRequest('Meeting ID is required');
+      }
+
+      const organizationId = authReq.auth!.organizationId;
+      const { forceModel } = req.body || {};
+
+      // Validate forceModel if provided
+      if (forceModel && forceModel !== 'claude' && forceModel !== 'gpt') {
+        throw errors.badRequest('forceModel must be "claude" or "gpt"');
+      }
+
+      const result = await meetingService.regenerateSummary(id, organizationId, {
+        forceModel,
+      });
+
+      res.status(202).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Update an action item
+   * PATCH /api/v1/meetings/:id/action-items/:actionItemId
+   */
+  async updateActionItem(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const { id, actionItemId } = req.params;
+      if (!id) {
+        throw errors.badRequest('Meeting ID is required');
+      }
+      if (!actionItemId) {
+        throw errors.badRequest('Action item ID is required');
+      }
+
+      const organizationId = authReq.auth!.organizationId;
+
+      // Validate and parse update data
+      const updateSchema = z.object({
+        text: z.string().min(1).optional(),
+        assignee: z.string().optional(),
+        dueDate: z.coerce.date().optional(),
+        completed: z.boolean().optional(),
+      });
+
+      const data = updateSchema.parse(req.body);
+
+      const updated = await meetingService.updateActionItem(id, actionItemId, organizationId, data);
+
+      res.json({
+        success: true,
+        data: updated,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Delete an action item
+   * DELETE /api/v1/meetings/:id/action-items/:actionItemId
+   */
+  async deleteActionItem(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const { id, actionItemId } = req.params;
+      if (!id) {
+        throw errors.badRequest('Meeting ID is required');
+      }
+      if (!actionItemId) {
+        throw errors.badRequest('Action item ID is required');
+      }
+
+      const organizationId = authReq.auth!.organizationId;
+
+      await meetingService.deleteActionItem(id, actionItemId, organizationId);
+
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 // Export singleton instance
