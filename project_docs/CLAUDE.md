@@ -32,28 +32,48 @@ ultrathink: Design the database schema for storing meeting transcripts with supp
 ## 📁 Project Structure (Monorepo)
 
 ```
-meeting-assistant/
+zigznote/
 ├── apps/
-│   ├── api/                 # Express.js backend (Clean Architecture)
+│   ├── api/                 # Express.js backend (serves both user & admin)
 │   │   ├── src/
-│   │   │   ├── routes/      # Route definitions
-│   │   │   ├── controllers/ # Request handlers (thin, delegate to services)
-│   │   │   ├── services/    # Business logic (testable, no framework deps)
-│   │   │   ├── repositories/# Data access (abstracts database)
-│   │   │   ├── middleware/  # Express middleware
-│   │   │   ├── jobs/        # Background job definitions
-│   │   │   ├── integrations/# Third-party integrations
-│   │   │   ├── utils/       # Helpers
-│   │   │   ├── types/       # TypeScript types
-│   │   │   └── config/      # Configuration
+│   │   │   ├── routes/
+│   │   │   │   ├── api/     # User-facing API routes
+│   │   │   │   └── admin/   # Admin-only API routes
+│   │   │   ├── controllers/
+│   │   │   ├── services/
+│   │   │   ├── repositories/
+│   │   │   ├── middleware/
+│   │   │   │   ├── auth.ts          # User auth (Clerk)
+│   │   │   │   └── adminAuth.ts     # Admin auth (separate)
+│   │   │   ├── jobs/
+│   │   │   ├── integrations/
+│   │   │   └── config/
 │   │   └── tests/
-│   └── web/                 # Next.js 14 frontend (App Router)
-│       ├── app/             # Pages and layouts
-│       ├── components/      # React components
-│       ├── lib/             # API client, hooks, utilities
+│   ├── web/                 # User app (app.zigznote.com)
+│   │   ├── app/
+│   │   ├── components/
+│   │   ├── lib/
+│   │   └── tests/
+│   └── admin/               # Admin panel (admin.zigznote.com) ← SEPARATE APP
+│       ├── app/
+│       │   ├── (auth)/          # Admin login (email + password + 2FA)
+│       │   └── (dashboard)/     # Admin dashboard pages
+│       │       ├── page.tsx             # Overview dashboard
+│       │       ├── api-keys/            # API key management
+│       │       ├── users/               # User management
+│       │       ├── organizations/       # Org management + billing override
+│       │       ├── billing/             # Subscription & revenue
+│       │       ├── analytics/           # Usage analytics
+│       │       ├── system/              # Config, feature flags
+│       │       ├── security/            # Audit logs, access control
+│       │       ├── support/             # Support tools
+│       │       ├── operations/          # System health, jobs
+│       │       └── settings/            # Admin settings
+│       ├── components/
+│       ├── lib/
 │       └── tests/
 ├── packages/
-│   ├── database/            # Prisma schema + repositories
+│   ├── database/            # Prisma schema + repositories (shared)
 │   ├── shared/              # Shared types, utils, constants
 │   └── config/              # Shared ESLint, TypeScript, Jest configs
 ├── services/
@@ -62,6 +82,13 @@ meeting-assistant/
 ├── docker/
 ├── docs/
 └── .github/workflows/
+```
+
+### Deployment URLs
+```
+app.zigznote.com        →  apps/web     (User Dashboard)
+admin.zigznote.com      →  apps/admin   (Admin Panel - IP restricted)
+api.zigznote.com        →  apps/api     (Shared API)
 ```
 
 ---
@@ -159,16 +186,21 @@ Summary: [Brief description of what was completed]
 
 ```env
 # Database
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/meeting_assistant
-DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5433/meeting_assistant_test
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/zigznote
+DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5433/zigznote_test
 
 # Redis
 REDIS_URL=redis://localhost:6379
 
-# Authentication (Clerk)
+# Authentication (Clerk - User App)
 CLERK_SECRET_KEY=
 CLERK_WEBHOOK_SECRET=
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+
+# Admin Panel Authentication
+ADMIN_JWT_SECRET=               # Secret for admin JWT tokens
+ADMIN_2FA_ISSUER=zigznote       # 2FA app display name
+ADMIN_ALLOWED_IPS=              # Comma-separated IP allowlist (optional)
 
 # Meeting Bots (Recall.ai)
 RECALL_API_KEY=
@@ -185,9 +217,26 @@ OPENAI_API_KEY=
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 
-# App
+# Payment Providers (at least one required)
+DEFAULT_PAYMENT_PROVIDER=stripe  # 'stripe' or 'flutterwave'
+
+# Stripe
+STRIPE_SECRET_KEY=
+STRIPE_PUBLISHABLE_KEY=
+STRIPE_WEBHOOK_SECRET=
+
+# Flutterwave
+FLUTTERWAVE_PUBLIC_KEY=
+FLUTTERWAVE_SECRET_KEY=
+FLUTTERWAVE_WEBHOOK_SECRET=
+
+# App URLs
 API_URL=http://localhost:3001
 WEB_URL=http://localhost:3000
+ADMIN_URL=http://localhost:3002
+
+# Encryption (for storing API keys in database)
+ENCRYPTION_KEY=                 # 32-byte key for AES-256 encryption
 ```
 
 ---
@@ -261,16 +310,51 @@ pnpm build
 - [ ] Next.js dashboard
 - [ ] Meeting list & detail
 - [ ] Player + transcript sync
+- [ ] zigznote branding & logo
 
-### Phase 6: Integrations
-- [ ] Slack
-- [ ] HubSpot
-- [ ] Webhooks
+### Phase 6: Integrations & Billing
+- [ ] Slack integration
+- [ ] HubSpot integration
+- [ ] Webhooks system
+- [ ] Payment provider abstraction layer
+- [ ] Stripe provider implementation
+- [ ] Flutterwave provider implementation
+- [ ] Subscription management
+- [ ] Billing UI
 
-### Phase 7: Search & Polish
+### Phase 7: Admin Panel (Separate App)
+- [ ] Admin authentication (email + 2FA)
+- [ ] API key management vault
+- [ ] User & organization management
+- [ ] Billing overrides (complimentary accounts)
+- [ ] System configuration & feature flags
+- [ ] Analytics & reporting dashboards
+- [ ] Security & audit logs
+- [ ] Support tools (impersonation, debug)
+- [ ] Operations monitoring (jobs, health)
+
+### Phase 8: Search & Polish
 - [ ] Full-text search
-- [ ] Semantic search
-- [ ] Production docs
+- [ ] Semantic search with pgvector
+- [ ] Search UI
+- [ ] AI meeting assistant (Q&A)
+- [ ] In-app help assistant (hardened)
+- [ ] Onboarding flow
+- [ ] Proactive help system
+- [ ] Production documentation
+
+### Phase 8.5: Hardening & Stress Testing
+- [ ] Edge case tests for all phases
+- [ ] Security penetration testing (OWASP Top 10)
+- [ ] Load testing (100+ concurrent users)
+- [ ] Chaos engineering (fault injection)
+- [ ] Accessibility audit (WCAG 2.1 AA)
+- [ ] Performance benchmarks
+- [ ] E2E critical path tests
+- [ ] 95%+ coverage on critical code
+
+### 🔧 Retrofit (if needed)
+If Phase 0/1 were completed before production simulation was added, run the **"RETROFIT: Production Quality Upgrade"** prompt in STARTER_PROMPTS.md to upgrade existing infrastructure without breaking anything.
 
 ---
 
