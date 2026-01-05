@@ -20,7 +20,7 @@
 
 ## Phase 0: Project Initialization
 
-**Status:** ✅ Complete
+**Status:** ⬜ Not Started
 **Estimated Time:** 15-20 minutes
 
 ### Planned Deliverables
@@ -34,17 +34,10 @@
 - Environment validation
 
 ### Key Decisions Made
-- Used pnpm workspaces with Turborepo for monorepo orchestration
-- PostgreSQL with pgvector extension for future semantic search
-- Redis for job queues and caching
-- Jest with ts-jest for TypeScript testing
-- GitHub Actions for CI with parallel testing
+_To be filled after phase completion_
 
 ### Actual Changes from Plan
-- Docker config upgraded to production-simulated (password auth, resource limits)
-- Added comprehensive error hierarchy with traceId support
-- Added structured logging with pino and sensitive field redaction
-- Added Sentry monitoring setup with operational error filtering
+_To be filled after phase completion_
 
 ### Handoff File
 `PHASE_0_COMPLETE.md`
@@ -53,7 +46,7 @@
 
 ## Phase 1: Database & Core Backend
 
-**Status:** ✅ Complete
+**Status:** ⬜ Not Started
 **Estimated Time:** 45-60 minutes
 
 ### Planned Deliverables
@@ -76,22 +69,10 @@
 | actionItems | Extracted action items |
 
 ### Key Decisions Made
-- Soft delete pattern for meetings, users, organizations
-- Repository pattern for all database access
-- Organization-scoped queries for multi-tenant security
-- Consistent pagination format across all list endpoints
-- Type-safe BullMQ job definitions
+_To be filled after phase completion_
 
 ### Actual Changes from Plan
-- Repositories split per governance file size limits:
-  - meetingRepository → core CRUD
-  - meetingQueryRepository → complex queries
-  - meetingStatsRepository → statistics
-  - transcriptRepository → transcript operations
-  - summaryRepository → summary operations
-  - actionItemRepository → action item operations
-- Multi-scale seeding (minimal, development, load-test)
-- Edge case tests for data integrity, transactions, large data
+_To be filled after phase completion_
 
 ### Handoff File
 `PHASE_1_COMPLETE.md`
@@ -100,7 +81,7 @@
 
 ## Phase 2: Authentication & Calendar
 
-**Status:** ✅ Complete
+**Status:** ⬜ Not Started
 **Estimated Time:** 45-60 minutes
 
 ### Planned Deliverables
@@ -119,20 +100,10 @@
 | Google Calendar API | Calendar sync |
 
 ### Key Decisions Made
-- **Auth Flow**: Clerk SDK + webhooks for user sync, not JWT tokens
-- **Token Storage**: AES-256-GCM encryption with PBKDF2 key derivation (100,000 iterations)
-- **Calendar Sync**: Background jobs with BullMQ, not synchronous
-- **Multi-tenant**: Organization-scoped via Clerk organizations
-- **Express Typing**: Use Request type with casting to AuthenticatedRequest inside handlers
-- **Test Mocking**: Mock auth middleware entirely in Jest to avoid Clerk dependency
+_To be filled after phase completion_
 
 ### Actual Changes from Plan
-- Added encryption utility for secure token storage
-- Calendar connection CRUD operations added
-- Meeting link extraction supports Zoom, Meet, Teams, Webex
-- Added rate limiting middleware (standard, strict, expensive tiers)
-- Health routes moved before auth middleware for unauthenticated access
-- 18 tests passing (4 health, 14 meeting with mocked auth)
+_To be filled after phase completion_
 
 ### Handoff File
 `PHASE_2_COMPLETE.md`
@@ -141,7 +112,7 @@
 
 ## Phase 3: Meeting Bots & Transcription
 
-**Status:** ✅ Complete
+**Status:** ⬜ Not Started
 **Estimated Time:** 60-90 minutes
 
 ### Planned Deliverables
@@ -158,29 +129,13 @@
 | Service | Purpose |
 |---------|---------|
 | Recall.ai | Meeting bot infrastructure |
-| Deepgram Nova-2 | Speech-to-text |
+| Deepgram Nova-3 | Speech-to-text |
 
 ### Key Decisions Made
-- **WebSocket Architecture**: Socket.IO for robust connection handling and room-based broadcasting
-- **Error Classes**: Specific `RecallApiError` and `DeepgramApiError` for better error handling
-- **Job Processing**: BullMQ with 5-minute lock duration for long transcription jobs
-- **Segment Merging**: Adjacent segments from same speaker merged for cleaner transcripts
-- **Quality Threshold**: 0.7 confidence threshold triggers quality warnings
-- **URL Parsing**: Handle zoommtg:// protocol before URL parsing (protocol not supported by URL API)
+_To be filled after phase completion_
 
 ### Actual Changes from Plan
-- Added WebSocket server with typed events (bot.status, transcript.chunk, transcript.complete, summary.complete)
-- Used Nova-2 model (Nova-3 not yet available in API)
-- Added password extraction from calendar event bodies
-- Added duplicate bot detection in create endpoint
-- Meeting duration check - skip transcripts for meetings < 30 seconds
-- Transcription worker has its own Jest config for ts-jest support
-
-### Test Coverage
-- API: 74 tests passing
-- Transcription Worker: 33 tests passing
-- Web: 11 tests passing
-- **Total: 118 tests**
+_To be filled after phase completion_
 
 ### Handoff File
 `PHASE_3_COMPLETE.md`
@@ -189,7 +144,7 @@
 
 ## Phase 4: AI Summarization
 
-**Status:** ✅ Complete
+**Status:** ⬜ Not Started
 **Estimated Time:** 45-60 minutes
 
 ### Planned Deliverables
@@ -210,27 +165,10 @@
 | OpenAI GPT-4o-mini | Fallback summarization |
 
 ### Key Decisions Made
-- **Model Selection Threshold**: 5000 words - shorter transcripts use GPT-4o-mini for cost, longer use Claude for quality
-- **Chunking Strategy**: 4000 words per chunk for long transcripts
-- **Zod Validation**: Type-safe output parsing with detailed error messages
-- **JSON Mode**: Both providers support structured JSON output
-- **Fallback Logic**: Primary provider → Retry 3x → Fallback to alternate provider
-- **Due Date Parsing**: Support for relative dates ("next Monday", "in 2 weeks", "EOW")
+_To be filled after phase completion_
 
 ### Actual Changes from Plan
-- Added 5 built-in insight templates (Sales Signals, Interview Notes, Project Status, Customer Feedback, Meeting Effectiveness)
-- Added insights endpoint at `/api/v1/insights/templates`
-- Added action item PATCH/DELETE endpoints for UI management
-- Structured output includes sentiment analysis
-- Prompt versioning implemented (v1.0.0)
-- 95 tests for summarization worker alone
-
-### Test Coverage
-- Summarization Worker: 95 tests
-- API: 74 tests
-- Transcription Worker: 33 tests
-- Web: 11 tests
-- **Total: 213 tests**
+_To be filled after phase completion_
 
 ### Handoff File
 `PHASE_4_COMPLETE.md`
@@ -239,7 +177,7 @@
 
 ## Phase 5: Frontend Dashboard
 
-**Status:** ✅ Complete
+**Status:** ⬜ Not Started
 **Estimated Time:** 90-120 minutes
 
 ### Planned Deliverables
@@ -265,23 +203,10 @@
 | `/settings` | User and org settings |
 
 ### Key Decisions Made
-- **Route Groups**: Used `(dashboard)` route group for shared layout
-- **React Query**: For data fetching with cache sync
-- **CVA**: Class Variance Authority for component variants
-- **WebSocket**: Socket.IO with automatic reconnection
-- **MSW**: Mock Service Worker for API mocking in tests
-- **asChild Pattern**: Slot-based composition for Button component
+_To be filled after phase completion_
 
 ### Actual Changes from Plan
-- Dark mode not implemented in this phase (deferred to Phase 8)
-- Settings page is placeholder (will be implemented in Phase 6)
-- 119 tests passing (84% of target), some edge case tests deferred
-- Added design tokens file (lib/design-tokens.ts)
-- Created WebSocket hooks (useWebSocket, useMeetingUpdates)
-
-### Test Coverage
-- Web: 141 tests passing (post Phase 6 fixes)
-- **Total: 343 tests**
+_To be filled after phase completion_
 
 ### Handoff File
 `PHASE_5_COMPLETE.md`
@@ -290,7 +215,7 @@
 
 ## Phase 6: Integrations & Billing
 
-**Status:** ✅ Complete
+**Status:** ⬜ Not Started
 **Estimated Time:** 90-120 minutes
 
 ### Planned Deliverables
@@ -313,28 +238,59 @@
 | Flutterwave | Payment processing (Africa) |
 
 ### Key Decisions Made
-- **Provider Abstraction**: Interface-based payment provider design for vendor independence
-- **OAuth Base Class**: Reusable OAuthIntegration class with automatic token refresh
-- **Credential Encryption**: AES-256 encryption for stored OAuth tokens
-- **Webhook Reliability**: BullMQ-based delivery with exponential backoff (1s→5s→30s→5min→1hr)
-- **African Market Support**: Flutterwave for NGN, KES, GHS, ZAR currencies
+_To be filled after phase completion_
 
 ### Actual Changes from Plan
-- Settings UI fully implemented (general, integrations, webhooks, billing pages)
-- Webhook system more robust than planned with HMAC-SHA256 signatures
-- Added WebhookDispatcher for async queue-based delivery
-- 35+ new files created for integrations and billing
-- Tests cover webhook signatures, billing service, payment providers, OAuth flow
-
-### Test Coverage
-- WebhookService: 15+ tests
-- BillingService: 20+ tests
-- StripeProvider: 25+ tests
-- FlutterwaveProvider: 15+ tests
-- OAuthIntegration: 20+ tests
+_To be filled after phase completion_
 
 ### Handoff File
 `PHASE_6_COMPLETE.md`
+
+---
+
+## Phase 6.5: User API Keys
+
+**Status:** ⬜ Not Started
+**Estimated Time:** 30-45 minutes
+
+### Planned Deliverables
+- UserApiKey database schema with scopes
+- API key service (secure generation, bcrypt hashing)
+- API key authentication middleware
+- Dual auth support (session + API key)
+- API key management endpoints (CRUD)
+- Granular permission scopes
+- Settings page for key management
+- Usage tracking (last used, request count)
+- API documentation for external developers
+
+### Key Features
+| Feature | Purpose |
+|---------|---------|
+| Secure Key Generation | `sk_live_` prefixed, 256-bit random |
+| Granular Scopes | `meetings:read`, `transcripts:write`, etc. |
+| Key Expiration | Optional time-limited keys |
+| Usage Tracking | Monitor key usage and last access |
+
+### Available Scopes
+| Scope | Description |
+|-------|-------------|
+| `meetings:read` | View meetings and details |
+| `meetings:write` | Create, update, delete meetings |
+| `transcripts:read` | View transcripts and summaries |
+| `transcripts:write` | Update transcripts and summaries |
+| `action-items:read` | View action items |
+| `action-items:write` | Manage action items |
+| `webhooks:manage` | Create and manage webhooks |
+
+### Key Decisions Made
+_To be filled after phase completion_
+
+### Actual Changes from Plan
+_To be filled after phase completion_
+
+### Handoff File
+`PHASE_6_5_COMPLETE.md`
 
 ---
 
@@ -447,18 +403,19 @@ _To be filled after phase completion_
 
 | Phase | Name | Status | Est. Time |
 |-------|------|--------|-----------|
-| 0 | Project Initialization | ✅ | 15-20 min |
-| 1 | Database & Core Backend | ✅ | 45-60 min |
-| 2 | Authentication & Calendar | ✅ | 45-60 min |
-| 3 | Meeting Bots & Transcription | ✅ | 60-90 min |
-| 4 | AI Summarization | ✅ | 45-60 min |
-| 5 | Frontend Dashboard | ✅ | 90-120 min |
-| 6 | Integrations & Billing | ✅ | 90-120 min |
+| 0 | Project Initialization | ⬜ | 15-20 min |
+| 1 | Database & Core Backend | ⬜ | 45-60 min |
+| 2 | Authentication & Calendar | ⬜ | 45-60 min |
+| 3 | Meeting Bots & Transcription | ⬜ | 60-90 min |
+| 4 | AI Summarization | ⬜ | 45-60 min |
+| 5 | Frontend Dashboard | ⬜ | 90-120 min |
+| 6 | Integrations & Billing | ⬜ | 90-120 min |
+| 6.5 | User API Keys | ⬜ | 30-45 min |
 | 7 | Admin Panel | ⬜ | 90-120 min |
 | 8 | Search & Polish | ⬜ | 60-90 min |
 | 8.5 | Hardening & Stress Testing | ⬜ | 60-90 min |
 
-**Total Estimated Time:** 10-14 hours
+**Total Estimated Time:** 10.5-15 hours
 
 ---
 
@@ -466,15 +423,7 @@ _To be filled after phase completion_
 
 | Date | Phase | Change Description |
 |------|-------|-------------------|
-| 2026-01-04 | Phase 0 | Initial project setup complete |
-| 2026-01-04 | Phase 1 | Database and core backend complete |
-| 2026-01-04 | Retrofit | Production quality upgrade - Docker, error handling, file splits |
-| 2026-01-04 | Retrofit | Governance alignment - error infrastructure, logger, Sentry setup |
-| 2026-01-04 | Phase 2 | Authentication (Clerk) and Calendar Integration (Google) complete |
-| 2026-01-04 | Phase 3 | Meeting bots (Recall.ai) and transcription (Deepgram) complete |
-| 2026-01-04 | Phase 4 | AI Summarization (Claude/GPT) with insights and action items complete |
-| 2026-01-05 | Phase 5 | Frontend Dashboard with zigznote branding, 343 tests passing |
-| 2026-01-05 | Phase 6 | Integrations (Slack, HubSpot, Webhooks) + Billing (Stripe, Flutterwave) complete |
+| _YYYY-MM-DD_ | _Phase X_ | _Description of change_ |
 
 ---
 
