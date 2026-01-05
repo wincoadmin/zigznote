@@ -12,6 +12,18 @@ datasource db {
 }
 
 // ============================================
+// Enums
+// ============================================
+
+enum AccountType {
+  REGULAR        // Normal paying customer
+  TRIAL          // Trial period
+  COMPLIMENTARY  // Free account (admin override)
+  PARTNER        // Partner account with special terms
+  INTERNAL       // Internal team account
+}
+
+// ============================================
 // Users and Organizations
 // ============================================
 
@@ -24,6 +36,13 @@ model Organization {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
+
+  // Account type and billing overrides (admin-managed)
+  accountType           AccountType @default(REGULAR) @map("account_type")
+  billingOverrideReason String?     @map("billing_override_reason")   // Why is this account special?
+  billingOverrideBy     String?     @map("billing_override_by")       // Admin ID who set the override
+  billingOverrideAt     DateTime?   @map("billing_override_at")       // When override was set
+  accountNotes          String?     @map("account_notes")             // Internal notes for support
 
   users                  User[]
   meetings               Meeting[]
@@ -39,6 +58,7 @@ model Organization {
 
   @@index([clerkId])
   @@index([deletedAt])
+  @@index([accountType])
   @@map("organizations")
 }
 
@@ -630,4 +650,153 @@ model Refund {
   @@index([paymentId])
   @@index([status])
   @@map("refunds")
+}
+
+// ============================================
+// Admin Panel
+// ============================================
+
+model AdminUser {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  passwordHash    String    @map("password_hash")
+  name            String
+  role            String    @default("support") // super_admin, admin, support, viewer
+
+  // 2FA (TOTP)
+  twoFactorSecret String?   @map("two_factor_secret")  // Encrypted TOTP secret
+  twoFactorEnabled Boolean  @default(false) @map("two_factor_enabled")
+  backupCodes     String[]  @map("backup_codes")       // Encrypted backup codes
+
+  // Security
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
+  lastLoginAt         DateTime? @map("last_login_at")
+  lastLoginIp         String?   @map("last_login_ip")
+  passwordChangedAt   DateTime  @default(now()) @map("password_changed_at")
+
+  // Lifecycle
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by") // Admin who created this account
+
+  sessions  AdminSession[]
+  auditLogs AuditLog[]
+
+  @@index([email])
+  @@index([role])
+  @@index([isActive])
+  @@map("admin_users")
+}
+
+model AdminSession {
+  id           String   @id @default(uuid())
+  adminUserId  String   @map("admin_user_id")
+  token        String   @unique  // JWT or session token (hashed)
+  ipAddress    String   @map("ip_address")
+  userAgent    String   @map("user_agent")
+  expiresAt    DateTime @map("expires_at")
+  lastActiveAt DateTime @default(now()) @map("last_active_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("admin_sessions")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  adminUserId  String?  @map("admin_user_id")  // Null for system actions
+  action       String   // user.create, org.delete, apikey.revoke, config.update, etc.
+  entityType   String   @map("entity_type")    // user, organization, apikey, config, etc.
+  entityId     String?  @map("entity_id")      // ID of affected entity
+  details      Json     @default("{}")         // Full details of the action
+  previousData Json?    @map("previous_data")  // State before change
+  newData      Json?    @map("new_data")       // State after change
+  ipAddress    String   @map("ip_address")
+  userAgent    String?  @map("user_agent")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  adminUser AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+
+  @@index([adminUserId])
+  @@index([action])
+  @@index([entityType])
+  @@index([entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model SystemApiKey {
+  id             String    @id @default(uuid())
+  name           String    // Descriptive name: "Production Deepgram", "Dev Anthropic"
+  provider       String    // deepgram, anthropic, openai, recall, stripe, etc.
+  environment    String    @default("production") // production, staging, development
+
+  // Encrypted key storage (AES-256)
+  encryptedKey   String    @map("encrypted_key")
+  keyHint        String    @map("key_hint")        // Last 4 chars for identification
+
+  // Usage tracking
+  lastUsedAt     DateTime? @map("last_used_at")
+  usageCount     Int       @default(0) @map("usage_count")
+
+  // Lifecycle
+  isActive       Boolean   @default(true) @map("is_active")
+  expiresAt      DateTime? @map("expires_at")
+  rotatedAt      DateTime? @map("rotated_at")      // Last rotation date
+  rotationDue    DateTime? @map("rotation_due")    // When to rotate next
+
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  createdBy      String?   @map("created_by")      // Admin who created
+
+  @@unique([provider, environment])
+  @@index([provider])
+  @@index([environment])
+  @@index([isActive])
+  @@map("system_api_keys")
+}
+
+model FeatureFlag {
+  id           String    @id @default(uuid())
+  key          String    @unique                  // new_dashboard, beta_search, etc.
+  name         String                              // Human-readable name
+  description  String?
+
+  // Flag configuration
+  enabled      Boolean   @default(false)
+  percentage   Int       @default(100)            // Rollout percentage (0-100)
+  targetRules  Json      @default("[]")           // [{type: 'org', ids: [...]}, {type: 'plan', value: 'enterprise'}]
+
+  // Metadata
+  category     String    @default("general")      // general, billing, ui, integrations
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  createdBy    String?   @map("created_by")
+
+  @@index([key])
+  @@index([enabled])
+  @@index([category])
+  @@map("feature_flags")
+}
+
+model SystemConfig {
+  id        String   @id @default(uuid())
+  key       String   @unique                     // rate_limit.api, smtp.host, etc.
+  value     Json                                  // Flexible value storage
+  encrypted Boolean  @default(false)             // Is the value encrypted?
+  category  String   @default("general")         // general, email, limits, security
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedBy String?  @map("updated_by")
+
+  @@index([key])
+  @@index([category])
+  @@map("system_configs")
 }

@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 
 import { config } from './config';
 import { errorHandler } from './middleware/errorHandler';
@@ -12,6 +13,7 @@ import { standardRateLimit } from './middleware/rateLimit';
 import { clerkAuthMiddleware } from './middleware/auth';
 import { healthRouter } from './routes/health';
 import { apiRouter } from './routes/api';
+import { adminRouter } from './routes/admin';
 import clerkWebhookRouter from './routes/webhooks/clerk';
 import recallWebhookRouter from './routes/webhooks/recall';
 
@@ -42,6 +44,9 @@ export function createApp(): Express {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+  // Cookie parsing (for admin sessions)
+  app.use(cookieParser());
+
   // Compression
   app.use(compression());
 
@@ -60,7 +65,10 @@ export function createApp(): Express {
   app.use('/webhooks/clerk', clerkWebhookRouter);
   app.use('/webhooks/recall', recallWebhookRouter);
 
-  // Clerk auth middleware (only for API routes)
+  // Admin panel routes (separate auth system)
+  app.use('/api/admin', adminRouter);
+
+  // Clerk auth middleware (only for user API routes)
   // Skip in test environment if no Clerk key is configured
   if (config.clerk.secretKey || config.nodeEnv !== 'test') {
     app.use('/api', clerkAuthMiddleware);

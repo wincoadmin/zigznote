@@ -275,3 +275,172 @@ export interface UpdateCustomVocabularyInput {
   boost?: number;
   category?: string | null;
 }
+
+// ============================================
+// Admin Panel Types
+// ============================================
+
+/**
+ * Admin user roles with hierarchy
+ */
+export type AdminRole = 'super_admin' | 'admin' | 'support' | 'viewer';
+
+/**
+ * Account types for organizations
+ */
+export type AccountType = 'REGULAR' | 'TRIAL' | 'COMPLIMENTARY' | 'PARTNER' | 'INTERNAL';
+
+/**
+ * Create admin user input
+ */
+export interface CreateAdminUserInput {
+  email: string;
+  passwordHash: string;
+  name: string;
+  role?: AdminRole;
+  createdBy?: string;
+}
+
+/**
+ * Update admin user input
+ */
+export interface UpdateAdminUserInput {
+  email?: string;
+  name?: string;
+  role?: AdminRole;
+  isActive?: boolean;
+  twoFactorSecret?: string | null;
+  twoFactorEnabled?: boolean;
+  backupCodes?: string[];
+  failedLoginAttempts?: number;
+  lockedUntil?: Date | null;
+  lastLoginAt?: Date;
+  lastLoginIp?: string;
+  passwordHash?: string;
+  passwordChangedAt?: Date;
+}
+
+/**
+ * Create admin session input
+ */
+export interface CreateAdminSessionInput {
+  adminUserId: string;
+  token: string;
+  ipAddress: string;
+  userAgent: string;
+  expiresAt: Date;
+}
+
+/**
+ * Create audit log input
+ */
+export interface CreateAuditLogInput {
+  adminUserId?: string | null;
+  action: string;
+  entityType: string;
+  entityId?: string | null;
+  details?: Prisma.InputJsonValue;
+  previousData?: Prisma.InputJsonValue | null;
+  newData?: Prisma.InputJsonValue | null;
+  ipAddress: string;
+  userAgent?: string | null;
+}
+
+/**
+ * Audit log filter options
+ */
+export interface AuditLogFilterOptions {
+  adminUserId?: string;
+  action?: string | string[];
+  entityType?: string | string[];
+  entityId?: string;
+  startDate?: Date;
+  endDate?: Date;
+}
+
+/**
+ * Create system API key input
+ */
+export interface CreateSystemApiKeyInput {
+  name: string;
+  provider: string;
+  environment?: string;
+  encryptedKey: string;
+  keyHint: string;
+  expiresAt?: Date | null;
+  rotationDue?: Date | null;
+  createdBy?: string;
+}
+
+/**
+ * Update system API key input
+ */
+export interface UpdateSystemApiKeyInput {
+  name?: string;
+  encryptedKey?: string;
+  keyHint?: string;
+  isActive?: boolean;
+  expiresAt?: Date | null;
+  rotatedAt?: Date;
+  rotationDue?: Date | null;
+  lastUsedAt?: Date;
+  usageCount?: number;
+}
+
+/**
+ * Create feature flag input
+ */
+export interface CreateFeatureFlagInput {
+  key: string;
+  name: string;
+  description?: string | null;
+  enabled?: boolean;
+  percentage?: number;
+  targetRules?: Prisma.InputJsonValue;
+  category?: string;
+  createdBy?: string;
+}
+
+/**
+ * Update feature flag input
+ */
+export interface UpdateFeatureFlagInput {
+  name?: string;
+  description?: string | null;
+  enabled?: boolean;
+  percentage?: number;
+  targetRules?: Prisma.InputJsonValue;
+  category?: string;
+}
+
+/**
+ * Create system config input
+ */
+export interface CreateSystemConfigInput {
+  key: string;
+  value: Prisma.InputJsonValue;
+  encrypted?: boolean;
+  category?: string;
+  updatedBy?: string;
+}
+
+/**
+ * Update system config input
+ */
+export interface UpdateSystemConfigInput {
+  value?: Prisma.InputJsonValue;
+  encrypted?: boolean;
+  category?: string;
+  updatedBy?: string;
+}
+
+/**
+ * Update organization billing override input
+ */
+export interface UpdateOrganizationBillingOverrideInput {
+  accountType?: AccountType;
+  billingOverrideReason?: string | null;
+  billingOverrideBy?: string;
+  billingOverrideAt?: Date;
+  accountNotes?: string | null;
+}

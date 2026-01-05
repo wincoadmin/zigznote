@@ -58,3 +58,41 @@ export {
   CustomVocabularyRepository,
   customVocabularyRepository,
 } from './customVocabularyRepository';
+
+// Admin Panel Repositories
+export {
+  AdminUserRepository,
+  adminUserRepository,
+  type AdminUserInclude,
+  type AdminUserFilter,
+} from './adminUserRepository';
+
+export {
+  AdminSessionRepository,
+  adminSessionRepository,
+  type AdminSessionInclude,
+} from './adminSessionRepository';
+
+export {
+  AuditLogRepository,
+  auditLogRepository,
+  type AuditLogInclude,
+} from './auditLogRepository';
+
+export {
+  SystemApiKeyRepository,
+  systemApiKeyRepository,
+  type SystemApiKeyFilter,
+} from './systemApiKeyRepository';
+
+export {
+  FeatureFlagRepository,
+  featureFlagRepository,
+  type FeatureFlagFilter,
+} from './featureFlagRepository';
+
+export {
+  SystemConfigRepository,
+  systemConfigRepository,
+  type SystemConfigFilter,
+} from './systemConfigRepository';

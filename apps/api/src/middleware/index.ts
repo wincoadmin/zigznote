@@ -19,3 +19,15 @@ export {
   requireScope,
   type ApiKeyAuthenticatedRequest,
 } from './apiKeyAuth';
+
+export {
+  requireAdminAuth,
+  requireAdminRole,
+  requireViewer,
+  requireSupport,
+  requireAdminRoleLevel,
+  requireSuperAdmin,
+  logAdminAction,
+  checkIpAllowlist,
+  type AdminAuthenticatedRequest,
+} from './adminAuth';

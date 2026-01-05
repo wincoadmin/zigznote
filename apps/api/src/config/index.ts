@@ -161,6 +161,23 @@ export const config = {
     endpoint: process.env.AWS_S3_ENDPOINT, // For S3-compatible (MinIO, R2)
     cdnUrl: process.env.AWS_CDN_URL, // CloudFront or CDN URL
   },
+
+  /**
+   * Admin panel configuration
+   */
+  admin: {
+    jwtSecret: process.env.ADMIN_JWT_SECRET || 'admin-jwt-secret-change-me',
+    twoFactorIssuer: process.env.ADMIN_2FA_ISSUER || 'zigznote Admin',
+    allowedIps: process.env.ADMIN_ALLOWED_IPS, // Comma-separated IPs
+    sessionDurationHours: parseInt(process.env.ADMIN_SESSION_HOURS || '8', 10),
+  },
+
+  /**
+   * Encryption configuration
+   */
+  encryption: {
+    key: process.env.ENCRYPTION_KEY || 'default-encryption-key-32-char!',
+  },
 };
 
 export type Config = typeof config;

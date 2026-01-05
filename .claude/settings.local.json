@@ -41,7 +41,10 @@
       "Bash(cat:*)",
       "Bash(pnpm --filter @zigznote/web test:*)",
       "Bash(pnpm --filter @zigznote/transcription-worker test -- --testPathPattern=postProcessor)",
-      "Bash(pnpm --filter @zigznote/transcription-worker test -- --testPathPattern=nameDetector --passWithNoTests)"
+      "Bash(pnpm --filter @zigznote/transcription-worker test -- --testPathPattern=nameDetector --passWithNoTests)",
+      "Bash(pnpm --filter @zigznote/admin build:*)",
+      "Bash(pnpm --filter @zigznote/admin test -- --passWithNoTests)",
+      "Bash(pnpm --filter @zigznote/admin test:*)"
     ]
   }
 }
