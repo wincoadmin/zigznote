@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Share2, Download, MoreVertical } from 'lucide-react';
+import { ArrowLeft, Share2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,7 @@ import {
   ActionItems,
   MeetingChat,
 } from '@/components/meetings';
+import { ShareDialog, ExportMenu } from '@/components/settings';
 import { meetingsApi } from '@/lib/api';
 import { formatDate, formatTime, formatDuration } from '@/lib/utils';
 import { meetingStatusConfig, type MeetingStatus } from '@/lib/design-tokens';
@@ -28,6 +29,7 @@ export default function MeetingDetailPage() {
   const meetingId = params.id as string;
 
   const [currentTimeMs, setCurrentTimeMs] = useState(0);
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
   // Fetch meeting details
   const { data: meeting, isLoading: meetingLoading } = useQuery({
@@ -137,23 +139,6 @@ export default function MeetingDetailPage() {
     setCurrentTimeMs(startMs);
   };
 
-  const handleShare = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      addToast({
-        type: 'success',
-        title: 'Link copied',
-        description: 'Meeting link copied to clipboard.',
-      });
-    } catch {
-      addToast({
-        type: 'error',
-        title: 'Failed to copy',
-        description: 'Could not copy link to clipboard.',
-      });
-    }
-  };
-
   if (meetingLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -213,14 +198,17 @@ export default function MeetingDetailPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleShare}>
+          <Button variant="outline" size="sm" onClick={() => setIsShareOpen(true)}>
             <Share2 className="mr-2 h-4 w-4" />
             Share
           </Button>
-          <Button variant="outline" size="sm">
-            <Download className="mr-2 h-4 w-4" />
-            Download
-          </Button>
+          <ExportMenu
+            meetingId={meetingId}
+            meetingTitle={meeting.title}
+            hasTranscript={!!transcript}
+            hasSummary={!!summary}
+            hasActionItems={!!actionItems && actionItems.length > 0}
+          />
         </div>
       </div>
 
@@ -268,8 +256,16 @@ export default function MeetingDetailPage() {
 
       {/* AI Meeting Assistant Chat */}
       {meeting.status === 'completed' && transcript && (
-        <MeetingChat meetingId={meetingId} />
+        <MeetingChat meetingId={meetingId} meetingTitle={meeting.title} />
       )}
+
+      {/* Share Dialog */}
+      <ShareDialog
+        meetingId={meetingId}
+        meetingTitle={meeting.title}
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+      />
     </div>
   );
 }
