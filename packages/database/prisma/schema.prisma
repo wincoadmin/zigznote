@@ -30,6 +30,7 @@ model Organization {
   integrationConnections IntegrationConnection[]
   automationRules        AutomationRule[]
   webhooks               Webhook[]
+  billingCustomer        BillingCustomer?
 
   @@index([clerkId])
   @@index([deletedAt])
@@ -211,6 +212,7 @@ model IntegrationConnection {
   id             String   @id @default(uuid())
   organizationId String   @map("organization_id")
   provider       String // slack, hubspot, salesforce, notion, etc.
+  status         String   @default("connected") // connected, disconnected, error
   credentials    Json     @default("{}") // Encrypted tokens
   settings       Json     @default("{}")
   connectedAt    DateTime @default(now()) @map("connected_at")
@@ -219,6 +221,7 @@ model IntegrationConnection {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, provider])
+  @@index([status])
   @@map("integration_connections")
 }
 
@@ -245,34 +248,195 @@ model AutomationRule {
 // ============================================
 
 model Webhook {
-  id             String   @id @default(uuid())
-  organizationId String   @map("organization_id")
-  url            String
-  events         String[] // ['meeting.completed', 'summary.generated']
-  signingSecret  String   @map("signing_secret")
-  enabled        Boolean  @default(true)
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  name            String
+  url             String
+  secret          String    // HMAC signing secret
+  events          String[]  // ['meeting.completed', 'summary.generated']
+  status          String    @default("active") // active, inactive, failed
+  headers         Json      @default("{}") // Custom headers
+  failureCount    Int       @default(0) @map("failure_count")
+  lastTriggeredAt DateTime? @map("last_triggered_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  logs         WebhookLog[]
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deliveries   WebhookDelivery[]
 
   @@index([organizationId])
+  @@index([status])
   @@map("webhooks")
 }
 
-model WebhookLog {
-  id             String   @id @default(uuid())
-  webhookId      String   @map("webhook_id")
+model WebhookDelivery {
+  id             String    @id @default(uuid())
+  webhookId      String    @map("webhook_id")
   event          String
   payload        Json
-  responseStatus Int?     @map("response_status")
-  responseBody   String?  @map("response_body")
-  deliveredAt    DateTime @default(now()) @map("delivered_at")
+  status         String    @default("pending") // pending, success, failed
+  attempts       Int       @default(0)
+  lastAttemptAt  DateTime? @map("last_attempt_at")
+  responseStatus Int?      @map("response_status")
+  responseBody   String?   @map("response_body")
+  error          String?
+  createdAt      DateTime  @default(now()) @map("created_at")
 
   webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
 
   @@index([webhookId])
-  @@index([deliveredAt])
-  @@map("webhook_logs")
+  @@index([status])
+  @@index([createdAt])
+  @@map("webhook_deliveries")
+}
+
+// ============================================
+// Billing
+// ============================================
+
+model BillingCustomer {
+  id                String    @id @default(uuid())
+  organizationId    String    @unique @map("organization_id")
+  stripeCustomerId  String?   @unique @map("stripe_customer_id")
+  flutterwaveId     String?   @unique @map("flutterwave_id")
+  email             String
+  name              String?
+  defaultProvider   String    @default("stripe") @map("default_provider") // stripe, flutterwave
+  metadata          Json      @default("{}")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subscriptions Subscription[]
+  payments      Payment[]
+  invoices      Invoice[]
+
+  @@index([stripeCustomerId])
+  @@index([flutterwaveId])
+  @@map("billing_customers")
+}
+
+model BillingPlan {
+  id              String   @id @default(uuid())
+  name            String
+  slug            String   @unique // free, pro, enterprise
+  description     String?
+  amount          Int      // Amount in cents
+  currency        String   @default("usd")
+  interval        String   // month, year
+  trialDays       Int      @default(0) @map("trial_days")
+  features        Json     @default("[]") // Array of feature strings
+  limits          Json     @default("{}") // {meetings_per_month, storage_gb, etc}
+  stripePriceId   String?  @map("stripe_price_id")
+  flutterwavePlan String?  @map("flutterwave_plan_id")
+  isActive        Boolean  @default(true) @map("is_active")
+  sortOrder       Int      @default(0) @map("sort_order")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  subscriptions Subscription[]
+
+  @@index([isActive])
+  @@index([slug])
+  @@map("billing_plans")
+}
+
+model Subscription {
+  id                 String    @id @default(uuid())
+  customerId         String    @map("customer_id")
+  planId             String    @map("plan_id")
+  provider           String    // stripe, flutterwave
+  providerSubId      String?   @map("provider_subscription_id")
+  status             String    @default("active") // active, past_due, cancelled, incomplete, trialing, paused
+  currentPeriodStart DateTime  @map("current_period_start")
+  currentPeriodEnd   DateTime  @map("current_period_end")
+  cancelAtPeriodEnd  Boolean   @default(false) @map("cancel_at_period_end")
+  cancelledAt        DateTime? @map("cancelled_at")
+  trialEnd           DateTime? @map("trial_end")
+  metadata           Json      @default("{}")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  customer BillingCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  plan     BillingPlan     @relation(fields: [planId], references: [id])
+
+  @@index([customerId])
+  @@index([planId])
+  @@index([status])
+  @@index([providerSubId])
+  @@map("subscriptions")
+}
+
+model Payment {
+  id               String   @id @default(uuid())
+  customerId       String   @map("customer_id")
+  provider         String   // stripe, flutterwave
+  providerPayId    String?  @map("provider_payment_id")
+  amount           Int      // Amount in cents
+  currency         String   @default("usd")
+  status           String   @default("pending") // pending, processing, succeeded, failed, cancelled, refunded
+  description      String?
+  receiptUrl       String?  @map("receipt_url")
+  invoiceId        String?  @map("invoice_id")
+  subscriptionId   String?  @map("subscription_id")
+  refundedAmount   Int      @default(0) @map("refunded_amount")
+  metadata         Json     @default("{}")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  customer BillingCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  invoice  Invoice?        @relation(fields: [invoiceId], references: [id])
+  refunds  Refund[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([providerPayId])
+  @@index([invoiceId])
+  @@map("payments")
+}
+
+model Invoice {
+  id              String    @id @default(uuid())
+  customerId      String    @map("customer_id")
+  provider        String    // stripe, flutterwave
+  providerInvId   String?   @map("provider_invoice_id")
+  subscriptionId  String?   @map("subscription_id")
+  amount          Int       // Total amount in cents
+  amountPaid      Int       @default(0) @map("amount_paid")
+  currency        String    @default("usd")
+  status          String    @default("draft") // draft, open, paid, void, uncollectible
+  dueDate         DateTime? @map("due_date")
+  paidAt          DateTime? @map("paid_at")
+  invoiceUrl      String?   @map("invoice_url")
+  invoicePdf      String?   @map("invoice_pdf")
+  lineItems       Json      @default("[]") // [{description, amount, quantity}]
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  customer BillingCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([providerInvId])
+  @@map("invoices")
+}
+
+model Refund {
+  id              String   @id @default(uuid())
+  paymentId       String   @map("payment_id")
+  provider        String   // stripe, flutterwave
+  providerRefId   String?  @map("provider_refund_id")
+  amount          Int      // Amount in cents
+  currency        String   @default("usd")
+  status          String   @default("pending") // pending, succeeded, failed
+  reason          String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([status])
+  @@map("refunds")
 }

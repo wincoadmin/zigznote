@@ -103,6 +103,51 @@ export const config = {
     apiKey: process.env.DEEPGRAM_API_KEY || '',
     baseUrl: process.env.DEEPGRAM_BASE_URL || 'https://api.deepgram.com/v1',
   },
+
+  /**
+   * Redis configuration
+   */
+  redis: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379', 10),
+    password: process.env.REDIS_PASSWORD || undefined,
+  },
+
+  /**
+   * Slack integration
+   */
+  slack: {
+    clientId: process.env.SLACK_CLIENT_ID || '',
+    clientSecret: process.env.SLACK_CLIENT_SECRET || '',
+    redirectUri: process.env.SLACK_REDIRECT_URI || `${baseConfig.apiUrl}/api/v1/integrations/slack/callback`,
+  },
+
+  /**
+   * HubSpot integration
+   */
+  hubspot: {
+    clientId: process.env.HUBSPOT_CLIENT_ID || '',
+    clientSecret: process.env.HUBSPOT_CLIENT_SECRET || '',
+    redirectUri: process.env.HUBSPOT_REDIRECT_URI || `${baseConfig.apiUrl}/api/v1/integrations/hubspot/callback`,
+  },
+
+  /**
+   * Stripe payments
+   */
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY || '',
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+  },
+
+  /**
+   * Flutterwave payments
+   */
+  flutterwave: {
+    publicKey: process.env.FLUTTERWAVE_PUBLIC_KEY || '',
+    secretKey: process.env.FLUTTERWAVE_SECRET_KEY || '',
+    webhookSecret: process.env.FLUTTERWAVE_WEBHOOK_SECRET || '',
+  },
 };
 
 export type Config = typeof config;
