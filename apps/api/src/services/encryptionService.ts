@@ -47,9 +47,9 @@ class EncryptionService {
     }
 
     const [ivHex, encryptedData] = parts;
-    const iv = Buffer.from(ivHex, 'hex');
+    const iv = Buffer.from(ivHex!, 'hex');
     const decipher = crypto.createDecipheriv(ALGORITHM, this.key, iv);
-    let decrypted = decipher.update(encryptedData, 'hex', 'utf8');
+    let decrypted = decipher.update(encryptedData!, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
     return decrypted;
   }

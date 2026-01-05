@@ -20,7 +20,7 @@ export const organizationsRouter: IRouter = Router();
 organizationsRouter.use(requireAdminAuth, requireSupport);
 
 // Validation schemas
-const listSchema = z.object({
+const listSchema = {
   query: z.object({
     page: z.coerce.number().int().positive().default(1).optional(),
     limit: z.coerce.number().int().min(1).max(100).default(50).optional(),
@@ -29,9 +29,9 @@ const listSchema = z.object({
     search: z.string().optional(),
     includeDeleted: z.enum(['true', 'false']).optional(),
   }),
-});
+};
 
-const updateSchema = z.object({
+const updateSchema = {
   params: z.object({
     id: z.string().uuid(),
   }),
@@ -40,9 +40,9 @@ const updateSchema = z.object({
     plan: z.string().min(1).max(50).optional(),
     settings: z.record(z.unknown()).optional(),
   }),
-});
+};
 
-const billingOverrideSchema = z.object({
+const billingOverrideSchema = {
   params: z.object({
     id: z.string().uuid(),
   }),
@@ -50,30 +50,30 @@ const billingOverrideSchema = z.object({
     accountType: z.enum(['REGULAR', 'TRIAL', 'COMPLIMENTARY', 'PARTNER', 'INTERNAL']),
     reason: z.string().min(1).max(500),
   }),
-});
+};
 
-const planSchema = z.object({
+const planSchema = {
   params: z.object({
     id: z.string().uuid(),
   }),
   body: z.object({
     plan: z.string().min(1).max(50),
   }),
-});
+};
 
-const settingsSchema = z.object({
+const settingsSchema = {
   params: z.object({
     id: z.string().uuid(),
   }),
   body: z.record(z.unknown()),
-});
+};
 
-const searchSchema = z.object({
+const searchSchema = {
   query: z.object({
     q: z.string().min(1),
     limit: z.coerce.number().int().min(1).max(50).default(20).optional(),
   }),
-});
+};
 
 /**
  * @route GET /api/admin/organizations
@@ -84,7 +84,7 @@ organizationsRouter.get(
   validateRequest(listSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const { page, limit, plan, accountType, search, includeDeleted } =
-      req.query as z.infer<typeof listSchema>['query'];
+      req.query as z.infer<typeof listSchema.query>;
 
     const result = await adminOrganizationService.listOrganizations(
       { page, limit },
@@ -112,7 +112,7 @@ organizationsRouter.get(
   '/search',
   validateRequest(searchSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const { q, limit } = req.query as z.infer<typeof searchSchema>['query'];
+    const { q, limit } = req.query as unknown as z.infer<typeof searchSchema.query>;
 
     const orgs = await adminOrganizationService.searchOrganizations(q, limit);
 
@@ -129,7 +129,7 @@ organizationsRouter.get(
  */
 organizationsRouter.get(
   '/stats',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (_req: Request, res: Response) => {
     const stats = await adminOrganizationService.getOrganizationStats();
 
     res.json({
@@ -146,7 +146,7 @@ organizationsRouter.get(
 organizationsRouter.get(
   '/:id',
   asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = req.params.id!;
     const includeDeleted = req.query.includeDeleted === 'true';
 
     const org = await adminOrganizationService.getOrganization(id, includeDeleted);
@@ -172,7 +172,7 @@ organizationsRouter.get(
 organizationsRouter.get(
   '/:id/users',
   asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = req.params.id!;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;
 
@@ -196,8 +196,8 @@ organizationsRouter.patch(
   validateRequest(updateSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const { id } = req.params;
-    const updates = req.body as z.infer<typeof updateSchema>['body'];
+    const id = req.params.id!;
+    const updates = req.body as z.infer<typeof updateSchema.body>;
 
     const updated = await adminOrganizationService.updateOrganization(id, updates, {
       adminId: adminReq.adminAuth!.adminId,
@@ -222,8 +222,8 @@ organizationsRouter.put(
   validateRequest(planSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const { id } = req.params;
-    const { plan } = req.body as z.infer<typeof planSchema>['body'];
+    const id = req.params.id!;
+    const { plan } = req.body as z.infer<typeof planSchema.body>;
 
     const updated = await adminOrganizationService.updatePlan(id, plan, {
       adminId: adminReq.adminAuth!.adminId,
@@ -248,7 +248,7 @@ organizationsRouter.patch(
   validateRequest(settingsSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const { id } = req.params;
+    const id = req.params.id!;
     const settings = req.body as Record<string, unknown>;
 
     const updated = await adminOrganizationService.updateSettings(id, settings, {
@@ -274,8 +274,8 @@ organizationsRouter.post(
   validateRequest(billingOverrideSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const { id } = req.params;
-    const { accountType, reason } = req.body as z.infer<typeof billingOverrideSchema>['body'];
+    const id = req.params.id!;
+    const { accountType, reason } = req.body as z.infer<typeof billingOverrideSchema.body>;
 
     const updated = await adminOrganizationService.setBillingOverride(
       id,
@@ -305,7 +305,7 @@ organizationsRouter.delete(
   requireAdminRoleLevel,
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const { id } = req.params;
+    const id = req.params.id!;
 
     const updated = await adminOrganizationService.clearBillingOverride(id, {
       adminId: adminReq.adminAuth!.adminId,
@@ -330,7 +330,7 @@ organizationsRouter.post(
   requireAdminRoleLevel,
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const { id } = req.params;
+    const id = req.params.id!;
 
     await adminOrganizationService.suspendOrganization(id, {
       adminId: adminReq.adminAuth!.adminId,
@@ -354,7 +354,7 @@ organizationsRouter.post(
   requireAdminRoleLevel,
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const { id } = req.params;
+    const id = req.params.id!;
 
     const org = await adminOrganizationService.restoreOrganization(id, {
       adminId: adminReq.adminAuth!.adminId,

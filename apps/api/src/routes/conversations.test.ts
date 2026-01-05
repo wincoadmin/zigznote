@@ -3,13 +3,9 @@
  * AI Meeting Assistant Q&A endpoints
  */
 
-import request from 'supertest';
-import express from 'express';
-import { conversationsRouter } from './conversations';
-
-// Mock Prisma
-jest.mock('@prisma/client', () => {
-  const mockPrisma = {
+// Mock Prisma - must be before imports
+jest.mock('@zigznote/database', () => ({
+  prisma: {
     meeting: {
       findFirst: jest.fn(),
       findUnique: jest.fn(),
@@ -25,11 +21,16 @@ jest.mock('@prisma/client', () => {
       create: jest.fn(),
       findMany: jest.fn(),
     },
-  };
-  return {
-    PrismaClient: jest.fn(() => mockPrisma),
-  };
-});
+  },
+  Prisma: {},
+}));
+
+import request from 'supertest';
+import express from 'express';
+import { conversationsRouter } from './conversations';
+import { prisma } from '@zigznote/database';
+
+const mockPrisma = prisma as jest.Mocked<typeof prisma>;
 
 // Mock meeting QA service
 jest.mock('../services/meetingQAService', () => ({
@@ -64,10 +65,6 @@ app.use((req, _res, next) => {
 });
 app.use('/api/v1', conversationsRouter);
 
-// Get mocked prisma
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
-
 describe('Conversations API', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -78,14 +75,14 @@ describe('Conversations API', () => {
       const meetingId = 'meeting-123';
 
       // Mock meeting exists
-      prisma.meeting.findFirst.mockResolvedValue({
+      mockPrisma.meeting.findFirst.mockResolvedValue({
         id: meetingId,
         organizationId: mockAuth.organizationId,
         title: 'Test Meeting',
       });
 
       // Mock conversation creation
-      prisma.conversation.create.mockResolvedValue({
+      mockPrisma.conversation.create.mockResolvedValue({
         id: 'conv-123',
         meetingId,
         userId: mockAuth.userId,
@@ -93,7 +90,7 @@ describe('Conversations API', () => {
       });
 
       // Mock message creation
-      prisma.conversationMessage.create.mockResolvedValue({
+      mockPrisma.conversationMessage.create.mockResolvedValue({
         id: 'msg-123',
         conversationId: 'conv-123',
         role: 'user',
@@ -115,16 +112,16 @@ describe('Conversations API', () => {
 
     it('should continue existing conversation', async () => {
       const meetingId = 'meeting-123';
-      const conversationId = 'conv-123';
+      const conversationId = '550e8400-e29b-41d4-a716-446655440000'; // Valid UUID
 
       // Mock meeting exists
-      prisma.meeting.findFirst.mockResolvedValue({
+      mockPrisma.meeting.findFirst.mockResolvedValue({
         id: meetingId,
         organizationId: mockAuth.organizationId,
       });
 
       // Mock existing conversation
-      prisma.conversation.findFirst.mockResolvedValue({
+      mockPrisma.conversation.findFirst.mockResolvedValue({
         id: conversationId,
         meetingId,
         userId: mockAuth.userId,
@@ -134,12 +131,12 @@ describe('Conversations API', () => {
         ],
       });
 
-      prisma.conversation.update.mockResolvedValue({
+      mockPrisma.conversation.update.mockResolvedValue({
         id: conversationId,
         totalTokens: 300,
       });
 
-      prisma.conversationMessage.create.mockResolvedValue({
+      mockPrisma.conversationMessage.create.mockResolvedValue({
         id: 'msg-456',
         conversationId,
         role: 'user',
@@ -161,7 +158,7 @@ describe('Conversations API', () => {
     });
 
     it('should return error for non-existent meeting', async () => {
-      prisma.meeting.findFirst.mockResolvedValue(null);
+      mockPrisma.meeting.findFirst.mockResolvedValue(null);
 
       const response = await request(app)
         .post('/api/v1/meetings/invalid-id/ask')
@@ -183,12 +180,12 @@ describe('Conversations API', () => {
     it('should return list of conversations', async () => {
       const meetingId = 'meeting-123';
 
-      prisma.meeting.findFirst.mockResolvedValue({
+      mockPrisma.meeting.findFirst.mockResolvedValue({
         id: meetingId,
         organizationId: mockAuth.organizationId,
       });
 
-      prisma.conversation.findMany.mockResolvedValue([
+      mockPrisma.conversation.findMany.mockResolvedValue([
         {
           id: 'conv-1',
           title: 'First conversation',
@@ -222,7 +219,7 @@ describe('Conversations API', () => {
     it('should return conversation with messages', async () => {
       const conversationId = 'conv-123';
 
-      prisma.conversation.findFirst.mockResolvedValue({
+      mockPrisma.conversation.findFirst.mockResolvedValue({
         id: conversationId,
         meetingId: 'meeting-123',
         userId: mockAuth.userId,
@@ -260,7 +257,7 @@ describe('Conversations API', () => {
     });
 
     it('should return error for non-existent conversation', async () => {
-      prisma.conversation.findFirst.mockResolvedValue(null);
+      mockPrisma.conversation.findFirst.mockResolvedValue(null);
 
       const response = await request(app)
         .get('/api/v1/conversations/invalid-id');
@@ -273,12 +270,12 @@ describe('Conversations API', () => {
     it('should delete conversation', async () => {
       const conversationId = 'conv-123';
 
-      prisma.conversation.findFirst.mockResolvedValue({
+      mockPrisma.conversation.findFirst.mockResolvedValue({
         id: conversationId,
         userId: mockAuth.userId,
       });
 
-      prisma.conversation.delete.mockResolvedValue({
+      mockPrisma.conversation.delete.mockResolvedValue({
         id: conversationId,
       });
 
@@ -289,7 +286,7 @@ describe('Conversations API', () => {
     });
 
     it('should return error for non-existent conversation', async () => {
-      prisma.conversation.findFirst.mockResolvedValue(null);
+      mockPrisma.conversation.findFirst.mockResolvedValue(null);
 
       const response = await request(app)
         .delete('/api/v1/conversations/invalid-id');
@@ -302,7 +299,7 @@ describe('Conversations API', () => {
     it('should return suggested questions', async () => {
       const meetingId = 'meeting-123';
 
-      prisma.meeting.findFirst.mockResolvedValue({
+      mockPrisma.meeting.findFirst.mockResolvedValue({
         id: meetingId,
         organizationId: mockAuth.organizationId,
       });

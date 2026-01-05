@@ -4,13 +4,13 @@
  */
 
 import { Router } from 'express';
-import type { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction, Router as RouterType } from 'express';
 import { z } from 'zod';
 import { prisma } from '@zigznote/database';
 import { AppError } from '@zigznote/shared';
 import { usageService } from '../services/usageService';
 
-export const settingsRouter = Router();
+export const settingsRouter: RouterType = Router();
 
 // Validation schemas
 const updateNotificationPreferencesSchema = z.object({

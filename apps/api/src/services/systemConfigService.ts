@@ -3,7 +3,7 @@
  */
 
 import { systemConfigRepository } from '@zigznote/database';
-import type { SystemConfig, Prisma } from '@prisma/client';
+import { type SystemConfig, Prisma } from '@zigznote/database';
 import type { PaginatedResult, SystemConfigFilter } from '@zigznote/database';
 import { encryptionService } from './encryptionService';
 import { auditService, AuditActions, type AuditContext } from './auditService';

@@ -20,7 +20,7 @@ export const auditLogsRouter: IRouter = Router();
 auditLogsRouter.use(requireAdminAuth, requireSupport);
 
 // Validation schemas
-const listSchema = z.object({
+const listSchema = {
   query: z.object({
     page: z.coerce.number().int().positive().default(1).optional(),
     limit: z.coerce.number().int().min(1).max(100).default(50).optional(),
@@ -31,9 +31,9 @@ const listSchema = z.object({
     startDate: z.string().datetime().optional(),
     endDate: z.string().datetime().optional(),
   }),
-});
+};
 
-const entityHistorySchema = z.object({
+const entityHistorySchema = {
   params: z.object({
     entityType: z.string().min(1),
     entityId: z.string().min(1),
@@ -41,9 +41,9 @@ const entityHistorySchema = z.object({
   query: z.object({
     limit: z.coerce.number().int().min(1).max(200).default(50).optional(),
   }),
-});
+};
 
-const exportSchema = z.object({
+const exportSchema = {
   query: z.object({
     startDate: z.string().datetime(),
     endDate: z.string().datetime(),
@@ -51,7 +51,7 @@ const exportSchema = z.object({
     action: z.string().optional(),
     entityType: z.string().optional(),
   }),
-});
+};
 
 /**
  * @route GET /api/admin/audit-logs
@@ -62,7 +62,7 @@ auditLogsRouter.get(
   validateRequest(listSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const { page, limit, adminUserId, action, entityType, entityId, startDate, endDate } =
-      req.query as z.infer<typeof listSchema>['query'];
+      req.query as z.infer<typeof listSchema.query>;
 
     const result = await auditService.getLogs(
       { page, limit },
@@ -120,9 +120,9 @@ auditLogsRouter.get(
   validateRequest(entityHistorySchema),
   asyncHandler(async (req: Request, res: Response) => {
     const { entityType, entityId } = req.params;
-    const { limit } = req.query as z.infer<typeof entityHistorySchema>['query'];
+    const { limit } = req.query as z.infer<typeof entityHistorySchema.query>;
 
-    const logs = await auditService.getEntityHistory(entityType, entityId, limit);
+    const logs = await auditService.getEntityHistory(entityType!, entityId!, limit);
 
     res.json({
       success: true,
@@ -138,7 +138,7 @@ auditLogsRouter.get(
 auditLogsRouter.get(
   '/admin/:adminId',
   asyncHandler(async (req: Request, res: Response) => {
-    const { adminId } = req.params;
+    const adminId = req.params.adminId!;
     const limit = parseInt(req.query.limit as string) || 100;
 
     const logs = await auditService.getAdminActivity(adminId, limit);
@@ -184,7 +184,7 @@ auditLogsRouter.get(
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
     const { startDate, endDate, adminUserId, action, entityType } =
-      req.query as z.infer<typeof exportSchema>['query'];
+      req.query as z.infer<typeof exportSchema.query>;
 
     const logs = await auditService.exportLogs(
       new Date(startDate),

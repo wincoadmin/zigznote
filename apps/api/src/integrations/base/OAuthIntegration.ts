@@ -3,7 +3,7 @@
  * Base class for OAuth-based integrations
  */
 
-import { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@zigznote/database';
 import { BaseIntegration } from './BaseIntegration';
 import {
   IntegrationProvider,
@@ -66,7 +66,7 @@ export abstract class OAuthIntegration extends BaseIntegration {
         };
       }
 
-      const data = await response.json();
+      const data = await response.json() as Record<string, unknown>;
 
       return {
         success: true,
@@ -112,7 +112,7 @@ export abstract class OAuthIntegration extends BaseIntegration {
         };
       }
 
-      const data = await response.json();
+      const data = await response.json() as Record<string, unknown>;
 
       return {
         success: true,

@@ -1,4 +1,4 @@
-import dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
 import { z } from 'zod';
 
 // Only load .env in development (not in test mode to avoid conflicts)
@@ -178,6 +178,16 @@ export const config = {
   encryption: {
     key: process.env.ENCRYPTION_KEY || 'default-encryption-key-32-char!',
   },
+
+  /**
+   * OpenAI configuration
+   */
+  openaiApiKey: process.env.OPENAI_API_KEY || '',
+
+  /**
+   * Anthropic configuration
+   */
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
 };
 
 export type Config = typeof config;

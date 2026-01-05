@@ -24,13 +24,13 @@ export const analyticsRouter: IRouter = Router();
 analyticsRouter.use(requireAdminAuth, requireSupport);
 
 // Validation schemas
-const dateRangeSchema = z.object({
+const dateRangeSchema = {
   query: z.object({
     startDate: z.string().datetime().optional(),
     endDate: z.string().datetime().optional(),
     period: z.enum(['day', 'week', 'month', 'year']).default('week').optional(),
   }),
-});
+};
 
 /**
  * @route GET /api/admin/analytics/dashboard
@@ -38,7 +38,7 @@ const dateRangeSchema = z.object({
  */
 analyticsRouter.get(
   '/dashboard',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (_req: Request, res: Response) => {
     const now = new Date();
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -82,7 +82,7 @@ analyticsRouter.get(
   '/users',
   validateRequest(dateRangeSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const { startDate, endDate, period } = req.query as z.infer<typeof dateRangeSchema>['query'];
+    const { startDate, endDate, period: _period } = req.query as z.infer<typeof dateRangeSchema['query']>;
 
     const start = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const end = endDate ? new Date(endDate) : new Date();
@@ -113,7 +113,7 @@ analyticsRouter.get(
 analyticsRouter.get(
   '/organizations',
   validateRequest(dateRangeSchema),
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (_req: Request, res: Response) => {
     const allOrgs = await organizationRepository.findMany({ includeDeleted: true });
 
     const stats = {
@@ -150,7 +150,7 @@ analyticsRouter.get(
   '/meetings',
   validateRequest(dateRangeSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const { startDate, endDate } = req.query as z.infer<typeof dateRangeSchema>['query'];
+    const { startDate, endDate } = req.query as z.infer<typeof dateRangeSchema['query']>;
 
     const start = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const end = endDate ? new Date(endDate) : new Date();
@@ -167,7 +167,9 @@ analyticsRouter.get(
 
     for (const meeting of allMeetings) {
       stats.byStatus[meeting.status] = (stats.byStatus[meeting.status] || 0) + 1;
-      stats.byPlatform[meeting.platform] = (stats.byPlatform[meeting.platform] || 0) + 1;
+      if (meeting.platform) {
+        stats.byPlatform[meeting.platform] = (stats.byPlatform[meeting.platform] || 0) + 1;
+      }
 
       if (meeting.createdAt >= start && meeting.createdAt <= end) {
         stats.inDateRange++;
@@ -214,7 +216,7 @@ analyticsRouter.get(
  */
 analyticsRouter.get(
   '/growth',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (_req: Request, res: Response) => {
     const now = new Date();
     const periods = {
       today: new Date(now.getFullYear(), now.getMonth(), now.getDate()),

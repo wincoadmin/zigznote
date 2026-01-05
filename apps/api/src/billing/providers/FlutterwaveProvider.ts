@@ -35,12 +35,13 @@ interface FlutterwaveResponse<T> {
   data: T;
 }
 
-interface FlutterwaveCustomer {
-  id: number;
-  customer_email: string;
-  name?: string;
-  created_at: string;
-}
+// Note: FlutterwaveCustomer interface kept for reference when implementing full customer API
+// interface FlutterwaveCustomer {
+//   id: number;
+//   customer_email: string;
+//   name?: string;
+//   created_at: string;
+// }
 
 interface FlutterwavePaymentPlan {
   id: number;
@@ -86,7 +87,6 @@ export class FlutterwaveProvider extends BasePaymentProvider {
   readonly type: PaymentProviderType = 'flutterwave';
   readonly name = 'Flutterwave';
 
-  private apiKey: string | null = null;
   private secretKey: string | null = null;
   private webhookSecret: string | null = null;
   private readonly apiBase = 'https://api.flutterwave.com/v3';
@@ -96,8 +96,8 @@ export class FlutterwaveProvider extends BasePaymentProvider {
 
   override initialize(config: ProviderConfig): void {
     super.initialize(config);
-    this.apiKey = config.apiKey;
-    this.secretKey = config.secretKey || null;
+    // API key stored in config, secret key used for API calls
+    this.secretKey = config.secretKey || config.apiKey;
     this.webhookSecret = config.webhookSecret || null;
   }
 
@@ -118,7 +118,7 @@ export class FlutterwaveProvider extends BasePaymentProvider {
       },
     });
 
-    const data = await response.json();
+    const data = await response.json() as FlutterwaveResponse<T>;
 
     if (!response.ok || data.status !== 'success') {
       throw new Error(data.message || `Flutterwave API error: ${response.status}`);

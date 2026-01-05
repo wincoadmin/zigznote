@@ -5,7 +5,11 @@
 import { Router } from 'express';
 import type { Router as IRouter, Request, Response } from 'express';
 import { z } from 'zod';
-import { featureFlagService } from '../../services/featureFlagService';
+import {
+  featureFlagService,
+  type CreateFeatureFlagInput,
+  type UpdateFeatureFlagInput,
+} from '../../services/featureFlagService';
 import {
   requireAdminAuth,
   requireSupport,
@@ -20,7 +24,7 @@ export const featureFlagsRouter: IRouter = Router();
 featureFlagsRouter.use(requireAdminAuth, requireSupport);
 
 // Validation schemas
-const listSchema = z.object({
+const listSchema = {
   query: z.object({
     page: z.coerce.number().int().positive().default(1).optional(),
     limit: z.coerce.number().int().min(1).max(100).default(50).optional(),
@@ -28,9 +32,9 @@ const listSchema = z.object({
     enabled: z.enum(['true', 'false']).optional(),
     search: z.string().optional(),
   }),
-});
+};
 
-const createSchema = z.object({
+const createSchema = {
   body: z.object({
     key: z.string().min(1).max(100).regex(/^[a-z0-9_.-]+$/, {
       message: 'Key must be lowercase alphanumeric with dots, underscores, or hyphens',
@@ -46,9 +50,9 @@ const createSchema = z.object({
       value: z.string().optional(),
     })).optional(),
   }),
-});
+};
 
-const updateSchema = z.object({
+const updateSchema = {
   params: z.object({
     id: z.string().uuid(),
   }),
@@ -64,7 +68,7 @@ const updateSchema = z.object({
       value: z.string().optional(),
     })).optional(),
   }),
-});
+};
 
 /**
  * @route GET /api/admin/feature-flags
@@ -75,7 +79,7 @@ featureFlagsRouter.get(
   validateRequest(listSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const { page, limit, category, enabled, search } =
-      req.query as z.infer<typeof listSchema>['query'];
+      req.query as z.infer<typeof listSchema.query>;
 
     const result = await featureFlagService.listFlags(
       { page, limit },
@@ -100,7 +104,7 @@ featureFlagsRouter.get(
  */
 featureFlagsRouter.get(
   '/stats',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (_req: Request, res: Response) => {
     const stats = await featureFlagService.getFlagStats();
 
     res.json({
@@ -116,7 +120,7 @@ featureFlagsRouter.get(
  */
 featureFlagsRouter.get(
   '/categories',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (_req: Request, res: Response) => {
     const categories = await featureFlagService.getCategories();
 
     res.json({
@@ -132,7 +136,7 @@ featureFlagsRouter.get(
  */
 featureFlagsRouter.get(
   '/enabled',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (_req: Request, res: Response) => {
     const flags = await featureFlagService.getEnabledFlags();
 
     res.json({
@@ -149,7 +153,7 @@ featureFlagsRouter.get(
 featureFlagsRouter.get(
   '/:id',
   asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = req.params.id!;
 
     const flag = await featureFlagService.getFlag(id);
     if (!flag) {
@@ -177,7 +181,7 @@ featureFlagsRouter.post(
   validateRequest(createSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const input = req.body as z.infer<typeof createSchema>['body'];
+    const input = req.body as CreateFeatureFlagInput;
 
     const created = await featureFlagService.createFlag(
       input,
@@ -206,8 +210,8 @@ featureFlagsRouter.patch(
   validateRequest(updateSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const { id } = req.params;
-    const input = req.body as z.infer<typeof updateSchema>['body'];
+    const id = req.params.id!;
+    const input = req.body as UpdateFeatureFlagInput;
 
     const updated = await featureFlagService.updateFlag(id, input, {
       adminId: adminReq.adminAuth!.adminId,
@@ -231,7 +235,7 @@ featureFlagsRouter.post(
   requireAdminRoleLevel,
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const { id } = req.params;
+    const id = req.params.id!;
 
     const toggled = await featureFlagService.toggleFlag(id, {
       adminId: adminReq.adminAuth!.adminId,
@@ -256,7 +260,7 @@ featureFlagsRouter.delete(
   requireAdminRoleLevel,
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const { id } = req.params;
+    const id = req.params.id!;
 
     await featureFlagService.deleteFlag(id, {
       adminId: adminReq.adminAuth!.adminId,

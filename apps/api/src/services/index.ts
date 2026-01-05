@@ -22,3 +22,29 @@ export {
   type MatchSpeakerInput,
   type SpeakerIdentification,
 } from './voiceProfileService';
+
+export {
+  analyticsService,
+  type UserDashboardStats,
+  type OrgAnalyticsStats,
+  type Achievement,
+  type ProductivityScore,
+} from './analyticsService';
+
+export {
+  EmbeddingService,
+  embeddingService,
+  type EmbeddingResult,
+  type SimilarResult,
+  type SemanticSearchOptions,
+} from './embeddingService';
+
+export {
+  MeetingChatService,
+  meetingChatService,
+  type ChatMessage,
+  type ChatResponse,
+  type Citation,
+  type CreateChatOptions,
+  type SendMessageOptions,
+} from './meetingChatService';

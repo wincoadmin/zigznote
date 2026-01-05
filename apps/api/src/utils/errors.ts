@@ -17,8 +17,20 @@ import {
   SummaryNotFoundError,
 } from '@zigznote/shared';
 
-// Re-export AppError for backward compatibility
-export { AppError };
+// Re-export error classes for backward compatibility
+export {
+  AppError,
+  BadRequestError,
+  UnauthorizedError,
+  ForbiddenError,
+  NotFoundError,
+  ConflictError,
+  RateLimitError,
+  ServiceUnavailableError,
+  MeetingNotFoundError,
+  TranscriptNotFoundError,
+  SummaryNotFoundError,
+};
 
 /**
  * Common error factory functions

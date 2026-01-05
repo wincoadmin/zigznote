@@ -4,12 +4,12 @@
  */
 
 import { Router } from 'express';
-import type { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction, Router as RouterType } from 'express';
 import { z } from 'zod';
 import { prisma } from '@zigznote/database';
 import { AppError } from '@zigznote/shared';
 
-export const meetingExportRouter = Router();
+export const meetingExportRouter: RouterType = Router();
 
 // Validation schemas
 const exportSchema = z.object({

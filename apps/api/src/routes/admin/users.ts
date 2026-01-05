@@ -20,7 +20,7 @@ export const usersRouter: IRouter = Router();
 usersRouter.use(requireAdminAuth, requireSupport);
 
 // Validation schemas
-const listSchema = z.object({
+const listSchema = {
   query: z.object({
     page: z.coerce.number().int().positive().default(1).optional(),
     limit: z.coerce.number().int().min(1).max(100).default(50).optional(),
@@ -29,9 +29,9 @@ const listSchema = z.object({
     search: z.string().optional(),
     includeDeleted: z.enum(['true', 'false']).optional(),
   }),
-});
+};
 
-const updateSchema = z.object({
+const updateSchema = {
   params: z.object({
     id: z.string().uuid(),
   }),
@@ -40,14 +40,14 @@ const updateSchema = z.object({
     role: z.enum(['owner', 'admin', 'member', 'viewer']).optional(),
     avatarUrl: z.string().url().nullable().optional(),
   }),
-});
+};
 
-const searchSchema = z.object({
+const searchSchema = {
   query: z.object({
     q: z.string().min(1),
     limit: z.coerce.number().int().min(1).max(50).default(20).optional(),
   }),
-});
+};
 
 /**
  * @route GET /api/admin/users
@@ -58,7 +58,7 @@ usersRouter.get(
   validateRequest(listSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const { page, limit, organizationId, role, search, includeDeleted } =
-      req.query as z.infer<typeof listSchema>['query'];
+      req.query as unknown as z.infer<typeof listSchema.query>;
 
     const result = await adminUserService.listUsers(
       { page, limit },
@@ -86,7 +86,7 @@ usersRouter.get(
   '/search',
   validateRequest(searchSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const { q, limit } = req.query as z.infer<typeof searchSchema>['query'];
+    const { q, limit } = req.query as unknown as z.infer<typeof searchSchema.query>;
 
     const users = await adminUserService.searchUsers(q, limit);
 
@@ -103,7 +103,7 @@ usersRouter.get(
  */
 usersRouter.get(
   '/stats',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (_req: Request, res: Response) => {
     const stats = await adminUserService.getUserStats();
 
     res.json({
@@ -120,7 +120,7 @@ usersRouter.get(
 usersRouter.get(
   '/:id',
   asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = req.params.id!;
     const includeDeleted = req.query.includeDeleted === 'true';
 
     const user = await adminUserService.getUser(id, includeDeleted);
@@ -149,8 +149,8 @@ usersRouter.patch(
   validateRequest(updateSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const { id } = req.params;
-    const updates = req.body as z.infer<typeof updateSchema>['body'];
+    const id = req.params.id!;
+    const updates = req.body as z.infer<typeof updateSchema.body>;
 
     const updated = await adminUserService.updateUser(id, updates, {
       adminId: adminReq.adminAuth!.adminId,
@@ -174,7 +174,7 @@ usersRouter.post(
   requireAdminRoleLevel,
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const { id } = req.params;
+    const id = req.params.id!;
 
     await adminUserService.suspendUser(id, {
       adminId: adminReq.adminAuth!.adminId,
@@ -198,7 +198,7 @@ usersRouter.post(
   requireAdminRoleLevel,
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const { id } = req.params;
+    const id = req.params.id!;
 
     const user = await adminUserService.restoreUser(id, {
       adminId: adminReq.adminAuth!.adminId,
@@ -223,7 +223,7 @@ usersRouter.post(
   requireAdminRoleLevel,
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const { id } = req.params;
+    const id = req.params.id!;
 
     const { token, expiresAt } = await adminUserService.impersonateUser(
       id,
@@ -321,7 +321,7 @@ usersRouter.delete(
       return;
     }
 
-    const { id } = req.params;
+    const id = req.params.id!;
 
     await adminUserService.deleteUserPermanently(id, {
       adminId: adminReq.adminAuth.adminId,

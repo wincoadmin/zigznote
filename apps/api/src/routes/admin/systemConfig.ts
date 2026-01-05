@@ -20,7 +20,7 @@ export const systemConfigRouter: IRouter = Router();
 systemConfigRouter.use(requireAdminAuth, requireSupport);
 
 // Validation schemas
-const listSchema = z.object({
+const listSchema = {
   query: z.object({
     page: z.coerce.number().int().positive().default(1).optional(),
     limit: z.coerce.number().int().min(1).max(100).default(50).optional(),
@@ -28,9 +28,9 @@ const listSchema = z.object({
     encrypted: z.enum(['true', 'false']).optional(),
     search: z.string().optional(),
   }),
-});
+};
 
-const createSchema = z.object({
+const createSchema = {
   body: z.object({
     key: z.string().min(1).max(100).regex(/^[a-z0-9_.-]+$/, {
       message: 'Key must be lowercase alphanumeric with dots, underscores, or hyphens',
@@ -39,9 +39,9 @@ const createSchema = z.object({
     encrypted: z.boolean().default(false),
     category: z.string().max(50).default('general'),
   }),
-});
+};
 
-const updateSchema = z.object({
+const updateSchema = {
   params: z.object({
     id: z.string().uuid(),
   }),
@@ -50,16 +50,16 @@ const updateSchema = z.object({
     encrypted: z.boolean().optional(),
     category: z.string().max(50).optional(),
   }),
-});
+};
 
-const setValueSchema = z.object({
+const setValueSchema = {
   body: z.object({
     key: z.string().min(1).max(100),
     value: z.unknown(),
     encrypted: z.boolean().optional(),
     category: z.string().max(50).optional(),
   }),
-});
+};
 
 /**
  * @route GET /api/admin/system-config
@@ -70,7 +70,7 @@ systemConfigRouter.get(
   validateRequest(listSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const { page, limit, category, encrypted, search } =
-      req.query as z.infer<typeof listSchema>['query'];
+      req.query as z.infer<typeof listSchema.query>;
 
     const result = await systemConfigService.listConfigs(
       { page, limit },
@@ -95,7 +95,7 @@ systemConfigRouter.get(
  */
 systemConfigRouter.get(
   '/stats',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (_req: Request, res: Response) => {
     const stats = await systemConfigService.getConfigStats();
 
     res.json({
@@ -111,7 +111,7 @@ systemConfigRouter.get(
  */
 systemConfigRouter.get(
   '/categories',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (_req: Request, res: Response) => {
     const categories = await systemConfigService.getCategories();
 
     res.json({
@@ -128,7 +128,7 @@ systemConfigRouter.get(
 systemConfigRouter.get(
   '/category/:category',
   asyncHandler(async (req: Request, res: Response) => {
-    const { category } = req.params;
+    const category = req.params.category!;
 
     const configs = await systemConfigService.getConfigsByCategory(category);
 
@@ -146,7 +146,7 @@ systemConfigRouter.get(
 systemConfigRouter.get(
   '/prefix/:prefix',
   asyncHandler(async (req: Request, res: Response) => {
-    const { prefix } = req.params;
+    const prefix = req.params.prefix!;
 
     const configs = await systemConfigService.getConfigsByPrefix(prefix);
 
@@ -164,7 +164,7 @@ systemConfigRouter.get(
 systemConfigRouter.get(
   '/key/:key',
   asyncHandler(async (req: Request, res: Response) => {
-    const { key } = req.params;
+    const key = req.params.key!;
 
     const config = await systemConfigService.getConfigByKey(key);
     if (!config) {
@@ -189,7 +189,7 @@ systemConfigRouter.get(
 systemConfigRouter.get(
   '/:id',
   asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = req.params.id!;
 
     const config = await systemConfigService.getConfig(id);
     if (!config) {
@@ -217,10 +217,10 @@ systemConfigRouter.post(
   validateRequest(createSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const input = req.body as z.infer<typeof createSchema>['body'];
+    const input = req.body as z.infer<typeof createSchema.body>;
 
     const created = await systemConfigService.createConfig(
-      input,
+      { ...input, value: input.value ?? null },
       adminReq.adminAuth!.adminId,
       {
         adminId: adminReq.adminAuth!.adminId,
@@ -246,7 +246,7 @@ systemConfigRouter.put(
   validateRequest(setValueSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const { key, value, encrypted, category } = req.body as z.infer<typeof setValueSchema>['body'];
+    const { key, value, encrypted, category } = req.body as z.infer<typeof setValueSchema.body>;
 
     const config = await systemConfigService.setValue(
       key,
@@ -277,8 +277,8 @@ systemConfigRouter.patch(
   validateRequest(updateSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const { id } = req.params;
-    const input = req.body as z.infer<typeof updateSchema>['body'];
+    const id = req.params.id!;
+    const input = req.body as z.infer<typeof updateSchema.body>;
 
     const updated = await systemConfigService.updateConfig(
       id,
@@ -307,7 +307,7 @@ systemConfigRouter.delete(
   requireAdminRoleLevel,
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const { id } = req.params;
+    const id = req.params.id!;
 
     await systemConfigService.deleteConfig(id, {
       adminId: adminReq.adminAuth!.adminId,

@@ -8,7 +8,7 @@ import type { Router as IRouter, Request, Response } from 'express';
 import { z } from 'zod';
 import { helpAssistantService } from '../services/helpAssistantService';
 import { helpCategories, faqs, searchArticles, getArticleById, getCategoryById } from '../help/helpContent';
-import { requireAuth, type AuthenticatedRequest } from '../middleware/auth';
+import { requireAuth } from '../middleware/auth';
 import { asyncHandler, validateRequest } from '../middleware';
 
 export const helpRouter: IRouter = Router();
@@ -17,7 +17,7 @@ export const helpRouter: IRouter = Router();
 helpRouter.use(requireAuth);
 
 // Validation schemas
-const chatSchema = z.object({
+const chatSchema = {
   body: z.object({
     message: z.string().min(1).max(1000),
     context: z.object({
@@ -33,26 +33,26 @@ const chatSchema = z.object({
       content: z.string(),
     })).optional().default([]),
   }),
-});
+};
 
-const feedbackSchema = z.object({
+const feedbackSchema = {
   body: z.object({
     responseId: z.string().uuid(),
     helpful: z.boolean(),
   }),
-});
+};
 
-const searchSchema = z.object({
+const searchSchema = {
   query: z.object({
     q: z.string().min(1).max(200),
   }),
-});
+};
 
-const pageSchema = z.object({
+const pageSchema = {
   query: z.object({
     page: z.string().optional().default('/dashboard'),
   }),
-});
+};
 
 /**
  * @route POST /api/help/chat
@@ -146,7 +146,7 @@ helpRouter.get(
 helpRouter.get(
   '/articles/:id',
   asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = req.params.id!;
 
     const article = getArticleById(id);
 
@@ -174,7 +174,7 @@ helpRouter.get(
  */
 helpRouter.get(
   '/categories',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (_req: Request, res: Response) => {
     const categories = helpCategories.map((c) => ({
       id: c.id,
       name: c.name,
@@ -196,7 +196,7 @@ helpRouter.get(
 helpRouter.get(
   '/categories/:id',
   asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = req.params.id!;
 
     const category = getCategoryById(id);
 
@@ -231,7 +231,7 @@ helpRouter.get(
  */
 helpRouter.get(
   '/faqs',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (_req: Request, res: Response) => {
     res.json({
       success: true,
       data: faqs,
@@ -245,7 +245,7 @@ helpRouter.get(
  */
 helpRouter.get(
   '/status',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (_req: Request, res: Response) => {
     res.json({
       success: true,
       data: {

@@ -30,15 +30,15 @@ const upload = multer({
 });
 
 // Validation schemas
-const getUploadUrlSchema = z.object({
+const getUploadUrlSchema = {
   body: z.object({
     fileName: z.string().min(1).max(255),
     mimeType: z.string().min(1),
     fileSize: z.number().int().positive().max(500 * 1024 * 1024),
   }),
-});
+};
 
-const finalizeUploadSchema = z.object({
+const finalizeUploadSchema = {
   body: z.object({
     title: z.string().min(1).max(500),
     fileUrl: z.string().url(),
@@ -46,7 +46,7 @@ const finalizeUploadSchema = z.object({
     fileSize: z.number().int().positive(),
     audioDuration: z.number().int().positive().optional(),
   }),
-});
+};
 
 /**
  * @route POST /api/v1/audio/upload-url

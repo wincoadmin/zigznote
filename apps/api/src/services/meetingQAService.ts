@@ -3,14 +3,11 @@
  * AI-powered question answering about meeting content
  */
 
-import Anthropic from '@anthropic-ai/sdk';
-import OpenAI from 'openai';
 import pino from 'pino';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@zigznote/database';
 import { AI_MODELS } from '@zigznote/shared';
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
-const prisma = new PrismaClient();
 
 // Types
 interface TranscriptSegment {
@@ -77,23 +74,59 @@ Guidelines:
 
 Format your responses in a clear, readable way. Use bullet points for lists.`;
 
+// Anthropic client type
+interface AnthropicClient {
+  messages: {
+    create(params: {
+      model: string;
+      max_tokens: number;
+      temperature: number;
+      system: string;
+      messages: Array<{ role: string; content: string }>;
+    }): Promise<{
+      content: Array<{ type: string; text?: string }>;
+      usage: { input_tokens: number; output_tokens: number };
+    }>;
+  };
+}
+
+// OpenAI client type
+interface OpenAIClient {
+  chat: {
+    completions: {
+      create(params: {
+        model: string;
+        max_tokens: number;
+        temperature: number;
+        messages: Array<{ role: string; content: string }>;
+      }): Promise<{
+        choices: Array<{ message?: { content?: string } }>;
+        usage?: { total_tokens: number };
+      }>;
+    };
+  };
+}
+
 /**
  * Meeting Q&A Service Class
  */
 export class MeetingQAService {
-  private anthropic: Anthropic | null = null;
-  private openai: OpenAI | null = null;
+  private anthropic: AnthropicClient | null = null;
+  private openai: OpenAIClient | null = null;
 
   /**
    * Get Anthropic client
    */
-  private getAnthropicClient(): Anthropic {
+  private async getAnthropicClient(): Promise<AnthropicClient> {
     if (!this.anthropic) {
       const apiKey = process.env.ANTHROPIC_API_KEY;
       if (!apiKey) {
         throw new Error('ANTHROPIC_API_KEY not configured');
       }
-      this.anthropic = new Anthropic({ apiKey });
+      // Dynamic import to avoid build-time dependency
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const Anthropic = require('@anthropic-ai/sdk').default;
+      this.anthropic = new Anthropic({ apiKey }) as AnthropicClient;
     }
     return this.anthropic;
   }
@@ -101,13 +134,16 @@ export class MeetingQAService {
   /**
    * Get OpenAI client
    */
-  private getOpenAIClient(): OpenAI {
+  private async getOpenAIClient(): Promise<OpenAIClient> {
     if (!this.openai) {
       const apiKey = process.env.OPENAI_API_KEY;
       if (!apiKey) {
         throw new Error('OPENAI_API_KEY not configured');
       }
-      this.openai = new OpenAI({ apiKey });
+      // Dynamic import to avoid build-time dependency
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const OpenAI = require('openai').default;
+      this.openai = new OpenAI({ apiKey }) as unknown as OpenAIClient;
     }
     return this.openai;
   }
@@ -264,7 +300,7 @@ export class MeetingQAService {
     }
 
     // Parse transcript segments
-    const segments = (meeting.transcript.segments as TranscriptSegment[]) || [];
+    const segments = (meeting.transcript.segments as unknown as TranscriptSegment[]) || [];
 
     // Build meeting context
     const meetingContext: MeetingContext = {
@@ -343,7 +379,7 @@ export class MeetingQAService {
   private async askWithAnthropic(
     messages: Array<{ role: 'user' | 'assistant'; content: string }>
   ): Promise<{ answer: string; tokensUsed: number; model: string }> {
-    const client = this.getAnthropicClient();
+    const client = await this.getAnthropicClient();
 
     const response = await client.messages.create({
       model: AI_MODELS.CLAUDE_SONNET,
@@ -356,8 +392,8 @@ export class MeetingQAService {
       })),
     });
 
-    const textContent = response.content.find((block) => block.type === 'text');
-    const answer = textContent?.type === 'text' ? textContent.text : '';
+    const textContent = response.content.find((block: { type: string; text?: string }) => block.type === 'text');
+    const answer = textContent?.type === 'text' ? textContent.text ?? '' : '';
 
     return {
       answer,
@@ -372,7 +408,7 @@ export class MeetingQAService {
   private async askWithOpenAI(
     messages: Array<{ role: 'user' | 'assistant'; content: string }>
   ): Promise<{ answer: string; tokensUsed: number; model: string }> {
-    const client = this.getOpenAIClient();
+    const client = await this.getOpenAIClient();
 
     const response = await client.chat.completions.create({
       model: AI_MODELS.GPT_4O_MINI,
@@ -427,9 +463,9 @@ export class MeetingQAService {
     ];
 
     // Add context-specific suggestions based on summary
-    const summary = meeting.summary?.content as MeetingContext['summary'];
+    const summary = (meeting as { summary?: { content?: MeetingContext['summary'] } }).summary?.content as MeetingContext['summary'];
     if (summary?.topics && summary.topics.length > 0) {
-      const firstTopic = summary.topics[0].title;
+      const firstTopic = summary.topics[0]!.title;
       suggestions.push(`Tell me more about ${firstTopic}`);
     }
 

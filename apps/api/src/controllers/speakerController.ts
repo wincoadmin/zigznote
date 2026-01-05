@@ -8,8 +8,18 @@
 import type { Request, Response, NextFunction } from 'express';
 import type { AuthenticatedRequest } from '../middleware';
 import { speakerAliasRepository } from '@zigznote/database';
-import { z } from 'zod';
+import { z, ZodError } from 'zod';
 import { ValidationError, NotFoundError } from '@zigznote/shared';
+
+/**
+ * Convert Zod errors to ValidationError format
+ */
+function zodToValidationErrors(error: ZodError): Array<{ field: string; message: string }> {
+  return error.errors.map((e) => ({
+    field: e.path.join('.') || 'root',
+    message: e.message,
+  }));
+}
 
 /**
  * Validation schemas
@@ -43,7 +53,7 @@ class SpeakerController {
   async list(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const authReq = req as AuthenticatedRequest;
-      const organizationId = authReq.auth!.organizationId;
+      const organizationId = authReq.auth!.organizationId!;
 
       const aliases = await speakerAliasRepository.findByOrganization(
         organizationId
@@ -65,8 +75,8 @@ class SpeakerController {
   async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const authReq = req as AuthenticatedRequest;
-      const { id } = req.params;
-      const organizationId = authReq.auth!.organizationId;
+      const id = req.params.id!;
+      const organizationId = authReq.auth!.organizationId!;
 
       const alias = await speakerAliasRepository.findById(id);
 
@@ -87,11 +97,11 @@ class SpeakerController {
   async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const authReq = req as AuthenticatedRequest;
-      const organizationId = authReq.auth!.organizationId;
+      const organizationId = authReq.auth!.organizationId!;
 
       const validation = createSpeakerAliasSchema.safeParse(req.body);
       if (!validation.success) {
-        throw new ValidationError(validation.error.message);
+        throw new ValidationError(zodToValidationErrors(validation.error));
       }
 
       const alias = await speakerAliasRepository.create({
@@ -112,11 +122,11 @@ class SpeakerController {
   async upsert(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const authReq = req as AuthenticatedRequest;
-      const organizationId = authReq.auth!.organizationId;
+      const organizationId = authReq.auth!.organizationId!;
 
       const validation = createSpeakerAliasSchema.safeParse(req.body);
       if (!validation.success) {
-        throw new ValidationError(validation.error.message);
+        throw new ValidationError(zodToValidationErrors(validation.error));
       }
 
       const alias = await speakerAliasRepository.upsert({
@@ -137,11 +147,11 @@ class SpeakerController {
   async bulkUpsert(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const authReq = req as AuthenticatedRequest;
-      const organizationId = authReq.auth!.organizationId;
+      const organizationId = authReq.auth!.organizationId!;
 
       const validation = bulkUpsertSchema.safeParse(req.body);
       if (!validation.success) {
-        throw new ValidationError(validation.error.message);
+        throw new ValidationError(zodToValidationErrors(validation.error));
       }
 
       const aliasesWithOrg = validation.data.aliases.map((a) => ({
@@ -167,8 +177,8 @@ class SpeakerController {
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const authReq = req as AuthenticatedRequest;
-      const { id } = req.params;
-      const organizationId = authReq.auth!.organizationId;
+      const id = req.params.id!;
+      const organizationId = authReq.auth!.organizationId!;
 
       // Verify ownership
       const existing = await speakerAliasRepository.findById(id);
@@ -178,7 +188,7 @@ class SpeakerController {
 
       const validation = updateSpeakerAliasSchema.safeParse(req.body);
       if (!validation.success) {
-        throw new ValidationError(validation.error.message);
+        throw new ValidationError(zodToValidationErrors(validation.error));
       }
 
       const alias = await speakerAliasRepository.update(id, validation.data);
@@ -196,8 +206,8 @@ class SpeakerController {
   async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const authReq = req as AuthenticatedRequest;
-      const { id } = req.params;
-      const organizationId = authReq.auth!.organizationId;
+      const id = req.params.id!;
+      const organizationId = authReq.auth!.organizationId!;
 
       // Verify ownership
       const existing = await speakerAliasRepository.findById(id);
@@ -219,7 +229,7 @@ class SpeakerController {
    */
   async listByMeeting(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { meetingId } = req.params;
+      const meetingId = req.params.meetingId!;
 
       const aliases = await speakerAliasRepository.findByMeeting(meetingId);
 

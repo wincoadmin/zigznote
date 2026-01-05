@@ -7,10 +7,8 @@ import { prisma } from '@zigznote/database';
 import {
   escapeSearchQuery,
   extractHighlights,
-  highlightTerms,
-  combineSearchScores,
 } from '@zigznote/database';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@zigznote/database';
 
 export interface SearchOptions {
   query: string;
@@ -135,8 +133,6 @@ class SearchService {
     organizationId: string,
     dateRange?: { start?: Date; end?: Date }
   ): Promise<SearchResult[]> {
-    const searchTerms = query.toLowerCase().split(/\s+/).filter(Boolean);
-
     const meetings = await prisma.meeting.findMany({
       where: {
         organizationId,
@@ -145,7 +141,6 @@ class SearchService {
         ...(dateRange?.end && { startTime: { lte: dateRange.end } }),
         OR: [
           { title: { contains: query, mode: 'insensitive' } },
-          { externalMeetingId: { contains: query, mode: 'insensitive' } },
         ],
       },
       select: {
@@ -293,7 +288,7 @@ class SearchService {
   private async searchActionItems(
     query: string,
     organizationId: string,
-    userId?: string,
+    _userId?: string,
     dateRange?: { start?: Date; end?: Date }
   ): Promise<SearchResult[]> {
     const actionItems = await prisma.actionItem.findMany({
@@ -304,10 +299,7 @@ class SearchService {
           ...(dateRange?.start && { startTime: { gte: dateRange.start } }),
           ...(dateRange?.end && { startTime: { lte: dateRange.end } }),
         },
-        OR: [
-          { title: { contains: query, mode: 'insensitive' } },
-          { description: { contains: query, mode: 'insensitive' } },
-        ],
+        text: { contains: query, mode: 'insensitive' },
       },
       include: {
         meeting: {
@@ -323,20 +315,14 @@ class SearchService {
     });
 
     return actionItems.map((item) => {
-      const score = this.calculateTextScore(
-        `${item.title} ${item.description || ''}`,
-        query
-      );
+      const score = this.calculateTextScore(item.text, query);
 
       return {
         id: item.id,
         type: 'action_item' as const,
-        title: item.title,
-        preview: item.description || 'No description',
-        highlights: extractHighlights(
-          `${item.title} ${item.description || ''}`,
-          query
-        ),
+        title: item.text.substring(0, 100),
+        preview: item.text,
+        highlights: extractHighlights(item.text, query),
         score,
         meetingId: item.meetingId,
         meetingTitle: item.meeting?.title || undefined,

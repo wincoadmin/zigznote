@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   MessageSquare,
   Send,
@@ -12,123 +12,98 @@ import {
   X,
   Bot,
   User,
-  ExternalLink,
+  Clock,
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  sources?: Array<{
-    segmentIndex: number;
-    text: string;
-    relevance: number;
-    speaker?: string;
-    timestamp?: number;
-  }>;
-  createdAt: string;
-}
+import { chatApi, type ChatMessage, type ChatCitation } from '@/lib/api';
 
 interface MeetingChatProps {
   meetingId: string;
+  meetingTitle?: string;
   className?: string;
 }
 
-// API client functions
-async function askQuestion(
-  meetingId: string,
-  question: string,
-  conversationId?: string
-): Promise<{
-  conversationId: string;
-  answer: string;
-  sources: Message['sources'];
-  tokensUsed: number;
-  modelUsed: string;
-  latencyMs: number;
-}> {
-  const response = await fetch(`/api/v1/meetings/${meetingId}/ask`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question, conversationId }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to get answer');
-  }
-
-  return response.json();
+function formatTimestamp(seconds: number | null): string {
+  if (seconds === null) return '';
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${String(secs).padStart(2, '0')}`;
 }
 
-async function getSuggestions(meetingId: string): Promise<{ suggestions: string[] }> {
-  const response = await fetch(`/api/v1/meetings/${meetingId}/suggestions`);
-  if (!response.ok) {
-    return { suggestions: [] };
-  }
-  return response.json();
-}
+const messageVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0 },
+};
 
-async function getConversation(
-  conversationId: string
-): Promise<{ messages: Message[] }> {
-  const response = await fetch(`/api/v1/conversations/${conversationId}`);
-  if (!response.ok) {
-    throw new Error('Failed to load conversation');
-  }
-  return response.json();
-}
-
-export function MeetingChat({ meetingId, className }: MeetingChatProps) {
+export function MeetingChat({ meetingId, meetingTitle, className }: MeetingChatProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [conversationId, setConversationId] = useState<string | null>(null);
-  const [showSources, setShowSources] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [chatId, setChatId] = useState<string | null>(null);
+  const [expandedCitations, setExpandedCitations] = useState<string | null>(null);
+  const [followups, setFollowups] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const queryClient = useQueryClient();
 
-  // Fetch suggestions
+  // Fetch suggested questions
   const { data: suggestionsData } = useQuery({
-    queryKey: ['meeting-suggestions', meetingId],
-    queryFn: () => getSuggestions(meetingId),
+    queryKey: ['chat-suggestions', meetingId],
+    queryFn: async () => {
+      const response = await chatApi.getSuggestions(meetingId);
+      if (response.success && response.data) {
+        return response.data;
+      }
+      return [];
+    },
     enabled: isOpen && messages.length === 0,
   });
 
-  // Ask question mutation
-  const askMutation = useMutation({
-    mutationFn: ({ question }: { question: string }) =>
-      askQuestion(meetingId, question, conversationId || undefined),
-    onMutate: async ({ question }) => {
+  // Create chat mutation
+  const createChatMutation = useMutation({
+    mutationFn: async () => {
+      const response = await chatApi.createChat({ meetingId });
+      if (response.success && response.data) {
+        return response.data.chatId;
+      }
+      throw new Error('Failed to create chat');
+    },
+  });
+
+  // Send message mutation
+  const sendMessageMutation = useMutation({
+    mutationFn: async ({ activeChatId, message }: { activeChatId: string; message: string }) => {
+      const response = await chatApi.sendMessage(activeChatId, message);
+      if (response.success && response.data) {
+        return response.data;
+      }
+      throw new Error('Failed to send message');
+    },
+    onMutate: async ({ message }) => {
       // Optimistically add user message
-      const tempMessage: Message = {
+      const tempMessage: ChatMessage = {
         id: `temp-${Date.now()}`,
         role: 'user',
-        content: question,
+        content: message,
         createdAt: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, tempMessage]);
     },
     onSuccess: (data) => {
-      setConversationId(data.conversationId);
+      // Replace temp message and add assistant response
+      setMessages((prev) => [
+        ...prev.slice(0, -1),
+        { ...prev[prev.length - 1], id: `user-${Date.now()}` },
+        data.message,
+      ]);
 
-      // Add assistant response
-      const assistantMessage: Message = {
-        id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        content: data.answer,
-        sources: data.sources,
-        createdAt: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
+      if (data.suggestedFollowups) {
+        setFollowups(data.suggestedFollowups);
+      }
     },
-    onError: (error) => {
+    onError: () => {
       // Remove optimistic message on error
       setMessages((prev) => prev.slice(0, -1));
-      console.error('Failed to ask question:', error);
     },
   });
 
@@ -144,16 +119,36 @@ export function MeetingChat({ meetingId, className }: MeetingChatProps) {
     }
   }, [isOpen]);
 
+  // Set initial suggestions
+  useEffect(() => {
+    if (suggestionsData && suggestionsData.length > 0 && followups.length === 0) {
+      setFollowups(suggestionsData);
+    }
+  }, [suggestionsData, followups.length]);
+
   const handleSubmit = useCallback(
-    (e?: React.FormEvent) => {
+    async (e?: React.FormEvent) => {
       e?.preventDefault();
-      const question = input.trim();
-      if (!question || askMutation.isPending) return;
+      const message = input.trim();
+      if (!message || sendMessageMutation.isPending) return;
 
       setInput('');
-      askMutation.mutate({ question });
+
+      // Create chat if needed
+      let activeChatId = chatId;
+      if (!activeChatId) {
+        try {
+          activeChatId = await createChatMutation.mutateAsync();
+          setChatId(activeChatId);
+        } catch (error) {
+          console.error('Failed to create chat:', error);
+          return;
+        }
+      }
+
+      sendMessageMutation.mutate({ activeChatId, message });
     },
-    [input, askMutation]
+    [input, chatId, sendMessageMutation, createChatMutation]
   );
 
   const handleSuggestionClick = useCallback((suggestion: string) => {
@@ -171,19 +166,14 @@ export function MeetingChat({ meetingId, className }: MeetingChatProps) {
     [handleSubmit]
   );
 
-  const formatTimestamp = (ms: number) => {
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
-  };
+  const isLoading = createChatMutation.isPending || sendMessageMutation.isPending;
 
   if (!isOpen) {
     return (
       <button
         onClick={() => setIsOpen(true)}
         className={cn(
-          'fixed bottom-6 right-6 bg-primary-600 hover:bg-primary-700 text-white rounded-full p-4 shadow-lg transition-all hover:scale-105 z-50',
+          'fixed bottom-6 right-6 bg-amber-500 hover:bg-amber-600 text-white rounded-full p-4 shadow-lg transition-all hover:scale-105 z-50',
           className
         )}
         title="Ask AI about this meeting"
@@ -194,17 +184,26 @@ export function MeetingChat({ meetingId, className }: MeetingChatProps) {
   }
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95, y: 20 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
       className={cn(
-        'fixed bottom-6 right-6 w-96 max-h-[600px] bg-white rounded-xl shadow-2xl border border-slate-200 flex flex-col z-50',
+        'fixed bottom-6 right-6 w-96 max-h-[600px] bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col z-50',
         className
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-gradient-to-r from-primary-600 to-primary-700 rounded-t-xl">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-amber-500 to-amber-600 rounded-t-xl">
         <div className="flex items-center gap-2 text-white">
           <Sparkles className="w-5 h-5" />
-          <span className="font-semibold">AI Assistant</span>
+          <div>
+            <span className="font-semibold block">AI Assistant</span>
+            {meetingTitle && (
+              <span className="text-xs text-amber-100 truncate block max-w-[200px]">
+                {meetingTitle}
+              </span>
+            )}
+          </div>
         </div>
         <button
           onClick={() => setIsOpen(false)}
@@ -216,135 +215,176 @@ export function MeetingChat({ meetingId, className }: MeetingChatProps) {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[300px] max-h-[400px]">
-        {messages.length === 0 ? (
-          <div className="space-y-4">
-            <div className="text-center text-slate-500 py-4">
-              <Bot className="w-12 h-12 mx-auto mb-2 text-slate-300" />
-              <p className="text-sm">
-                Ask me anything about this meeting!
-              </p>
-            </div>
-
-            {/* Suggestions */}
-            {suggestionsData?.suggestions && suggestionsData.suggestions.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs text-slate-400 uppercase tracking-wide">
-                  Suggested questions
-                </p>
-                {suggestionsData.suggestions.map((suggestion, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleSuggestionClick(suggestion)}
-                    className="w-full text-left text-sm px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-700 transition-colors"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              className={cn(
-                'flex gap-2',
-                message.role === 'user' ? 'justify-end' : 'justify-start'
-              )}
+        <AnimatePresence initial={false}>
+          {messages.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-4"
             >
-              {message.role === 'assistant' && (
-                <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
-                  <Bot className="w-4 h-4 text-primary-600" />
+              <div className="text-center py-4">
+                <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+                  <Bot className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Ask me anything about this meeting!
+                </p>
+              </div>
+
+              {/* Suggestions */}
+              {followups.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs text-gray-400 uppercase tracking-wide">
+                    Suggested questions
+                  </p>
+                  {followups.slice(0, 3).map((suggestion, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      className="w-full text-left text-sm px-3 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300 transition-colors"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
                 </div>
               )}
-
-              <div
+            </motion.div>
+          ) : (
+            messages.map((message) => (
+              <motion.div
+                key={message.id}
+                variants={messageVariants}
+                initial="hidden"
+                animate="visible"
                 className={cn(
-                  'max-w-[80%] rounded-lg px-3 py-2',
-                  message.role === 'user'
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-slate-100 text-slate-800'
+                  'flex gap-2',
+                  message.role === 'user' ? 'justify-end' : 'justify-start'
                 )}
               >
-                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                {message.role === 'assistant' && (
+                  <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0">
+                    <Bot className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                )}
 
-                {/* Sources */}
-                {message.role === 'assistant' &&
-                  message.sources &&
-                  message.sources.length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-slate-200">
-                      <button
-                        onClick={() =>
-                          setShowSources(
-                            showSources === message.id ? null : message.id
-                          )
-                        }
-                        className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                        {message.sources.length} source
-                        {message.sources.length !== 1 ? 's' : ''}
-                        {showSources === message.id ? (
-                          <ChevronUp className="w-3 h-3" />
-                        ) : (
-                          <ChevronDown className="w-3 h-3" />
-                        )}
-                      </button>
-
-                      {showSources === message.id && (
-                        <div className="mt-2 space-y-1">
-                          {message.sources.map((source, i) => (
-                            <div
-                              key={i}
-                              className="text-xs bg-white rounded p-2 border border-slate-200"
-                            >
-                              {source.speaker && (
-                                <span className="font-medium text-slate-700">
-                                  {source.speaker}
-                                </span>
-                              )}
-                              {source.timestamp !== undefined && (
-                                <span className="text-slate-400 ml-1">
-                                  @ {formatTimestamp(source.timestamp)}
-                                </span>
-                              )}
-                              <p className="text-slate-600 mt-1 line-clamp-2">
-                                "{source.text}"
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                <div
+                  className={cn(
+                    'max-w-[80%] rounded-2xl px-4 py-2',
+                    message.role === 'user'
+                      ? 'bg-amber-500 text-white'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
                   )}
-              </div>
+                >
+                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
 
-              {message.role === 'user' && (
-                <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
-                  <User className="w-4 h-4 text-slate-600" />
+                  {/* Citations */}
+                  {message.role === 'assistant' &&
+                    message.citations &&
+                    message.citations.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <button
+                          onClick={() =>
+                            setExpandedCitations(
+                              expandedCitations === message.id ? null : message.id
+                            )
+                          }
+                          className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                        >
+                          <span>
+                            {message.citations.length} source
+                            {message.citations.length !== 1 ? 's' : ''}
+                          </span>
+                          {expandedCitations === message.id ? (
+                            <ChevronUp className="w-3 h-3" />
+                          ) : (
+                            <ChevronDown className="w-3 h-3" />
+                          )}
+                        </button>
+
+                        <AnimatePresence>
+                          {expandedCitations === message.id && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="mt-2 space-y-1 overflow-hidden"
+                            >
+                              {message.citations.map((citation, i) => (
+                                <div
+                                  key={i}
+                                  className="text-xs bg-white dark:bg-gray-900 rounded p-2 border border-gray-200 dark:border-gray-700"
+                                >
+                                  {citation.speaker && (
+                                    <span className="font-medium text-gray-700 dark:text-gray-300">
+                                      {citation.speaker}
+                                    </span>
+                                  )}
+                                  {citation.timestamp !== null && (
+                                    <span className="text-gray-400 ml-1 inline-flex items-center gap-0.5">
+                                      <Clock className="w-3 h-3" />
+                                      {formatTimestamp(citation.timestamp)}
+                                    </span>
+                                  )}
+                                  <p className="text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                                    &ldquo;{citation.text}&rdquo;
+                                  </p>
+                                </div>
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    )}
                 </div>
-              )}
-            </div>
-          ))
-        )}
+
+                {message.role === 'user' && (
+                  <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                    <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  </div>
+                )}
+              </motion.div>
+            ))
+          )}
+        </AnimatePresence>
 
         {/* Loading indicator */}
-        {askMutation.isPending && (
-          <div className="flex gap-2">
-            <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
-              <Bot className="w-4 h-4 text-primary-600" />
+        {isLoading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex gap-2"
+          >
+            <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0">
+              <Bot className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             </div>
-            <div className="bg-slate-100 rounded-lg px-3 py-2">
-              <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+            <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-3">
+              <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
             </div>
-          </div>
+          </motion.div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Follow-up suggestions */}
+      {messages.length > 0 && followups.length > 0 && !isLoading && (
+        <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-800">
+          <div className="flex flex-wrap gap-1">
+            {followups.slice(0, 2).map((question, i) => (
+              <button
+                key={i}
+                onClick={() => handleSuggestionClick(question)}
+                className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full text-gray-600 dark:text-gray-400 transition-colors truncate max-w-[45%]"
+              >
+                {question}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Input */}
-      <form onSubmit={handleSubmit} className="p-3 border-t border-slate-200">
+      <form onSubmit={handleSubmit} className="p-3 border-t border-gray-200 dark:border-gray-800">
         <div className="flex gap-2">
           <textarea
             ref={inputRef}
@@ -353,15 +393,15 @@ export function MeetingChat({ meetingId, className }: MeetingChatProps) {
             onKeyDown={handleKeyDown}
             placeholder="Ask about this meeting..."
             rows={1}
-            className="flex-1 resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            disabled={askMutation.isPending}
+            className="flex-1 resize-none rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            disabled={isLoading}
           />
           <button
             type="submit"
-            disabled={!input.trim() || askMutation.isPending}
-            className="bg-primary-600 hover:bg-primary-700 disabled:bg-slate-300 text-white rounded-lg p-2 transition-colors"
+            disabled={!input.trim() || isLoading}
+            className="bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-xl p-2 transition-colors"
           >
-            {askMutation.isPending ? (
+            {isLoading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
               <Send className="w-5 h-5" />
@@ -369,6 +409,6 @@ export function MeetingChat({ meetingId, className }: MeetingChatProps) {
           </button>
         </div>
       </form>
-    </div>
+    </motion.div>
   );
 }

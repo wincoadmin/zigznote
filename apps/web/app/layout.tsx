@@ -87,7 +87,7 @@ export default function RootLayout({
       className={`${inter.variable} ${plusJakarta.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen bg-slate-50 font-sans antialiased">
+      <body className="min-h-screen bg-slate-50 font-sans antialiased dark:bg-slate-900">
         <Providers>{children}</Providers>
       </body>
     </html>

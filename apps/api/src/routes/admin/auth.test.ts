@@ -28,6 +28,20 @@ jest.mock('@zigznote/database', () => ({
   },
 }));
 
+// Mock adminAuthService
+jest.mock('../../services/adminAuthService', () => ({
+  adminAuthService: {
+    login: jest.fn(),
+    verify2FA: jest.fn(),
+    validateSession: jest.fn(),
+    logout: jest.fn(),
+    needsInitialSetup: jest.fn(),
+    createInitialAdmin: jest.fn(),
+  },
+}));
+
+const mockAdminAuthService = adminAuthService as jest.Mocked<typeof adminAuthService>;
+
 const mockAdminUserRepo = adminUserRepository as jest.Mocked<typeof adminUserRepository>;
 const mockAdminSessionRepo = adminSessionRepository as jest.Mocked<typeof adminSessionRepository>;
 const mockAuditLogRepo = auditLogRepository as jest.Mocked<typeof auditLogRepository>;
@@ -61,7 +75,7 @@ describe('Admin Auth Routes', () => {
 
   describe('GET /api/admin/auth/setup-status', () => {
     it('should return needsSetup: true when no admins exist', async () => {
-      mockAdminUserRepo.hasAnyAdmins.mockResolvedValue(false);
+      mockAdminAuthService.needsInitialSetup.mockResolvedValue(true);
 
       const response = await request(app)
         .get('/api/admin/auth/setup-status')
@@ -74,7 +88,7 @@ describe('Admin Auth Routes', () => {
     });
 
     it('should return needsSetup: false when admins exist', async () => {
-      mockAdminUserRepo.hasAnyAdmins.mockResolvedValue(true);
+      mockAdminAuthService.needsInitialSetup.mockResolvedValue(false);
 
       const response = await request(app)
         .get('/api/admin/auth/setup-status')
@@ -89,8 +103,7 @@ describe('Admin Auth Routes', () => {
 
   describe('POST /api/admin/auth/initial-setup', () => {
     it('should create initial admin when no admins exist', async () => {
-      mockAdminUserRepo.hasAnyAdmins.mockResolvedValue(false);
-      mockAdminUserRepo.create.mockResolvedValue(mockAdmin);
+      mockAdminAuthService.createInitialAdmin.mockResolvedValue(mockAdmin);
 
       const response = await request(app)
         .post('/api/admin/auth/initial-setup')
@@ -107,7 +120,10 @@ describe('Admin Auth Routes', () => {
     });
 
     it('should reject when admins already exist', async () => {
-      mockAdminUserRepo.hasAnyAdmins.mockResolvedValue(true);
+      const { ForbiddenError } = jest.requireActual('@zigznote/shared');
+      mockAdminAuthService.createInitialAdmin.mockRejectedValue(
+        new ForbiddenError('Admin setup already complete')
+      );
 
       const response = await request(app)
         .post('/api/admin/auth/initial-setup')
@@ -125,7 +141,10 @@ describe('Admin Auth Routes', () => {
 
   describe('POST /api/admin/auth/login', () => {
     it('should reject invalid email', async () => {
-      mockAdminUserRepo.findByEmail.mockResolvedValue(null);
+      const { UnauthorizedError } = jest.requireActual('@zigznote/shared');
+      mockAdminAuthService.login.mockRejectedValue(
+        new UnauthorizedError('Invalid email or password')
+      );
 
       const response = await request(app)
         .post('/api/admin/auth/login')
@@ -139,10 +158,10 @@ describe('Admin Auth Routes', () => {
     });
 
     it('should reject inactive account', async () => {
-      mockAdminUserRepo.findByEmail.mockResolvedValue({
-        ...mockAdmin,
-        isActive: false,
-      });
+      const { UnauthorizedError } = jest.requireActual('@zigznote/shared');
+      mockAdminAuthService.login.mockRejectedValue(
+        new UnauthorizedError('Account is inactive')
+      );
 
       const response = await request(app)
         .post('/api/admin/auth/login')
@@ -156,10 +175,10 @@ describe('Admin Auth Routes', () => {
     });
 
     it('should reject locked account', async () => {
-      mockAdminUserRepo.findByEmail.mockResolvedValue({
-        ...mockAdmin,
-        lockedUntil: new Date(Date.now() + 30 * 60 * 1000),
-      });
+      const { ForbiddenError } = jest.requireActual('@zigznote/shared');
+      mockAdminAuthService.login.mockRejectedValue(
+        new ForbiddenError('Account is locked. Please try again later.')
+      );
 
       const response = await request(app)
         .post('/api/admin/auth/login')
@@ -184,17 +203,13 @@ describe('Admin Auth Routes', () => {
     });
 
     it('should return admin info with valid token', async () => {
-      mockAdminSessionRepo.validateSession.mockResolvedValue({
-        id: 'session-123',
-        adminUserId: 'admin-123',
-        token: 'token-hash',
-        ipAddress: '127.0.0.1',
-        userAgent: 'test',
-        expiresAt: new Date(Date.now() + 3600000),
-        lastActiveAt: new Date(),
-        createdAt: new Date(),
-        adminUser: mockAdmin,
-      } as never);
+      mockAdminAuthService.validateSession.mockResolvedValue({
+        adminId: 'admin-123',
+        email: 'admin@test.com',
+        name: 'Test Admin',
+        role: 'admin',
+        sessionId: 'session-123',
+      });
 
       const response = await request(app)
         .get('/api/admin/auth/me')
@@ -208,18 +223,14 @@ describe('Admin Auth Routes', () => {
 
   describe('POST /api/admin/auth/logout', () => {
     it('should clear session on logout', async () => {
-      mockAdminSessionRepo.validateSession.mockResolvedValue({
-        id: 'session-123',
-        adminUserId: 'admin-123',
-        token: 'token-hash',
-        ipAddress: '127.0.0.1',
-        userAgent: 'test',
-        expiresAt: new Date(Date.now() + 3600000),
-        lastActiveAt: new Date(),
-        createdAt: new Date(),
-        adminUser: mockAdmin,
-      } as never);
-      mockAdminSessionRepo.deleteByToken.mockResolvedValue();
+      mockAdminAuthService.validateSession.mockResolvedValue({
+        adminId: 'admin-123',
+        email: 'admin@test.com',
+        name: 'Test Admin',
+        role: 'admin',
+        sessionId: 'session-123',
+      });
+      mockAdminAuthService.logout.mockResolvedValue(undefined);
 
       const response = await request(app)
         .post('/api/admin/auth/logout')
@@ -227,7 +238,7 @@ describe('Admin Auth Routes', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(mockAdminSessionRepo.deleteByToken).toHaveBeenCalled();
+      expect(mockAdminAuthService.logout).toHaveBeenCalled();
     });
   });
 });

@@ -8,8 +8,18 @@
 import type { Request, Response, NextFunction } from 'express';
 import type { AuthenticatedRequest } from '../middleware';
 import { customVocabularyRepository } from '@zigznote/database';
-import { z } from 'zod';
+import { z, ZodError } from 'zod';
 import { ValidationError, NotFoundError } from '@zigznote/shared';
+
+/**
+ * Convert Zod errors to ValidationError format
+ */
+function zodToValidationErrors(error: ZodError): Array<{ field: string; message: string }> {
+  return error.errors.map((e) => ({
+    field: e.path.join('.') || 'root',
+    message: e.message,
+  }));
+}
 
 /**
  * Vocabulary categories
@@ -53,7 +63,7 @@ class VocabularyController {
   async list(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const authReq = req as AuthenticatedRequest;
-      const organizationId = authReq.auth!.organizationId;
+      const organizationId = authReq.auth!.organizationId!;
       const { category } = req.query;
 
       let terms;
@@ -85,8 +95,8 @@ class VocabularyController {
   async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const authReq = req as AuthenticatedRequest;
-      const { id } = req.params;
-      const organizationId = authReq.auth!.organizationId;
+      const id = req.params.id!;
+      const organizationId = authReq.auth!.organizationId!;
 
       const term = await customVocabularyRepository.findById(id);
 
@@ -107,11 +117,11 @@ class VocabularyController {
   async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const authReq = req as AuthenticatedRequest;
-      const organizationId = authReq.auth!.organizationId;
+      const organizationId = authReq.auth!.organizationId!;
 
       const validation = createVocabularySchema.safeParse(req.body);
       if (!validation.success) {
-        throw new ValidationError(validation.error.message);
+        throw new ValidationError(zodToValidationErrors(validation.error));
       }
 
       const term = await customVocabularyRepository.upsert({
@@ -132,11 +142,11 @@ class VocabularyController {
   async bulkCreate(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const authReq = req as AuthenticatedRequest;
-      const organizationId = authReq.auth!.organizationId;
+      const organizationId = authReq.auth!.organizationId!;
 
       const validation = bulkCreateSchema.safeParse(req.body);
       if (!validation.success) {
-        throw new ValidationError(validation.error.message);
+        throw new ValidationError(zodToValidationErrors(validation.error));
       }
 
       const termsWithOrg = validation.data.terms.map((t) => ({
@@ -162,8 +172,8 @@ class VocabularyController {
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const authReq = req as AuthenticatedRequest;
-      const { id } = req.params;
-      const organizationId = authReq.auth!.organizationId;
+      const id = req.params.id!;
+      const organizationId = authReq.auth!.organizationId!;
 
       // Verify ownership
       const existing = await customVocabularyRepository.findById(id);
@@ -173,7 +183,7 @@ class VocabularyController {
 
       const validation = updateVocabularySchema.safeParse(req.body);
       if (!validation.success) {
-        throw new ValidationError(validation.error.message);
+        throw new ValidationError(zodToValidationErrors(validation.error));
       }
 
       const term = await customVocabularyRepository.update(id, validation.data);
@@ -191,8 +201,8 @@ class VocabularyController {
   async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const authReq = req as AuthenticatedRequest;
-      const { id } = req.params;
-      const organizationId = authReq.auth!.organizationId;
+      const id = req.params.id!;
+      const organizationId = authReq.auth!.organizationId!;
 
       // Verify ownership
       const existing = await customVocabularyRepository.findById(id);
@@ -215,7 +225,7 @@ class VocabularyController {
   async stats(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const authReq = req as AuthenticatedRequest;
-      const organizationId = authReq.auth!.organizationId;
+      const organizationId = authReq.auth!.organizationId!;
 
       const total = await customVocabularyRepository.count(organizationId);
       const terms = await customVocabularyRepository.findByOrganization(

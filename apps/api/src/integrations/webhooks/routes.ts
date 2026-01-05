@@ -3,15 +3,14 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@zigznote/database';
 import { WebhookService } from './WebhookService';
 import { asyncHandler } from '../../middleware/asyncHandler';
 import { AuthenticatedRequest } from '../../middleware/auth';
 import { BadRequestError, NotFoundError } from '../../utils/errors';
 import { WEBHOOK_EVENTS, WebhookEvent } from './types';
 
-const router = Router();
-const prisma = new PrismaClient();
+const router: Router = Router();
 const webhookService = new WebhookService(prisma);
 
 /**
@@ -22,7 +21,7 @@ router.get(
   '/',
   asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const organizationId = authReq.auth?.organizationId;
+    const organizationId = authReq.auth!.organizationId!;
 
     if (!organizationId) {
       throw new BadRequestError('Organization ID required');
@@ -56,7 +55,7 @@ router.post(
   '/',
   asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const organizationId = authReq.auth?.organizationId;
+    const organizationId = authReq.auth!.organizationId!;
 
     if (!organizationId) {
       throw new BadRequestError('Organization ID required');
@@ -116,8 +115,8 @@ router.get(
   '/:id',
   asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const organizationId = authReq.auth?.organizationId;
-    const { id } = req.params;
+    const organizationId = authReq.auth!.organizationId!;
+    const id = req.params.id!;
 
     if (!organizationId) {
       throw new BadRequestError('Organization ID required');
@@ -146,8 +145,8 @@ router.put(
   '/:id',
   asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const organizationId = authReq.auth?.organizationId;
-    const { id } = req.params;
+    const organizationId = authReq.auth!.organizationId!;
+    const id = req.params.id!;
 
     if (!organizationId) {
       throw new BadRequestError('Organization ID required');
@@ -212,8 +211,8 @@ router.delete(
   '/:id',
   asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const organizationId = authReq.auth?.organizationId;
-    const { id } = req.params;
+    const organizationId = authReq.auth!.organizationId!;
+    const id = req.params.id!;
 
     if (!organizationId) {
       throw new BadRequestError('Organization ID required');
@@ -237,8 +236,8 @@ router.post(
   '/:id/regenerate-secret',
   asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const organizationId = authReq.auth?.organizationId;
-    const { id } = req.params;
+    const organizationId = authReq.auth!.organizationId!;
+    const id = req.params.id!;
 
     if (!organizationId) {
       throw new BadRequestError('Organization ID required');
@@ -262,8 +261,8 @@ router.get(
   '/:id/deliveries',
   asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const organizationId = authReq.auth?.organizationId;
-    const { id } = req.params;
+    const organizationId = authReq.auth!.organizationId!;
+    const id = req.params.id!;
     const limit = Math.min(parseInt(req.query.limit as string, 10) || 50, 100);
 
     if (!organizationId) {
@@ -290,8 +289,8 @@ router.post(
   '/:id/test',
   asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const organizationId = authReq.auth?.organizationId;
-    const { id } = req.params;
+    const organizationId = authReq.auth!.organizationId!;
+    const id = req.params.id!;
 
     if (!organizationId) {
       throw new BadRequestError('Organization ID required');

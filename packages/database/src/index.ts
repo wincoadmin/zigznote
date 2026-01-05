@@ -25,7 +25,44 @@ export type {
   Payment,
   Invoice,
   Refund,
+  // Admin types
+  AdminUser,
+  AdminSession,
+  AuditLog,
+  SystemApiKey,
+  FeatureFlag,
+  SystemConfig,
+  // Voice profile types
+  VoiceProfile,
+  SpeakerMatch,
+  SpeakerAlias,
+  CustomVocabulary,
+  NamePattern,
+  // Analytics types
+  UserDailyMetrics,
+  OrgDailyMetrics,
+  UserEngagement,
+  Achievement,
+  UserAchievement,
+  MeetingAnalytics,
+  // Settings types
+  NotificationPreferences,
+  OrganizationSettings,
+  DataExport,
+  MeetingShare,
+  UsageRecord,
+  // Chat types
+  MeetingChat,
+  ChatMessage,
+  SuggestedQuestion,
+  Conversation,
+  ConversationMessage,
+  // Webhook types
+  ProcessedWebhook,
 } from '@prisma/client';
+
+// Re-export enums
+export { AccountType } from '@prisma/client';
 
 // Export repositories
 export * from './repositories';

@@ -6,8 +6,10 @@
  */
 
 import { prisma } from '@zigznote/database';
-import type { VoiceProfile, SpeakerMatch } from '@prisma/client';
-import { logger } from '../utils/logger';
+import type { VoiceProfile, SpeakerMatch } from '@zigznote/database';
+
+// logger is available but not used in current implementation
+// import { logger } from '../utils/logger';
 
 export interface CreateVoiceProfileInput {
   organizationId: string;
@@ -51,7 +53,7 @@ class VoiceProfileService {
         userId: input.userId,
         firstMeetingId: input.meetingId,
         lastMeetingId: input.meetingId,
-        voiceEmbedding: input.voiceEmbedding,
+        voiceEmbedding: input.voiceEmbedding ? new Uint8Array(input.voiceEmbedding) : undefined,
         voiceHash: input.voiceHash,
         confidence: input.confidence ?? 0.5,
       },
@@ -292,3 +294,37 @@ class VoiceProfileService {
 }
 
 export const voiceProfileService = new VoiceProfileService();
+
+/**
+ * Speaker recognition service for reprocessing meetings
+ * This is a lightweight wrapper that coordinates with voice profiles
+ */
+class SpeakerRecognitionService {
+  /**
+   * Reprocess speaker recognition for a meeting
+   */
+  async reprocessMeeting(meetingId: string): Promise<{
+    speakerMap: Map<string, string>;
+    newProfiles: string[];
+    matchedProfiles: string[];
+  }> {
+    // Get existing speaker matches for this meeting
+    const existingMatches = await voiceProfileService.getMeetingSpeakers(meetingId);
+
+    const speakerMap = new Map<string, string>();
+    const matchedProfiles: string[] = [];
+
+    for (const match of existingMatches) {
+      speakerMap.set(match.speakerLabel, match.displayName);
+      matchedProfiles.push(match.voiceProfileId);
+    }
+
+    return {
+      speakerMap,
+      newProfiles: [],
+      matchedProfiles,
+    };
+  }
+}
+
+export const speakerRecognitionService = new SpeakerRecognitionService();

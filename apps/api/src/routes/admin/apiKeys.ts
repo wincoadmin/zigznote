@@ -24,7 +24,7 @@ export const apiKeysRouter: IRouter = Router();
 apiKeysRouter.use(requireAdminAuth, requireAdminRoleLevel);
 
 // Validation schemas
-const listSchema = z.object({
+const listSchema = {
   query: z.object({
     page: z.coerce.number().int().positive().default(1).optional(),
     limit: z.coerce.number().int().min(1).max(100).default(50).optional(),
@@ -33,9 +33,9 @@ const listSchema = z.object({
     isActive: z.enum(['true', 'false']).optional(),
     search: z.string().optional(),
   }),
-});
+};
 
-const createSchema = z.object({
+const createSchema = {
   body: z.object({
     name: z.string().min(1).max(100),
     provider: z.string().min(1).max(50),
@@ -44,9 +44,9 @@ const createSchema = z.object({
     expiresAt: z.string().datetime().optional(),
     rotationDays: z.number().int().positive().optional(),
   }),
-});
+};
 
-const updateSchema = z.object({
+const updateSchema = {
   params: z.object({
     id: z.string().uuid(),
   }),
@@ -56,16 +56,16 @@ const updateSchema = z.object({
     expiresAt: z.string().datetime().nullable().optional(),
     rotationDays: z.number().int().positive().nullable().optional(),
   }),
-});
+};
 
-const rotateSchema = z.object({
+const rotateSchema = {
   params: z.object({
     id: z.string().uuid(),
   }),
   body: z.object({
     key: z.string().min(1),
   }),
-});
+};
 
 /**
  * @route GET /api/admin/api-keys
@@ -76,7 +76,7 @@ apiKeysRouter.get(
   validateRequest(listSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const { page, limit, provider, environment, isActive, search } =
-      req.query as z.infer<typeof listSchema>['query'];
+      req.query as z.infer<typeof listSchema.query>;
 
     const result = await systemApiKeyService.listKeys(
       { page, limit },
@@ -102,7 +102,7 @@ apiKeysRouter.get(
  */
 apiKeysRouter.get(
   '/providers',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (_req: Request, res: Response) => {
     res.json({
       success: true,
       data: {
@@ -119,7 +119,7 @@ apiKeysRouter.get(
  */
 apiKeysRouter.get(
   '/stats',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (_req: Request, res: Response) => {
     const stats = await systemApiKeyService.getKeyStats();
 
     res.json({
@@ -135,7 +135,7 @@ apiKeysRouter.get(
  */
 apiKeysRouter.get(
   '/rotation-due',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (_req: Request, res: Response) => {
     const keys = await systemApiKeyService.getKeysDueForRotation();
 
     res.json({
@@ -151,7 +151,7 @@ apiKeysRouter.get(
  */
 apiKeysRouter.get(
   '/expired',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (_req: Request, res: Response) => {
     const keys = await systemApiKeyService.getExpiredKeys();
 
     res.json({
@@ -168,7 +168,7 @@ apiKeysRouter.get(
 apiKeysRouter.get(
   '/:id',
   asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = req.params.id!;
 
     const key = await systemApiKeyService.getKey(id);
     if (!key) {
@@ -193,7 +193,7 @@ apiKeysRouter.get(
 apiKeysRouter.get(
   '/:id/verify',
   asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = req.params.id!;
 
     const result = await systemApiKeyService.verifyKey(id);
 
@@ -214,7 +214,7 @@ apiKeysRouter.post(
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
     const { name, provider, environment, key, expiresAt, rotationDays } =
-      req.body as z.infer<typeof createSchema>['body'];
+      req.body as z.infer<typeof createSchema.body>;
 
     const created = await systemApiKeyService.createKey(
       {
@@ -249,15 +249,15 @@ apiKeysRouter.patch(
   validateRequest(updateSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const { id } = req.params;
-    const updates = req.body as z.infer<typeof updateSchema>['body'];
+    const id = req.params.id!;
+    const updates = req.body as z.infer<typeof updateSchema.body>;
 
     const updated = await systemApiKeyService.updateKey(
       id,
       {
         name: updates.name,
         isActive: updates.isActive,
-        expiresAt: updates.expiresAt ? new Date(updates.expiresAt) : updates.expiresAt,
+        expiresAt: updates.expiresAt ? new Date(updates.expiresAt) : (updates.expiresAt === null ? null : undefined),
         rotationDays: updates.rotationDays,
       },
       {
@@ -283,8 +283,8 @@ apiKeysRouter.post(
   validateRequest(rotateSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const { id } = req.params;
-    const { key } = req.body as z.infer<typeof rotateSchema>['body'];
+    const id = req.params.id!;
+    const { key } = req.body as z.infer<typeof rotateSchema.body>;
 
     const rotated = await systemApiKeyService.rotateKey(id, key, {
       adminId: adminReq.adminAuth!.adminId,
@@ -308,7 +308,7 @@ apiKeysRouter.post(
   '/:id/deactivate',
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const { id } = req.params;
+    const id = req.params.id!;
 
     const deactivated = await systemApiKeyService.deactivateKey(id, {
       adminId: adminReq.adminAuth!.adminId,
@@ -332,7 +332,7 @@ apiKeysRouter.delete(
   '/:id',
   asyncHandler(async (req: Request, res: Response) => {
     const adminReq = req as AdminAuthenticatedRequest;
-    const { id } = req.params;
+    const id = req.params.id!;
 
     await systemApiKeyService.deleteKey(id, {
       adminId: adminReq.adminAuth!.adminId,

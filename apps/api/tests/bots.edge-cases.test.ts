@@ -15,6 +15,11 @@ jest.mock('@zigznote/database', () => ({
     findByBotId: jest.fn(),
     update: jest.fn(),
   },
+  prisma: {
+    meeting: {
+      findFirst: jest.fn().mockResolvedValue(null),
+    },
+  },
 }));
 
 // Mock WebSocket module

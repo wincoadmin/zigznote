@@ -4,11 +4,9 @@
  */
 
 import { Worker, Job } from 'bullmq';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@zigznote/database';
 import { WebhookService, WebhookDispatcher, WebhookJobData, MAX_RETRY_ATTEMPTS } from '../integrations';
 import { config } from '../config';
-
-const prisma = new PrismaClient();
 const webhookService = new WebhookService(prisma);
 const webhookDispatcher = new WebhookDispatcher(prisma);
 

@@ -11,7 +11,6 @@ const logger = createLogger({ component: 'embeddingService' });
 
 // OpenAI embedding model
 const EMBEDDING_MODEL = 'text-embedding-ada-002';
-const EMBEDDING_DIMENSIONS = 1536;
 const CHUNK_SIZE = 500; // tokens approximately
 const CHUNK_OVERLAP = 50; // tokens overlap between chunks
 
@@ -36,11 +35,11 @@ export interface SemanticSearchOptions {
   threshold?: number; // minimum similarity score (0-1)
 }
 
-class EmbeddingService {
+export class EmbeddingService {
   private openaiApiKey: string | null;
 
   constructor() {
-    this.openaiApiKey = config.openaiApiKey || null;
+    this.openaiApiKey = (config as { openaiApiKey?: string }).openaiApiKey || null;
   }
 
   /**
@@ -72,14 +71,22 @@ class EmbeddingService {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`OpenAI API error: ${error.error?.message || response.statusText}`);
+        const errorData = await response.json() as { error?: { message?: string } };
+        throw new Error(`OpenAI API error: ${errorData.error?.message || response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as {
+        data: Array<{ embedding: number[] }>;
+        usage?: { total_tokens: number };
+      };
+
+      const embeddingData = data.data[0];
+      if (!embeddingData) {
+        throw new Error('No embedding data returned from OpenAI');
+      }
 
       return {
-        embedding: data.data[0].embedding,
+        embedding: embeddingData.embedding,
         tokensUsed: data.usage?.total_tokens || 0,
       };
     } catch (error) {
@@ -124,14 +131,14 @@ class EmbeddingService {
       const transcript = await prisma.transcript.findUnique({
         where: { meetingId },
         select: {
-          content: true,
+          fullText: true,
           meeting: {
             select: { organizationId: true },
           },
         },
       });
 
-      if (!transcript?.content) {
+      if (!transcript?.fullText) {
         logger.info({ meetingId }, 'No transcript found for embedding');
         return 0;
       }
@@ -142,15 +149,18 @@ class EmbeddingService {
       });
 
       // Chunk the transcript
-      const chunks = this.chunkText(transcript.content);
+      const chunks = this.chunkText(transcript.fullText);
       logger.info({ meetingId, chunkCount: chunks.length }, 'Generating embeddings');
 
       let storedCount = 0;
 
       // Generate and store embeddings for each chunk
       for (let i = 0; i < chunks.length; i++) {
+        const chunkText = chunks[i];
+        if (!chunkText) continue;
+
         try {
-          const result = await this.generateEmbedding(chunks[i]);
+          const result = await this.generateEmbedding(chunkText);
 
           // Convert embedding to bytes for storage
           const embeddingBuffer = Buffer.from(
@@ -161,7 +171,7 @@ class EmbeddingService {
             data: {
               meetingId,
               chunkIndex: i,
-              chunkText: chunks[i],
+              chunkText,
               embedding: embeddingBuffer,
             },
           });
@@ -242,7 +252,7 @@ class EmbeddingService {
    * Hybrid search combining full-text and semantic search
    */
   async hybridSearch(options: SemanticSearchOptions): Promise<SimilarResult[]> {
-    const { query, organizationId, limit = 10 } = options;
+    const { query: _query, organizationId: _organizationId, limit = 10 } = options;
 
     // Get semantic results
     const semanticResults = await this.searchSimilar({
@@ -292,6 +302,206 @@ class EmbeddingService {
       totalEmbeddings,
       meetingsWithEmbeddings,
     };
+  }
+
+  /**
+   * Chunk transcript segments with timing and speaker info
+   */
+  chunkTranscriptSegments(
+    segments: Array<{ speaker: string; text: string; startTime: number; endTime: number }>
+  ): Array<{ text: string; startTime: number; endTime: number; speakers: string[] }> {
+    const chunks: Array<{ text: string; startTime: number; endTime: number; speakers: string[] }> = [];
+    const wordsPerChunk = Math.floor(CHUNK_SIZE * 0.75);
+    const overlapWords = Math.floor(CHUNK_OVERLAP * 0.75);
+
+    let currentChunk = {
+      words: [] as string[],
+      startTime: 0,
+      endTime: 0,
+      speakers: new Set<string>(),
+    };
+
+    for (const segment of segments) {
+      const words = segment.text.split(/\s+/).filter((w) => w.length > 0);
+
+      if (currentChunk.words.length === 0) {
+        currentChunk.startTime = segment.startTime;
+      }
+
+      for (const word of words) {
+        currentChunk.words.push(word);
+        currentChunk.speakers.add(segment.speaker);
+        currentChunk.endTime = segment.endTime;
+
+        if (currentChunk.words.length >= wordsPerChunk) {
+          chunks.push({
+            text: currentChunk.words.join(' '),
+            startTime: currentChunk.startTime,
+            endTime: currentChunk.endTime,
+            speakers: Array.from(currentChunk.speakers),
+          });
+
+          currentChunk = {
+            words: currentChunk.words.slice(-overlapWords),
+            startTime: segment.startTime,
+            endTime: segment.endTime,
+            speakers: new Set([segment.speaker]),
+          };
+        }
+      }
+    }
+
+    if (currentChunk.words.length > 0) {
+      chunks.push({
+        text: currentChunk.words.join(' '),
+        startTime: currentChunk.startTime,
+        endTime: currentChunk.endTime,
+        speakers: Array.from(currentChunk.speakers),
+      });
+    }
+
+    return chunks;
+  }
+
+  /**
+   * Get context chunks for a meeting (for chat RAG)
+   */
+  async getContextChunks(
+    meetingId: string,
+    query: string,
+    limit = 5
+  ): Promise<Array<{
+    text: string;
+    startTime: number | null;
+    speakers: string[] | null;
+    similarity: number;
+  }>> {
+    if (!this.isAvailable()) {
+      return [];
+    }
+
+    try {
+      const queryResult = await this.generateEmbedding(query);
+      const queryEmbedding = queryResult.embedding;
+
+      const results = await prisma.$queryRaw<Array<{
+        chunk_text: string;
+        start_time: number | null;
+        speakers: string[] | null;
+        similarity: number;
+      }>>`
+        SELECT
+          te.chunk_text,
+          te.start_time,
+          te.speakers,
+          1 - (te.embedding <=> ${Buffer.from(new Float32Array(queryEmbedding).buffer)}::vector) as similarity
+        FROM transcript_embeddings te
+        WHERE te.meeting_id = ${meetingId}
+        ORDER BY te.embedding <=> ${Buffer.from(new Float32Array(queryEmbedding).buffer)}::vector
+        LIMIT ${limit}
+      `;
+
+      return results.map((r) => ({
+        text: r.chunk_text,
+        startTime: r.start_time,
+        speakers: r.speakers,
+        similarity: r.similarity,
+      }));
+    } catch (error) {
+      logger.error({ error, meetingId }, 'Failed to get context chunks');
+      return [];
+    }
+  }
+
+  /**
+   * Search across all meetings for cross-meeting chat
+   */
+  async crossMeetingSearch(
+    organizationId: string,
+    query: string,
+    options: { limit?: number; meetingIds?: string[] } = {}
+  ): Promise<Array<{
+    meetingId: string;
+    meetingTitle: string;
+    text: string;
+    startTime: number | null;
+    speakers: string[] | null;
+    similarity: number;
+  }>> {
+    const { limit = 10, meetingIds } = options;
+
+    if (!this.isAvailable()) {
+      return [];
+    }
+
+    try {
+      const queryResult = await this.generateEmbedding(query);
+      const queryEmbedding = queryResult.embedding;
+
+      let sql;
+      if (meetingIds && meetingIds.length > 0) {
+        sql = prisma.$queryRaw<Array<{
+          meeting_id: string;
+          meeting_title: string;
+          chunk_text: string;
+          start_time: number | null;
+          speakers: string[] | null;
+          similarity: number;
+        }>>`
+          SELECT
+            te.meeting_id,
+            m.title as meeting_title,
+            te.chunk_text,
+            te.start_time,
+            te.speakers,
+            1 - (te.embedding <=> ${Buffer.from(new Float32Array(queryEmbedding).buffer)}::vector) as similarity
+          FROM transcript_embeddings te
+          JOIN meetings m ON te.meeting_id = m.id
+          WHERE m.organization_id = ${organizationId}
+            AND m.deleted_at IS NULL
+            AND te.meeting_id = ANY(${meetingIds})
+          ORDER BY te.embedding <=> ${Buffer.from(new Float32Array(queryEmbedding).buffer)}::vector
+          LIMIT ${limit}
+        `;
+      } else {
+        sql = prisma.$queryRaw<Array<{
+          meeting_id: string;
+          meeting_title: string;
+          chunk_text: string;
+          start_time: number | null;
+          speakers: string[] | null;
+          similarity: number;
+        }>>`
+          SELECT
+            te.meeting_id,
+            m.title as meeting_title,
+            te.chunk_text,
+            te.start_time,
+            te.speakers,
+            1 - (te.embedding <=> ${Buffer.from(new Float32Array(queryEmbedding).buffer)}::vector) as similarity
+          FROM transcript_embeddings te
+          JOIN meetings m ON te.meeting_id = m.id
+          WHERE m.organization_id = ${organizationId}
+            AND m.deleted_at IS NULL
+          ORDER BY te.embedding <=> ${Buffer.from(new Float32Array(queryEmbedding).buffer)}::vector
+          LIMIT ${limit}
+        `;
+      }
+
+      const results = await sql;
+
+      return results.map((r) => ({
+        meetingId: r.meeting_id,
+        meetingTitle: r.meeting_title || 'Untitled Meeting',
+        text: r.chunk_text,
+        startTime: r.start_time,
+        speakers: r.speakers,
+        similarity: r.similarity,
+      }));
+    } catch (error) {
+      logger.error({ error }, 'Cross-meeting search failed');
+      return [];
+    }
   }
 }
 

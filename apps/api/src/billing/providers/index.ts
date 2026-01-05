@@ -3,11 +3,13 @@
  */
 
 export * from './types';
-export { PaymentProvider, BasePaymentProvider } from './PaymentProvider';
+export type { PaymentProvider } from './PaymentProvider';
+export { BasePaymentProvider } from './PaymentProvider';
 export { StripeProvider } from './StripeProvider';
 export { FlutterwaveProvider } from './FlutterwaveProvider';
 
-import { PaymentProvider, PaymentProviderType } from './types';
+import type { PaymentProvider } from './PaymentProvider';
+import { PaymentProviderType } from './types';
 import { StripeProvider } from './StripeProvider';
 import { FlutterwaveProvider } from './FlutterwaveProvider';
 

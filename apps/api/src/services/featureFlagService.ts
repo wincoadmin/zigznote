@@ -3,7 +3,7 @@
  */
 
 import { featureFlagRepository } from '@zigznote/database';
-import type { FeatureFlag } from '@prisma/client';
+import type { FeatureFlag } from '@zigznote/database';
 import type { PaginatedResult, FeatureFlagFilter } from '@zigznote/database';
 import { auditService, AuditActions, type AuditContext } from './auditService';
 import { AppError } from '../utils/errors';

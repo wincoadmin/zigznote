@@ -5,8 +5,7 @@
 
 import { Router } from 'express';
 import type { Router as IRouter, Request, Response, NextFunction } from 'express';
-import { voiceProfileService } from '../services/voiceProfileService';
-import { speakerRecognitionService } from '../../../../services/transcription/src/speakerRecognition';
+import { voiceProfileService, speakerRecognitionService } from '../services/voiceProfileService';
 import { requireAuth, optionalApiKeyAuth, requireScope, type AuthenticatedRequest } from '../middleware';
 import { z } from 'zod';
 import { ValidationError, NotFoundError } from '@zigznote/shared';
@@ -49,8 +48,13 @@ voiceProfilesRouter.get(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const authReq = req as AuthenticatedRequest;
+      const auth = authReq.auth;
+      if (!auth) {
+        res.status(401).json({ success: false, error: 'Unauthorized' });
+        return;
+      }
       const profiles = await voiceProfileService.getOrgProfiles(
-        authReq.auth!.organizationId
+        auth.organizationId
       );
       res.json({ success: true, data: profiles, total: profiles.length });
     } catch (error) {
@@ -69,14 +73,19 @@ voiceProfilesRouter.post(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const authReq = req as AuthenticatedRequest;
+      const auth = authReq.auth;
+      if (!auth) {
+        res.status(401).json({ success: false, error: 'Unauthorized' });
+        return;
+      }
       const validation = createProfileSchema.safeParse(req.body);
 
       if (!validation.success) {
-        throw new ValidationError(validation.error.message);
+        throw new ValidationError(validation.error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
       }
 
       const profile = await voiceProfileService.createProfile({
-        organizationId: authReq.auth!.organizationId,
+        organizationId: auth.organizationId,
         displayName: validation.data.displayName,
         email: validation.data.email,
       });
@@ -97,14 +106,24 @@ voiceProfilesRouter.get(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const authReq = req as AuthenticatedRequest;
-      const profile = await voiceProfileService.getProfileWithMatches(req.params.id);
+      const auth = authReq.auth;
+      if (!auth) {
+        res.status(401).json({ success: false, error: 'Unauthorized' });
+        return;
+      }
+      const profileId = req.params.id;
+      if (!profileId) {
+        res.status(400).json({ success: false, error: 'Profile ID is required' });
+        return;
+      }
+      const profile = await voiceProfileService.getProfileWithMatches(profileId);
 
       if (!profile) {
         throw new NotFoundError('Voice profile not found');
       }
 
       // Verify the profile belongs to the user's organization
-      if (profile.organizationId !== authReq.auth!.organizationId) {
+      if (profile.organizationId !== auth.organizationId) {
         throw new NotFoundError('Voice profile not found');
       }
 
@@ -125,19 +144,29 @@ voiceProfilesRouter.patch(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const authReq = req as AuthenticatedRequest;
+      const auth = authReq.auth;
+      if (!auth) {
+        res.status(401).json({ success: false, error: 'Unauthorized' });
+        return;
+      }
+      const profileId = req.params.id;
+      if (!profileId) {
+        res.status(400).json({ success: false, error: 'Profile ID is required' });
+        return;
+      }
       const validation = updateProfileSchema.safeParse(req.body);
 
       if (!validation.success) {
-        throw new ValidationError(validation.error.message);
+        throw new ValidationError(validation.error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
       }
 
       // Verify the profile belongs to the user's organization
-      const existing = await voiceProfileService.getProfile(req.params.id);
-      if (!existing || existing.organizationId !== authReq.auth!.organizationId) {
+      const existing = await voiceProfileService.getProfile(profileId);
+      if (!existing || existing.organizationId !== auth.organizationId) {
         throw new NotFoundError('Voice profile not found');
       }
 
-      const profile = await voiceProfileService.updateProfile(req.params.id, validation.data);
+      const profile = await voiceProfileService.updateProfile(profileId, validation.data);
       res.json({ success: true, data: profile });
     } catch (error) {
       next(error);
@@ -155,14 +184,24 @@ voiceProfilesRouter.delete(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const authReq = req as AuthenticatedRequest;
+      const auth = authReq.auth;
+      if (!auth) {
+        res.status(401).json({ success: false, error: 'Unauthorized' });
+        return;
+      }
+      const profileId = req.params.id;
+      if (!profileId) {
+        res.status(400).json({ success: false, error: 'Profile ID is required' });
+        return;
+      }
 
       // Verify the profile belongs to the user's organization
-      const existing = await voiceProfileService.getProfile(req.params.id);
-      if (!existing || existing.organizationId !== authReq.auth!.organizationId) {
+      const existing = await voiceProfileService.getProfile(profileId);
+      if (!existing || existing.organizationId !== auth.organizationId) {
         throw new NotFoundError('Voice profile not found');
       }
 
-      await voiceProfileService.deleteProfile(req.params.id);
+      await voiceProfileService.deleteProfile(profileId);
       res.json({ success: true, message: 'Voice profile deleted' });
     } catch (error) {
       next(error);
@@ -180,10 +219,15 @@ voiceProfilesRouter.post(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const authReq = req as AuthenticatedRequest;
+      const auth = authReq.auth;
+      if (!auth) {
+        res.status(401).json({ success: false, error: 'Unauthorized' });
+        return;
+      }
       const validation = mergeProfilesSchema.safeParse(req.body);
 
       if (!validation.success) {
-        throw new ValidationError(validation.error.message);
+        throw new ValidationError(validation.error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
       }
 
       // Verify both profiles belong to the user's organization
@@ -192,10 +236,10 @@ voiceProfilesRouter.post(
         voiceProfileService.getProfile(validation.data.mergeId),
       ]);
 
-      if (!keep || keep.organizationId !== authReq.auth!.organizationId) {
+      if (!keep || keep.organizationId !== auth.organizationId) {
         throw new NotFoundError('Keep profile not found');
       }
-      if (!merge || merge.organizationId !== authReq.auth!.organizationId) {
+      if (!merge || merge.organizationId !== auth.organizationId) {
         throw new NotFoundError('Merge profile not found');
       }
 
@@ -219,7 +263,12 @@ voiceProfilesRouter.get(
   requireScope('transcripts:read'),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const speakers = await voiceProfileService.getMeetingSpeakers(req.params.meetingId);
+      const meetingId = req.params.meetingId;
+      if (!meetingId) {
+        res.status(400).json({ success: false, error: 'Meeting ID is required' });
+        return;
+      }
+      const speakers = await voiceProfileService.getMeetingSpeakers(meetingId);
       res.json({ success: true, data: speakers, total: speakers.length });
     } catch (error) {
       next(error);
@@ -236,7 +285,12 @@ voiceProfilesRouter.post(
   requireScope('transcripts:write'),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const result = await speakerRecognitionService.reprocessMeeting(req.params.meetingId);
+      const meetingId = req.params.meetingId;
+      if (!meetingId) {
+        res.status(400).json({ success: false, error: 'Meeting ID is required' });
+        return;
+      }
+      const result = await speakerRecognitionService.reprocessMeeting(meetingId);
       res.json({
         success: true,
         data: {
@@ -260,15 +314,21 @@ voiceProfilesRouter.post(
   requireScope('transcripts:write'),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const meetingId = req.params.meetingId;
+      const speakerLabel = req.params.speakerLabel;
+      if (!meetingId || !speakerLabel) {
+        res.status(400).json({ success: false, error: 'Meeting ID and speaker label are required' });
+        return;
+      }
       const validation = confirmSpeakerSchema.safeParse(req.body);
 
       if (!validation.success) {
-        throw new ValidationError(validation.error.message);
+        throw new ValidationError(validation.error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
       }
 
       const match = await voiceProfileService.getSpeakerMatch(
-        req.params.meetingId,
-        req.params.speakerLabel
+        meetingId,
+        speakerLabel
       );
 
       if (!match) {

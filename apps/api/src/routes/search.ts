@@ -17,7 +17,7 @@ export const searchRouter: IRouter = Router();
 searchRouter.use(requireAuth);
 
 // Validation schemas
-const searchSchema = z.object({
+const searchSchema = {
   query: z.object({
     q: z.string().min(1).max(500),
     types: z.string().optional(), // comma-separated: meeting,transcript,summary,action_item
@@ -26,14 +26,14 @@ const searchSchema = z.object({
     limit: z.coerce.number().int().min(1).max(100).default(20).optional(),
     offset: z.coerce.number().int().min(0).default(0).optional(),
   }),
-});
+};
 
-const suggestionsSchema = z.object({
+const suggestionsSchema = {
   query: z.object({
     q: z.string().min(2).max(100),
     limit: z.coerce.number().int().min(1).max(10).default(5).optional(),
   }),
-});
+};
 
 /**
  * @route GET /api/search
@@ -44,13 +44,13 @@ searchRouter.get(
   validateRequest(searchSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const { q, types, startDate, endDate, limit, offset } =
-      req.query as z.infer<typeof searchSchema>['query'];
+    const query = req.query as unknown as z.infer<typeof searchSchema.query>;
+    const { q, types, startDate, endDate, limit, offset } = query;
 
     // Parse types
     const searchTypes = types
       ? (types.split(',') as ('meeting' | 'transcript' | 'summary' | 'action_item')[])
-      : ['meeting', 'transcript', 'summary', 'action_item'];
+      : ['meeting', 'transcript', 'summary', 'action_item'] as const;
 
     // Validate types
     const validTypes = ['meeting', 'transcript', 'summary', 'action_item'];
@@ -60,8 +60,8 @@ searchRouter.get(
 
     const result = await searchService.search({
       query: q,
-      organizationId: authReq.auth.organizationId,
-      userId: authReq.auth.userId,
+      organizationId: authReq.auth!.organizationId,
+      userId: authReq.auth!.userId,
       types: filteredTypes.length > 0 ? filteredTypes : undefined,
       dateRange: {
         start: startDate ? new Date(startDate) : undefined,
@@ -94,12 +94,12 @@ searchRouter.get(
   validateRequest(searchSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const { q, startDate, endDate, limit, offset } =
-      req.query as z.infer<typeof searchSchema>['query'];
+    const query = req.query as unknown as z.infer<typeof searchSchema.query>;
+    const { q, startDate, endDate, limit, offset } = query;
 
     const result = await searchService.search({
       query: q,
-      organizationId: authReq.auth.organizationId,
+      organizationId: authReq.auth!.organizationId,
       types: ['meeting'],
       dateRange: {
         start: startDate ? new Date(startDate) : undefined,
@@ -130,12 +130,12 @@ searchRouter.get(
   validateRequest(searchSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const { q, startDate, endDate, limit, offset } =
-      req.query as z.infer<typeof searchSchema>['query'];
+    const query = req.query as unknown as z.infer<typeof searchSchema.query>;
+    const { q, startDate, endDate, limit, offset } = query;
 
     const result = await searchService.search({
       query: q,
-      organizationId: authReq.auth.organizationId,
+      organizationId: authReq.auth!.organizationId,
       types: ['transcript'],
       dateRange: {
         start: startDate ? new Date(startDate) : undefined,
@@ -166,13 +166,13 @@ searchRouter.get(
   validateRequest(searchSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const { q, startDate, endDate, limit, offset } =
-      req.query as z.infer<typeof searchSchema>['query'];
+    const query = req.query as unknown as z.infer<typeof searchSchema.query>;
+    const { q, startDate, endDate, limit, offset } = query;
 
     const result = await searchService.search({
       query: q,
-      organizationId: authReq.auth.organizationId,
-      userId: authReq.auth.userId,
+      organizationId: authReq.auth!.organizationId,
+      userId: authReq.auth!.userId,
       types: ['action_item'],
       dateRange: {
         start: startDate ? new Date(startDate) : undefined,
@@ -203,11 +203,12 @@ searchRouter.get(
   validateRequest(suggestionsSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const { q, limit } = req.query as z.infer<typeof suggestionsSchema>['query'];
+    const query = req.query as unknown as z.infer<typeof suggestionsSchema.query>;
+    const { q, limit } = query;
 
     const suggestions = await searchService.getSuggestions(
       q,
-      authReq.auth.organizationId,
+      authReq.auth!.organizationId,
       limit
     );
 
@@ -218,13 +219,13 @@ searchRouter.get(
   })
 );
 
-const semanticSearchSchema = z.object({
+const semanticSearchSchema = {
   query: z.object({
     q: z.string().min(1).max(500),
     limit: z.coerce.number().int().min(1).max(50).default(10).optional(),
     threshold: z.coerce.number().min(0).max(1).default(0.7).optional(),
   }),
-});
+};
 
 /**
  * @route GET /api/search/semantic
@@ -235,7 +236,8 @@ searchRouter.get(
   validateRequest(semanticSearchSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const { q, limit, threshold } = req.query as z.infer<typeof semanticSearchSchema>['query'];
+    const query = req.query as unknown as z.infer<typeof semanticSearchSchema.query>;
+    const { q, limit, threshold } = query;
 
     if (!embeddingService.isAvailable()) {
       res.status(503).json({
@@ -250,7 +252,7 @@ searchRouter.get(
 
     const results = await embeddingService.searchSimilar({
       query: q,
-      organizationId: authReq.auth.organizationId,
+      organizationId: authReq.auth!.organizationId,
       limit,
       threshold,
     });
@@ -275,20 +277,21 @@ searchRouter.get(
   validateRequest(semanticSearchSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const { q, limit } = req.query as z.infer<typeof semanticSearchSchema>['query'];
+    const query = req.query as unknown as z.infer<typeof semanticSearchSchema.query>;
+    const { q, limit } = query;
 
     // Get both full-text and semantic results
     const [textResults, semanticResults] = await Promise.all([
       searchService.search({
         query: q,
-        organizationId: authReq.auth.organizationId,
+        organizationId: authReq.auth!.organizationId,
         types: ['transcript', 'summary'],
         limit: limit ? limit * 2 : 20,
       }),
       embeddingService.isAvailable()
         ? embeddingService.hybridSearch({
             query: q,
-            organizationId: authReq.auth.organizationId,
+            organizationId: authReq.auth!.organizationId,
             limit: limit ? limit * 2 : 20,
           })
         : Promise.resolve([]),

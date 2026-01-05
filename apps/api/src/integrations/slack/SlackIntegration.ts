@@ -3,7 +3,7 @@
  * OAuth-based Slack integration for posting meeting summaries
  */
 
-import { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@zigznote/database';
 import { OAuthIntegration } from '../base/OAuthIntegration';
 import {
   OAuthConfig,

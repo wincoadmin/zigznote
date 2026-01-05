@@ -4,7 +4,7 @@
  */
 
 import { auditLogRepository } from '@zigznote/database';
-import type { AuditLog } from '@prisma/client';
+import type { AuditLog } from '@zigznote/database';
 import type { PaginatedResult, AuditLogFilterOptions } from '@zigznote/database';
 import { logger } from '../utils/logger';
 
@@ -85,9 +85,9 @@ class AuditService {
       action: entry.action,
       entityType: entry.entityType,
       entityId: entry.entityId || null,
-      details: entry.details || {},
-      previousData: entry.previousData || null,
-      newData: entry.newData || null,
+      details: (entry.details || {}) as Record<string, string | number | boolean | null>,
+      previousData: (entry.previousData || null) as Record<string, string | number | boolean | null> | null,
+      newData: (entry.newData || null) as Record<string, string | number | boolean | null> | null,
       ipAddress: context.ipAddress,
       userAgent: context.userAgent || null,
     });

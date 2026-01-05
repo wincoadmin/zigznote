@@ -157,7 +157,7 @@ export default function SearchPage() {
             {typeButtons.map(({ type, icon: Icon, label }) => (
               <Button
                 key={type}
-                variant={filters.types.includes(type) ? 'default' : 'outline'}
+                variant={filters.types.includes(type) ? 'primary' : 'outline'}
                 size="sm"
                 onClick={() => toggleType(type)}
                 className="gap-1.5"

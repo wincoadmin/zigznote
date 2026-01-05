@@ -3,7 +3,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@zigznote/database';
 import { BillingService } from './BillingService';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { AuthenticatedRequest } from '../middleware/auth';
@@ -11,9 +11,8 @@ import { BadRequestError, NotFoundError } from '../utils/errors';
 import { PaymentProviderType } from './providers';
 import { config } from '../config';
 
-const router = Router();
-const prisma = new PrismaClient();
-const billingService = new BillingService(prisma);
+const router: Router = Router();
+const billingService = new BillingService();
 
 /**
  * GET /billing/plans
@@ -44,7 +43,8 @@ router.get(
     const subscription = await billingService.getSubscription(organizationId);
 
     if (!subscription) {
-      return res.json({ subscription: null });
+      res.json({ subscription: null });
+      return;
     }
 
     // Get plan details

@@ -3,7 +3,7 @@
  * Manages webhook CRUD, signature generation, and delivery
  */
 
-import { PrismaClient } from '@prisma/client';
+import type { PrismaClient, Prisma } from '@zigznote/database';
 import crypto from 'crypto';
 import {
   WebhookConfig,
@@ -332,7 +332,7 @@ export class WebhookService {
         id: `${webhookId}-${payload.id || crypto.randomUUID()}`,
         webhookId,
         event,
-        payload,
+        payload: payload as Prisma.InputJsonValue,
         status: result.success ? 'success' : attempt >= MAX_RETRY_ATTEMPTS ? 'failed' : 'pending',
         attempts: attempt,
         lastAttemptAt: new Date(),
@@ -402,7 +402,7 @@ export class WebhookService {
    * Get retry delay for attempt number
    */
   getRetryDelay(attempt: number): number {
-    return RETRY_DELAYS[Math.min(attempt - 1, RETRY_DELAYS.length - 1)];
+    return RETRY_DELAYS[Math.min(attempt - 1, RETRY_DELAYS.length - 1)] ?? 0;
   }
 
   /**

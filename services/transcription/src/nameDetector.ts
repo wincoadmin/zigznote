@@ -23,8 +23,9 @@ export interface TranscriptSegment {
 
 /**
  * Common words that follow names but shouldn't be captured as part of the name
+ * Reserved for future pattern matching refinement
  */
-const NAME_TERMINATORS = ['from', 'at', 'with', 'in', 'for', 'and', 'the', 'a', 'to', 'of'];
+// const NAME_TERMINATORS = ['from', 'at', 'with', 'in', 'for', 'and', 'the', 'a', 'to', 'of'];
 
 /**
  * Built-in patterns for detecting speaker introductions
@@ -163,7 +164,7 @@ export class NameDetector {
       const match = text.match(pattern.regex);
 
       if (match && match[pattern.nameGroup]) {
-        const rawName = match[pattern.nameGroup];
+        const rawName = match[pattern.nameGroup]!;
 
         if (isValidName(rawName)) {
           return {

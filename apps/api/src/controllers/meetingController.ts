@@ -355,6 +355,8 @@ export class MeetingController {
 
       // Create the bot
       const botStatus = await recallService.createBot({
+        meetingId: id,
+        organizationId,
         meetingUrl: meeting.meetingUrl,
         botName: botName || undefined,
         joinAt: joinAt ? new Date(joinAt) : undefined,

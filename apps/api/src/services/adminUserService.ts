@@ -3,8 +3,8 @@
  * Handles user CRUD and impersonation for admin panel
  */
 
-import { userRepository, organizationRepository } from '@zigznote/database';
-import type { User } from '@prisma/client';
+import { userRepository } from '@zigznote/database';
+import type { User } from '@zigznote/database';
 import type { PaginatedResult, UserFilterOptions } from '@zigznote/database';
 import { auditService, AuditActions, type AuditContext } from './auditService';
 import { AppError } from '../utils/errors';
@@ -176,7 +176,7 @@ class AdminUserService {
       throw new AppError('User is not suspended', 400, 'NOT_SUSPENDED');
     }
 
-    const restored = await userRepository.restore(id);
+    await userRepository.restore(id);
 
     await auditService.log(context, {
       action: AuditActions.USER_UPDATED,
@@ -293,7 +293,7 @@ class AdminUserService {
     byRole: Record<string, number>;
     recentSignups: number;
   }> {
-    const [allUsers, recentUsers] = await Promise.all([
+    const [allUsers, _recentUsers] = await Promise.all([
       userRepository.findMany({ includeDeleted: true }),
       userRepository.findMany({
         // Users from the last 30 days
@@ -366,7 +366,7 @@ class AdminUserService {
       name: user.name,
       role: user.role,
       avatarUrl: user.avatarUrl,
-      clerkId: user.clerkId,
+      clerkId: user.clerkId ?? '',
       organizationId: user.organizationId,
       organization: user.organization
         ? {

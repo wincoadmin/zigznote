@@ -2,7 +2,41 @@
  * BillingService Tests
  */
 
+// Mock the database module - must be before import
+jest.mock('@zigznote/database', () => ({
+  prisma: {
+    billingCustomer: {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+    },
+    billingPlan: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+    },
+    subscription: {
+      create: jest.fn(),
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
+    payment: {
+      findMany: jest.fn(),
+    },
+    invoice: {
+      findMany: jest.fn(),
+    },
+    organization: {
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
+  },
+  Prisma: {},
+}));
+
 import { BillingService } from './BillingService';
+import { prisma } from '@zigznote/database';
+
+const mockPrisma = prisma as jest.Mocked<typeof prisma>;
 
 // Mock the providers module
 jest.mock('./providers', () => ({
@@ -78,39 +112,12 @@ jest.mock('../config', () => ({
   },
 }));
 
-const mockPrisma = {
-  billingCustomer: {
-    findUnique: jest.fn(),
-    create: jest.fn(),
-  },
-  billingPlan: {
-    findMany: jest.fn(),
-    findUnique: jest.fn(),
-  },
-  subscription: {
-    create: jest.fn(),
-    findFirst: jest.fn(),
-    findUnique: jest.fn(),
-    update: jest.fn(),
-  },
-  payment: {
-    findMany: jest.fn(),
-  },
-  invoice: {
-    findMany: jest.fn(),
-  },
-  organization: {
-    findUnique: jest.fn(),
-    update: jest.fn(),
-  },
-};
-
 describe('BillingService', () => {
   let service: BillingService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new BillingService(mockPrisma as any);
+    service = new BillingService();
   });
 
   describe('getOrCreateCustomer', () => {

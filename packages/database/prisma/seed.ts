@@ -21,6 +21,7 @@ import {
   seedOrganizationsBatch,
   seedUsersBatch,
   seedMeetingsBatch,
+  seedAchievements,
   randomElement,
 } from './seeders';
 
@@ -97,6 +98,9 @@ async function seedDetailed(config: { orgs: number; usersPerOrg: number; meeting
   // Create action items
   const actionItemCount = await seedActionItems(prisma, meetings, 30);
 
+  // Seed achievements (gamification)
+  const achievementCount = await seedAchievements(prisma);
+
   // Create sample integration
   if (organizations[0]) {
     console.info('Creating sample integration...');
@@ -118,6 +122,7 @@ async function seedDetailed(config: { orgs: number; usersPerOrg: number; meeting
   console.info(`   Meetings: ${meetings.length}`);
   console.info(`   Transcripts: ${transcriptCount}`);
   console.info(`   Action Items: ${actionItemCount}`);
+  console.info(`   Achievements: ${achievementCount}`);
 }
 
 /**

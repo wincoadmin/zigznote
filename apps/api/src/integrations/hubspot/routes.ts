@@ -3,7 +3,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@zigznote/database';
 import crypto from 'crypto';
 import { HubSpotIntegration } from './HubSpotIntegration';
 import { asyncHandler } from '../../middleware/asyncHandler';
@@ -11,8 +11,7 @@ import { AuthenticatedRequest } from '../../middleware/auth';
 import { BadRequestError, NotFoundError } from '../../utils/errors';
 import { config } from '../../config';
 
-const router = Router();
-const prisma = new PrismaClient();
+const router: Router = Router();
 const hubspotIntegration = new HubSpotIntegration(prisma);
 
 /**
@@ -107,7 +106,8 @@ router.get(
     const connection = await hubspotIntegration.getConnection(organizationId);
 
     if (!connection) {
-      return res.json({ connected: false });
+      res.json({ connected: false });
+      return;
     }
 
     res.json({
@@ -138,11 +138,12 @@ router.post(
     const result = await hubspotIntegration.testConnection(organizationId);
 
     if (!result.success) {
-      return res.status(result.requiresReconfiguration ? 401 : 400).json({
+      res.status(result.requiresReconfiguration ? 401 : 400).json({
         success: false,
         error: result.error,
         requiresReconfiguration: result.requiresReconfiguration,
       });
+      return;
     }
 
     res.json({ success: true, data: result.data });

@@ -3,9 +3,10 @@
  * Base class for all integrations to extend
  */
 
-import { PrismaClient } from '@prisma/client';
+import type { PrismaClient, Prisma } from '@zigznote/database';
 import { logger } from '../../utils/logger';
 import { encrypt, decrypt } from '../../utils/encryption';
+import { config } from '../../config';
 import {
   IntegrationProvider,
   IntegrationCredentials,
@@ -82,12 +83,12 @@ export abstract class BaseIntegration {
       create: {
         organizationId,
         provider: this.provider,
-        credentials: encryptedCredentials,
-        settings,
+        credentials: encryptedCredentials as Prisma.InputJsonValue,
+        settings: settings as Prisma.InputJsonValue,
       },
       update: {
-        credentials: encryptedCredentials,
-        settings,
+        credentials: encryptedCredentials as Prisma.InputJsonValue,
+        settings: settings as Prisma.InputJsonValue,
       },
     });
 
@@ -123,7 +124,7 @@ export abstract class BaseIntegration {
         },
       },
       data: {
-        settings: { ...existing.settings, ...settings },
+        settings: { ...existing.settings, ...settings } as Prisma.InputJsonValue,
       },
     });
 
@@ -172,7 +173,7 @@ export abstract class BaseIntegration {
 
     for (const [key, value] of Object.entries(credentials)) {
       if (typeof value === 'string' && (key.includes('token') || key.includes('Token'))) {
-        encrypted[key] = encrypt(value);
+        encrypted[key] = encrypt(value, config.encryptionKey);
       } else if (value instanceof Date) {
         encrypted[key] = value.toISOString();
       } else {
@@ -191,7 +192,7 @@ export abstract class BaseIntegration {
 
     for (const [key, value] of Object.entries(encrypted)) {
       if (typeof value === 'string' && (key.includes('token') || key.includes('Token'))) {
-        credentials[key] = decrypt(value);
+        credentials[key] = decrypt(value, config.encryptionKey);
       } else if (key === 'tokenExpires' && typeof value === 'string') {
         credentials[key] = new Date(value);
       } else {

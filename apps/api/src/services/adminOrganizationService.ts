@@ -4,7 +4,7 @@
  */
 
 import { organizationRepository, userRepository } from '@zigznote/database';
-import type { Organization, AccountType } from '@prisma/client';
+import { type Organization, AccountType } from '@zigznote/database';
 import type { PaginatedResult, OrganizationFilter } from '@zigznote/database';
 import { auditService, AuditActions, type AuditContext } from './auditService';
 import { AppError } from '../utils/errors';
@@ -148,7 +148,7 @@ class AdminOrganizationService {
         billingOverrideReason: input.reason,
         billingOverrideBy: adminId,
         billingOverrideAt: new Date(),
-      },
+      } as Parameters<typeof organizationRepository.update>[1],
       { users: true }
     );
 
@@ -199,7 +199,7 @@ class AdminOrganizationService {
         billingOverrideReason: null,
         billingOverrideBy: null,
         billingOverrideAt: null,
-      },
+      } as Parameters<typeof organizationRepository.update>[1],
       { users: true }
     );
 
@@ -313,7 +313,7 @@ class AdminOrganizationService {
       throw new AppError('Organization is not suspended', 400, 'NOT_SUSPENDED');
     }
 
-    const restored = await organizationRepository.restore(id);
+    await organizationRepository.restore(id);
 
     await auditService.log(context, {
       action: AuditActions.ORG_UPDATED,

@@ -5,15 +5,15 @@
 
 import { Router } from 'express';
 import type { Router as IRouter, Request, Response } from 'express';
-import { z } from 'zod';
+import { z as _z } from 'zod';
 import {
   requireAdminAuth,
   requireSupport,
   requireAdminRoleLevel,
   type AdminAuthenticatedRequest,
 } from '../../middleware/adminAuth';
-import { asyncHandler, validateRequest } from '../../middleware';
-import { auditService, type AuditContext } from '../../services/auditService';
+import { asyncHandler } from '../../middleware';
+import { auditService } from '../../services/auditService';
 import { prisma } from '@zigznote/database';
 import { config } from '../../config';
 
@@ -28,7 +28,7 @@ operationsRouter.use(requireAdminAuth, requireSupport);
  */
 operationsRouter.get(
   '/health',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (_req: Request, res: Response) => {
     const checks: Record<string, { status: 'healthy' | 'degraded' | 'unhealthy'; latency?: number; error?: string }> = {};
 
     // Check database
@@ -63,7 +63,7 @@ operationsRouter.get(
         uptime: process.uptime(),
         checks,
         version: process.env.npm_package_version || '0.1.0',
-        environment: config.env,
+        environment: config.nodeEnv,
       },
     });
   })
@@ -75,7 +75,7 @@ operationsRouter.get(
  */
 operationsRouter.get(
   '/system',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (_req: Request, res: Response) => {
     const memoryUsage = process.memoryUsage();
 
     res.json({
@@ -96,7 +96,7 @@ operationsRouter.get(
           seconds: Math.floor(process.uptime()),
           formatted: formatUptime(process.uptime()),
         },
-        environment: config.env,
+        environment: config.nodeEnv,
         pid: process.pid,
       },
     });
@@ -109,7 +109,7 @@ operationsRouter.get(
  */
 operationsRouter.get(
   '/jobs',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (_req: Request, res: Response) => {
     // Job queue status would come from BullMQ
     // This is a placeholder for the queue statistics
     const queues = {

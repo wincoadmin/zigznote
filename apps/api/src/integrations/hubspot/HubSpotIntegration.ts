@@ -3,7 +3,7 @@
  * OAuth-based HubSpot CRM integration
  */
 
-import { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@zigznote/database';
 import { OAuthIntegration } from '../base/OAuthIntegration';
 import {
   OAuthConfig,
@@ -23,13 +23,11 @@ interface HubSpotContact {
   };
 }
 
-interface HubSpotCompany {
-  id: string;
-  properties: {
-    name?: string;
-    domain?: string;
-  };
-}
+// HubSpotCompany interface reserved for future CRM features
+// interface HubSpotCompany {
+//   id: string;
+//   properties: { name?: string; domain?: string; };
+// }
 
 interface HubSpotEngagement {
   id: string;
@@ -167,7 +165,7 @@ export class HubSpotIntegration extends OAuthIntegration {
     });
 
     if (!result.success) {
-      return result as IntegrationResult<HubSpotContact[]>;
+      return result as unknown as IntegrationResult<HubSpotContact[]>;
     }
 
     return {

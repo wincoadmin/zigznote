@@ -6,7 +6,7 @@
 import { Job } from 'bullmq';
 import pino from 'pino';
 import { deepgramService } from './deepgramService';
-import type { TranscriptionJob, TranscriptionResult, TranscriptionSegment } from './types';
+import type { TranscriptionJob, TranscriptionResult, TranscriptSegment, Word } from './types';
 import {
   transcriptRepository,
   meetingRepository,
@@ -19,7 +19,6 @@ import Redis from 'ioredis';
 import {
   TranscriptPostProcessor,
   type TranscriptSegment as PostProcessorSegment,
-  type ProcessedSegment,
 } from './postProcessor';
 import { speakerRecognitionService } from './speakerRecognition';
 
@@ -136,7 +135,7 @@ export async function processTranscriptionJob(
     if (orgId) {
       try {
         // Convert to recognition format
-        const recognitionSegments = transcript.segments.map((seg: TranscriptionSegment) => ({
+        const recognitionSegments = transcript.segments.map((seg: TranscriptSegment) => ({
           speaker: seg.speaker,
           text: seg.text,
           startTime: seg.startMs / 1000, // Convert ms to seconds
@@ -182,13 +181,13 @@ export async function processTranscriptionJob(
 
     // Convert segments to post-processor format (startMs/endMs -> startTime/endTime)
     const postProcessorSegments: PostProcessorSegment[] = transcript.segments.map(
-      (seg: TranscriptionSegment) => ({
+      (seg: TranscriptSegment) => ({
         speaker: seg.speaker,
         text: seg.text,
         startTime: seg.startMs,
         endTime: seg.endMs,
         confidence: seg.confidence,
-        words: seg.words?.map((w) => ({
+        words: seg.words?.map((w: Word) => ({
           word: w.word,
           start: w.startMs,
           end: w.endMs,

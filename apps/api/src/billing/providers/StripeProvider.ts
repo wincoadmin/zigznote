@@ -41,9 +41,7 @@ export class StripeProvider extends BasePaymentProvider {
 
   override initialize(config: ProviderConfig): void {
     super.initialize(config);
-    this.stripe = new Stripe(config.apiKey, {
-      apiVersion: '2024-12-18.acacia',
-    });
+    this.stripe = new Stripe(config.apiKey);
     this.webhookSecret = config.webhookSecret || null;
   }
 
@@ -435,13 +433,16 @@ export class StripeProvider extends BasePaymentProvider {
 
       if (updates.planId) {
         const subscription = await this.getStripe().subscriptions.retrieve(subscriptionId);
-        updateParams.items = [
-          {
-            id: subscription.items.data[0].id,
-            price: updates.planId,
-          },
-        ];
-        updateParams.proration_behavior = 'create_prorations';
+        const itemId = subscription.items?.data?.[0]?.id;
+        if (itemId) {
+          updateParams.items = [
+            {
+              id: itemId,
+              price: updates.planId,
+            },
+          ];
+          updateParams.proration_behavior = 'create_prorations';
+        }
       }
 
       const subscription = await this.getStripe().subscriptions.update(subscriptionId, updateParams);
@@ -580,9 +581,21 @@ export class StripeProvider extends BasePaymentProvider {
 
   async getUpcomingInvoice(customerId: string): Promise<ProviderResult<Invoice | null>> {
     try {
-      const invoice = await this.getStripe().invoices.retrieveUpcoming({
-        customer: customerId,
+      // Use direct API call since the SDK method may not be available in newer versions
+      const response = await fetch(`https://api.stripe.com/v1/invoices/upcoming?customer=${customerId}`, {
+        headers: {
+          'Authorization': `Bearer ${this.config?.apiKey}`,
+        },
       });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          return { success: true, data: null };
+        }
+        throw new Error(`Stripe API error: ${response.status}`);
+      }
+
+      const invoice = await response.json() as Stripe.Invoice;
 
       return {
         success: true,
@@ -709,7 +722,7 @@ export class StripeProvider extends BasePaymentProvider {
         data: {
           id: event.id,
           type: event.type,
-          data: event.data.object as Record<string, unknown>,
+          data: event.data.object as unknown as Record<string, unknown>,
           provider: 'stripe',
           timestamp: new Date(event.created * 1000),
         },
@@ -732,14 +745,20 @@ export class StripeProvider extends BasePaymentProvider {
       paused: 'paused',
     };
 
+    // Cast to access properties that may not be in strict types
+    const subData = sub as unknown as {
+      current_period_start: number;
+      current_period_end: number;
+    };
+
     return {
       id: sub.id,
       providerId: sub.id,
       customerId: typeof sub.customer === 'string' ? sub.customer : sub.customer.id,
       planId: sub.items.data[0]?.price.id || '',
       status: statusMap[sub.status] || 'incomplete',
-      currentPeriodStart: new Date(sub.current_period_start * 1000),
-      currentPeriodEnd: new Date(sub.current_period_end * 1000),
+      currentPeriodStart: new Date(subData.current_period_start * 1000),
+      currentPeriodEnd: new Date(subData.current_period_end * 1000),
       cancelAtPeriodEnd: sub.cancel_at_period_end,
       trialEnd: sub.trial_end ? new Date(sub.trial_end * 1000) : undefined,
       metadata: sub.metadata,
@@ -757,6 +776,11 @@ export class StripeProvider extends BasePaymentProvider {
       succeeded: 'succeeded',
     };
 
+    // Cast to access invoice property
+    const intentData = intent as unknown as {
+      invoice?: string | { id: string } | null;
+    };
+
     return {
       id: intent.id,
       providerId: intent.id,
@@ -770,9 +794,9 @@ export class StripeProvider extends BasePaymentProvider {
         ? intent.payment_method
         : intent.payment_method?.id,
       description: intent.description || undefined,
-      invoiceId: typeof intent.invoice === 'string'
-        ? intent.invoice
-        : intent.invoice?.id,
+      invoiceId: typeof intentData.invoice === 'string'
+        ? intentData.invoice
+        : intentData.invoice?.id,
       metadata: intent.metadata,
       createdAt: new Date(intent.created * 1000),
     };
@@ -793,15 +817,20 @@ export class StripeProvider extends BasePaymentProvider {
       quantity: line.quantity || 1,
     })) || [];
 
+    // Cast to access subscription property
+    const invoiceData = invoice as unknown as {
+      subscription?: string | { id: string } | null;
+    };
+
     return {
       id: invoice.id || '',
       providerId: invoice.id || '',
       customerId: typeof invoice.customer === 'string'
         ? invoice.customer
         : invoice.customer?.id || '',
-      subscriptionId: typeof invoice.subscription === 'string'
-        ? invoice.subscription
-        : invoice.subscription?.id,
+      subscriptionId: typeof invoiceData.subscription === 'string'
+        ? invoiceData.subscription
+        : invoiceData.subscription?.id,
       amount: invoice.total,
       amountPaid: invoice.amount_paid,
       currency: invoice.currency as Currency,

@@ -6,7 +6,21 @@ import { StripeProvider } from './StripeProvider';
 
 // Mock Stripe
 jest.mock('stripe', () => {
-  return jest.fn().mockImplementation(() => ({
+  class StripeError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = 'StripeError';
+    }
+  }
+
+  class StripeInvalidRequestError extends StripeError {
+    constructor(message: string) {
+      super(message);
+      this.name = 'StripeInvalidRequestError';
+    }
+  }
+
+  const StripeMock = jest.fn().mockImplementation(() => ({
     customers: {
       create: jest.fn().mockResolvedValue({
         id: 'cus_test',
@@ -244,7 +258,18 @@ jest.mock('stripe', () => {
       }),
     },
   }));
+
+  StripeMock.errors = {
+    StripeError,
+    StripeInvalidRequestError,
+  };
+
+  return StripeMock;
 });
+
+// Mock global fetch for getUpcomingInvoice
+const mockFetch = jest.fn();
+global.fetch = mockFetch;
 
 describe('StripeProvider', () => {
   let provider: StripeProvider;
@@ -435,6 +460,20 @@ describe('StripeProvider', () => {
 
   describe('getUpcomingInvoice', () => {
     it('should get upcoming invoice', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 'inv_upcoming',
+          customer: 'cus_test',
+          total: 2900,
+          amount_paid: 0,
+          currency: 'usd',
+          status: 'draft',
+          created: Date.now() / 1000,
+          lines: { data: [] },
+        }),
+      });
+
       const result = await provider.getUpcomingInvoice('cus_test');
 
       expect(result.success).toBe(true);

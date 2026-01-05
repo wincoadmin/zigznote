@@ -4,7 +4,7 @@
  */
 
 import { Queue } from 'bullmq';
-import { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@zigznote/database';
 import { WebhookService } from './WebhookService';
 import { WebhookEvent, MAX_RETRY_ATTEMPTS } from './types';
 import { config } from '../../config';

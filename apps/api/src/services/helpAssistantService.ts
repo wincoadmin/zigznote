@@ -9,7 +9,7 @@
 
 import { createLogger } from '@zigznote/shared';
 import { config } from '../config';
-import { helpCategories, faqs, searchArticles } from '../help/helpContent';
+import { faqs, searchArticles } from '../help/helpContent';
 
 const logger = createLogger({ component: 'helpAssistant' });
 
@@ -339,8 +339,10 @@ class HelpAssistantService {
    */
   private findArticleMatch(query: string): { title: string; content: string; category: string } | null {
     const articles = searchArticles(query);
-    if (articles.length > 0 && articles[0].title.toLowerCase().includes(query.toLowerCase().split(' ')[0])) {
-      return articles[0];
+    const firstWord = query.toLowerCase().split(' ')[0];
+    const firstArticle = articles[0];
+    if (articles.length > 0 && firstWord && firstArticle && firstArticle.title.toLowerCase().includes(firstWord)) {
+      return firstArticle;
     }
     return null;
   }
@@ -386,8 +388,9 @@ USER CONTEXT:
 ${context.enabledIntegrations?.length ? `- Enabled integrations: ${context.enabledIntegrations.join(', ')}` : ''}
 `;
 
+    const systemMessage = { role: 'system' as const, content: SYSTEM_PROMPT + relevantDocs + contextInfo };
     const messages = [
-      { role: 'system' as const, content: SYSTEM_PROMPT + relevantDocs + contextInfo },
+      systemMessage,
       ...history.map((m) => ({ role: m.role, content: m.content })),
       { role: 'user' as const, content: message },
     ];
@@ -405,7 +408,7 @@ ${context.enabledIntegrations?.length ? `- Enabled integrations: ${context.enabl
           body: JSON.stringify({
             model: 'claude-3-haiku-20240307', // Use fast model for help
             max_tokens: 500,
-            system: messages[0].content,
+            system: systemMessage.content,
             messages: messages.slice(1).map((m) => ({
               role: m.role,
               content: m.content,
@@ -414,8 +417,8 @@ ${context.enabledIntegrations?.length ? `- Enabled integrations: ${context.enabl
         });
 
         if (response.ok) {
-          const data = await response.json();
-          return data.content[0]?.text || '';
+          const data = (await response.json()) as { content?: Array<{ text?: string }> };
+          return data.content?.[0]?.text || '';
         }
       } catch (error) {
         logger.error({ error }, 'Anthropic API call failed');
@@ -442,8 +445,8 @@ ${context.enabledIntegrations?.length ? `- Enabled integrations: ${context.enabl
         });
 
         if (response.ok) {
-          const data = await response.json();
-          return data.choices[0]?.message?.content || '';
+          const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+          return data.choices?.[0]?.message?.content || '';
         }
       } catch (error) {
         logger.error({ error }, 'OpenAI API call failed');

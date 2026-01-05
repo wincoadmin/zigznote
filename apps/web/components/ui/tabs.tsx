@@ -21,13 +21,13 @@ function useTabs() {
 
 // Main Tabs container
 interface TabsProps extends HTMLAttributes<HTMLDivElement> {
-  defaultValue: string;
+  defaultValue?: string;
   value?: string;
   onValueChange?: (value: string) => void;
 }
 
 const Tabs = forwardRef<HTMLDivElement, TabsProps>(
-  ({ className, defaultValue, value, onValueChange, children, ...props }, ref) => {
+  ({ className, defaultValue = '', value, onValueChange, children, ...props }, ref) => {
     const [internalValue, setInternalValue] = useState(defaultValue);
     const activeTab = value ?? internalValue;
 

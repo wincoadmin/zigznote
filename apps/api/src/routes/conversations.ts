@@ -5,12 +5,12 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { PrismaClient } from '@prisma/client';
+import { prisma, Prisma } from '@zigznote/database';
 import { meetingQAService } from '../services/meetingQAService';
-import { AppError } from '../middleware';
+import { UnauthorizedError, NotFoundError, BadRequestError } from '../utils/errors';
+import type { AuthenticatedRequest } from '../middleware/auth';
 
-const router = Router();
-const prisma = new PrismaClient();
+const router: Router = Router();
 
 // Validation schemas
 const askQuestionSchema = z.object({
@@ -19,7 +19,9 @@ const askQuestionSchema = z.object({
   preferredModel: z.enum(['claude', 'gpt']).optional(),
 });
 
-const createConversationSchema = z.object({
+// Reserved for future use
+// @ts-expect-error - Reserved for future POST /conversations endpoint
+const _createConversationSchema = z.object({
   title: z.string().max(200).optional(),
 });
 
@@ -31,18 +33,19 @@ router.post(
   '/meetings/:meetingId/ask',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const { meetingId } = req.params;
-      const userId = req.auth?.userId;
-      const organizationId = req.auth?.organizationId;
+      const userId = authReq.auth?.userId;
+      const organizationId = authReq.auth?.organizationId;
 
       if (!userId || !organizationId) {
-        throw new AppError('Unauthorized', 401);
+        throw new UnauthorizedError('Authentication required');
       }
 
       // Validate request body
       const parsed = askQuestionSchema.safeParse(req.body);
       if (!parsed.success) {
-        throw new AppError('Invalid request body', 400);
+        throw new BadRequestError('Invalid request body');
       }
 
       const { question, conversationId, preferredModel } = parsed.data;
@@ -57,7 +60,7 @@ router.post(
       });
 
       if (!meeting) {
-        throw new AppError('Meeting not found', 404);
+        throw new NotFoundError('Meeting');
       }
 
       // Get or create conversation
@@ -80,7 +83,7 @@ router.post(
         });
 
         if (!conversation) {
-          throw new AppError('Conversation not found', 404);
+          throw new NotFoundError('Conversation');
         }
 
         // Build conversation history
@@ -93,7 +96,7 @@ router.post(
         const title = await meetingQAService.generateConversationTitle(question);
         conversation = await prisma.conversation.create({
           data: {
-            meetingId,
+            meetingId: meetingId!,
             userId,
             organizationId,
             title,
@@ -103,7 +106,7 @@ router.post(
 
       // Ask the question
       const response = await meetingQAService.askQuestion(
-        meetingId,
+        meetingId!,
         question,
         conversationHistory,
         preferredModel
@@ -127,7 +130,7 @@ router.post(
           tokensUsed: response.tokensUsed,
           modelUsed: response.modelUsed,
           latencyMs: response.latencyMs,
-          sources: response.sources,
+          sources: response.sources as unknown as Prisma.InputJsonValue,
         },
       });
 
@@ -163,12 +166,13 @@ router.get(
   '/meetings/:meetingId/conversations',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const { meetingId } = req.params;
-      const userId = req.auth?.userId;
-      const organizationId = req.auth?.organizationId;
+      const userId = authReq.auth?.userId;
+      const organizationId = authReq.auth?.organizationId;
 
       if (!userId || !organizationId) {
-        throw new AppError('Unauthorized', 401);
+        throw new UnauthorizedError('Authentication required');
       }
 
       // Verify meeting belongs to organization
@@ -181,7 +185,7 @@ router.get(
       });
 
       if (!meeting) {
-        throw new AppError('Meeting not found', 404);
+        throw new NotFoundError('Meeting');
       }
 
       const conversations = await prisma.conversation.findMany({
@@ -223,11 +227,12 @@ router.get(
   '/conversations/:conversationId',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const { conversationId } = req.params;
-      const userId = req.auth?.userId;
+      const userId = authReq.auth?.userId;
 
       if (!userId) {
-        throw new AppError('Unauthorized', 401);
+        throw new UnauthorizedError('Authentication required');
       }
 
       const conversation = await prisma.conversation.findFirst({
@@ -243,7 +248,7 @@ router.get(
       });
 
       if (!conversation) {
-        throw new AppError('Conversation not found', 404);
+        throw new NotFoundError('Conversation');
       }
 
       res.json({
@@ -276,11 +281,12 @@ router.delete(
   '/conversations/:conversationId',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const { conversationId } = req.params;
-      const userId = req.auth?.userId;
+      const userId = authReq.auth?.userId;
 
       if (!userId) {
-        throw new AppError('Unauthorized', 401);
+        throw new UnauthorizedError('Authentication required');
       }
 
       const conversation = await prisma.conversation.findFirst({
@@ -291,7 +297,7 @@ router.delete(
       });
 
       if (!conversation) {
-        throw new AppError('Conversation not found', 404);
+        throw new NotFoundError('Conversation');
       }
 
       await prisma.conversation.delete({
@@ -313,11 +319,12 @@ router.get(
   '/meetings/:meetingId/suggestions',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const { meetingId } = req.params;
-      const organizationId = req.auth?.organizationId;
+      const organizationId = authReq.auth?.organizationId;
 
       if (!organizationId) {
-        throw new AppError('Unauthorized', 401);
+        throw new UnauthorizedError('Authentication required');
       }
 
       // Verify meeting belongs to organization
@@ -330,10 +337,10 @@ router.get(
       });
 
       if (!meeting) {
-        throw new AppError('Meeting not found', 404);
+        throw new NotFoundError('Meeting');
       }
 
-      const suggestions = await meetingQAService.getSuggestedQuestions(meetingId);
+      const suggestions = await meetingQAService.getSuggestedQuestions(meetingId!);
 
       res.json({ suggestions });
     } catch (error) {

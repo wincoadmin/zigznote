@@ -16,33 +16,33 @@ import { asyncHandler, validateRequest } from '../../middleware';
 export const adminAuthRouter: IRouter = Router();
 
 // Validation schemas
-const loginSchema = z.object({
+const loginSchema = {
   body: z.object({
     email: z.string().email(),
     password: z.string().min(8),
   }),
-});
+};
 
-const verify2FASchema = z.object({
+const verify2FASchema = {
   body: z.object({
     email: z.string().email(),
     code: z.string().length(6),
   }),
-});
+};
 
-const enable2FASchema = z.object({
+const enable2FASchema = {
   body: z.object({
     code: z.string().length(6),
   }),
-});
+};
 
-const initialSetupSchema = z.object({
+const initialSetupSchema = {
   body: z.object({
     email: z.string().email(),
     password: z.string().min(12),
     name: z.string().min(2).max(100),
   }),
-});
+};
 
 /**
  * @route POST /api/admin/auth/login

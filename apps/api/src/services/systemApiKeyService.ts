@@ -4,7 +4,7 @@
  */
 
 import { systemApiKeyRepository } from '@zigznote/database';
-import type { SystemApiKey } from '@prisma/client';
+import type { SystemApiKey } from '@zigznote/database';
 import type { PaginatedResult, SystemApiKeyFilter } from '@zigznote/database';
 import { encryptionService } from './encryptionService';
 import { auditService, AuditActions, type AuditContext } from './auditService';

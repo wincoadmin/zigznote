@@ -4,13 +4,13 @@
  */
 
 import { Router } from 'express';
-import type { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction, Router as RouterType } from 'express';
 import { z } from 'zod';
 import { prisma } from '@zigznote/database';
 import { AppError, emailService } from '@zigznote/shared';
 import { randomBytes } from 'crypto';
 
-export const sharingRouter = Router();
+export const sharingRouter: RouterType = Router();
 
 // Validation schemas
 const createShareSchema = z.object({

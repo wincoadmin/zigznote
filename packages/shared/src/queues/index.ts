@@ -12,6 +12,7 @@ export const QUEUE_NAMES = {
   WEBHOOK: 'webhook',
   CALENDAR_SYNC: 'calendar-sync',
   NOTIFICATIONS: 'notifications',
+  WEEKLY_DIGEST: 'weekly-digest',
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
@@ -47,6 +48,11 @@ export const JOB_TYPES = {
     EMAIL: 'notification.email',
     SLACK: 'notification.slack',
     IN_APP: 'notification.inApp',
+  },
+  // Weekly digest queue
+  WEEKLY_DIGEST: {
+    SEND: 'digest.send',
+    SEND_ALL: 'digest.sendAll',
   },
 } as const;
 
@@ -123,6 +129,13 @@ export interface NotificationJobData {
   recipient: string;
   template: string;
   data: Record<string, unknown>;
+}
+
+export interface WeeklyDigestJobData {
+  /** Send to specific user */
+  userId?: string;
+  /** Send to all eligible users */
+  sendAll?: boolean;
 }
 
 /**

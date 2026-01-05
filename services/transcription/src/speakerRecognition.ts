@@ -183,11 +183,11 @@ class SpeakerRecognitionService {
     let timestamp = 0;
 
     while ((match = pattern.exec(fullText)) !== null) {
-      const text = match[2].trim();
+      const text = match[2]!.trim();
       const duration = text.split(/\s+/).length * 0.3; // Rough estimate: 0.3s per word
 
       segments.push({
-        speaker: match[1],
+        speaker: match[1]!,
         text,
         startTime: timestamp,
         endTime: timestamp + duration,

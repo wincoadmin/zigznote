@@ -28,7 +28,7 @@ interface ChecklistItem {
 }
 
 interface OnboardingChecklistProps {
-  items: ChecklistItem[];
+  items?: ChecklistItem[];
   onDismiss?: () => void;
   className?: string;
 }

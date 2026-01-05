@@ -6,7 +6,7 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { adminUserRepository, adminSessionRepository } from '@zigznote/database';
-import type { AdminUser, AdminSession } from '@prisma/client';
+import type { AdminUser, AdminSession } from '@zigznote/database';
 import { UnauthorizedError, ForbiddenError } from '@zigznote/shared';
 import { config } from '../config';
 import { logger } from '../utils/logger';
@@ -279,17 +279,16 @@ class AdminAuthService {
    */
   async validateSession(token: string): Promise<AdminAuthContext | null> {
     const tokenHash = this.hashToken(token);
-    const session = await adminSessionRepository.validateSession(tokenHash, {
-      adminUser: true,
-    });
+    const session = await adminSessionRepository.validateSession(tokenHash);
 
     if (!session) {
       return null;
     }
 
-    const adminUser = session.adminUser as AdminUser;
+    // Fetch the admin user separately
+    const adminUser = await adminUserRepository.findById(session.adminUserId);
 
-    if (!adminUser.isActive) {
+    if (!adminUser || !adminUser.isActive) {
       await adminSessionRepository.delete(session.id);
       return null;
     }
@@ -357,7 +356,7 @@ class AdminAuthService {
 
   private async handleFailedLogin(user: AdminUser, ipAddress: string): Promise<void> {
     const newFailedAttempts = user.failedLoginAttempts + 1;
-    let lockUntil: Date | null = null;
+    let lockUntil: Date | undefined = undefined;
 
     if (newFailedAttempts >= MAX_FAILED_ATTEMPTS) {
       lockUntil = new Date(Date.now() + LOCKOUT_DURATION_MINUTES * 60 * 1000);
@@ -418,19 +417,35 @@ class AdminAuthService {
     hmac.update(buffer);
     const hash = hmac.digest();
 
-    const offset = hash[hash.length - 1] & 0x0f;
+    const offsetByte = hash[hash.length - 1];
+    if (offsetByte === undefined) {
+      throw new Error('Invalid TOTP hash');
+    }
+    const offset = offsetByte & 0x0f;
+
+    const byte0 = hash[offset];
+    const byte1 = hash[offset + 1];
+    const byte2 = hash[offset + 2];
+    const byte3 = hash[offset + 3];
+
+    if (byte0 === undefined || byte1 === undefined || byte2 === undefined || byte3 === undefined) {
+      throw new Error('Invalid TOTP hash offset');
+    }
+
     const code =
-      ((hash[offset] & 0x7f) << 24) |
-      ((hash[offset + 1] & 0xff) << 16) |
-      ((hash[offset + 2] & 0xff) << 8) |
-      (hash[offset + 3] & 0xff);
+      ((byte0 & 0x7f) << 24) |
+      ((byte1 & 0xff) << 16) |
+      ((byte2 & 0xff) << 8) |
+      (byte3 & 0xff);
 
     return (code % 1000000).toString().padStart(6, '0');
   }
 
   private async verifyBackupCode(user: AdminUser, code: string): Promise<boolean> {
     for (let i = 0; i < user.backupCodes.length; i++) {
-      const isMatch = await this.verifyPassword(code, user.backupCodes[i]);
+      const backupCode = user.backupCodes[i];
+      if (!backupCode) continue;
+      const isMatch = await this.verifyPassword(code, backupCode);
       if (isMatch) {
         // Remove used backup code
         const newCodes = [...user.backupCodes];
@@ -463,7 +478,12 @@ class AdminAuthService {
 
   private decryptSecret(encrypted: string): string {
     const key = this.getEncryptionKey();
-    const [ivHex, encryptedData] = encrypted.split(':');
+    const parts = encrypted.split(':');
+    const ivHex = parts[0];
+    const encryptedData = parts[1];
+    if (!ivHex || !encryptedData) {
+      throw new Error('Invalid encrypted secret format');
+    }
     const iv = Buffer.from(ivHex, 'hex');
     const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
     let decrypted = decipher.update(encryptedData, 'hex', 'utf8');
