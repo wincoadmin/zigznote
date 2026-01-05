@@ -28,6 +28,7 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report",
+    "test:hardening": "jest --config jest.config.js --passWithNoTests",
     "typecheck": "turbo run typecheck",
     "clean": "turbo run clean && rimraf node_modules",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
@@ -46,11 +47,14 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
+    "@types/jest": "^29.5.14",
     "@types/node": "^20.17.10",
     "husky": "^9.1.7",
+    "jest": "^29.7.0",
     "lint-staged": "^15.2.11",
     "prettier": "^3.4.2",
     "rimraf": "^6.0.1",
+    "ts-jest": "^29.2.5",
     "turbo": "^2.3.3",
     "typescript": "^5.7.2"
   },
