@@ -137,6 +137,14 @@ export interface DeepgramUtterance {
 }
 
 /**
+ * Keyword for custom vocabulary boosting
+ */
+export interface KeywordBoost {
+  keyword: string;
+  boost: number;
+}
+
+/**
  * Options for transcription
  */
 export interface TranscribeOptions {
@@ -147,6 +155,8 @@ export interface TranscribeOptions {
   paragraphs?: boolean;
   utterances?: boolean;
   model?: string;
+  /** Custom keywords to boost recognition */
+  keywords?: KeywordBoost[];
 }
 
 /**

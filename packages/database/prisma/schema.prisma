@@ -32,6 +32,8 @@ model Organization {
   webhooks               Webhook[]
   billingCustomer        BillingCustomer?
   userApiKeys            UserApiKey[]
+  speakerAliases         SpeakerAlias[]
+  customVocabulary       CustomVocabulary[]
 
   @@index([clerkId])
   @@index([deletedAt])
@@ -97,6 +99,55 @@ model UserApiKey {
 }
 
 // ============================================
+// Speaker Recognition
+// ============================================
+
+// Learned speaker identities for an organization
+model SpeakerAlias {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+
+  // Voice identification (from Deepgram diarization)
+  speakerLabel   String   @map("speaker_label") // "Speaker 0", "Speaker 1", etc.
+
+  // User-provided identity
+  displayName    String   @map("display_name")  // "John Smith"
+  email          String?                         // Optional: link to known user
+
+  // Learning context
+  meetingId      String?  @map("meeting_id")    // First meeting where identified
+  confidence     Float    @default(1.0)         // How confident we are in this mapping
+
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  meeting        Meeting?     @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, speakerLabel])
+  @@index([organizationId])
+  @@map("speaker_aliases")
+}
+
+// Custom vocabulary for improved transcription accuracy
+model CustomVocabulary {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+
+  term           String   // "zigznote", "Acme Corp", "Kubernetes"
+  boost          Float    @default(1.5) // How much to boost this term (1.0-2.0)
+  category       String?  // "product", "company", "person", "technical"
+
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, term])
+  @@index([organizationId])
+  @@map("custom_vocabulary")
+}
+
+// ============================================
 // Calendar Integration
 // ============================================
 
@@ -142,13 +193,14 @@ model Meeting {
   updatedAt       DateTime  @updatedAt @map("updated_at")
   deletedAt       DateTime? @map("deleted_at")
 
-  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdBy    User?                @relation("MeetingCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  participants MeetingParticipant[]
-  transcript   Transcript?
-  summary      Summary?
-  actionItems  ActionItem[]
-  embeddings   TranscriptEmbedding[]
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy      User?                @relation("MeetingCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  participants   MeetingParticipant[]
+  transcript     Transcript?
+  summary        Summary?
+  actionItems    ActionItem[]
+  embeddings     TranscriptEmbedding[]
+  speakerAliases SpeakerAlias[]
 
   @@index([organizationId])
   @@index([status])

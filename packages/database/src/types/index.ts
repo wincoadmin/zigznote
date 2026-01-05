@@ -228,3 +228,43 @@ export interface UpdateUserApiKeyInput {
   name?: string;
   scopes?: string[];
 }
+
+/**
+ * Create speaker alias input
+ */
+export interface CreateSpeakerAliasInput {
+  organizationId: string;
+  speakerLabel: string;
+  displayName: string;
+  email?: string | null;
+  meetingId?: string | null;
+  confidence?: number;
+}
+
+/**
+ * Update speaker alias input
+ */
+export interface UpdateSpeakerAliasInput {
+  displayName?: string;
+  email?: string | null;
+  confidence?: number;
+}
+
+/**
+ * Create custom vocabulary input
+ */
+export interface CreateCustomVocabularyInput {
+  organizationId: string;
+  term: string;
+  boost?: number;
+  category?: string | null;
+}
+
+/**
+ * Update custom vocabulary input
+ */
+export interface UpdateCustomVocabularyInput {
+  term?: string;
+  boost?: number;
+  category?: string | null;
+}

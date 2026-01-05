@@ -48,3 +48,13 @@ export {
   UserApiKeyRepository,
   userApiKeyRepository,
 } from './userApiKeyRepository';
+
+export {
+  SpeakerAliasRepository,
+  speakerAliasRepository,
+} from './speakerAliasRepository';
+
+export {
+  CustomVocabularyRepository,
+  customVocabularyRepository,
+} from './customVocabularyRepository';

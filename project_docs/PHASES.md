@@ -392,6 +392,52 @@
 
 ---
 
+## Phase 6.6: Transcript Polish
+
+**Status:** ✅ Complete
+**Estimated Time:** 30-45 minutes
+
+### Planned Deliverables
+- Transcript post-processing service
+- Filler word removal (um, uh, like, etc.)
+- Sentence boundary cleanup
+- Speaker alias system (map "Speaker 0" → "John Smith")
+- Custom vocabulary for Deepgram keyword boosting
+- Low confidence region detection
+- API routes for speaker and vocabulary management
+
+### Key Features
+| Feature | Purpose |
+|---------|---------|
+| Filler Removal | Clean transcripts of verbal tics |
+| Speaker Aliases | Human-readable speaker names |
+| Custom Vocabulary | Improve domain-specific term accuracy |
+| Low Confidence | Highlight uncertain transcription regions |
+
+### Key Decisions Made
+- **Filler Patterns**: Organized into categories (single word, verbal tics, phrases, repetition, false starts)
+- **Post-Processor Integration**: Applied after Deepgram processing, before storage
+- **Cleaned Text Storage**: Store cleaned version as main fullText, preserve raw segments
+- **Vocabulary Limit**: 500 terms per organization
+- **Boost Range**: 1.0-2.0 for Deepgram keyword boosting
+
+### Actual Changes from Plan
+- Added TranscriptPostProcessor class with configurable options
+- Created speakerAliasRepository and customVocabularyRepository
+- Integrated custom vocabulary into Deepgram API calls
+- Added 39 post-processor tests
+- API routes use transcripts:read/write scopes for consistency
+
+### Test Coverage
+- Post-Processor: 39 tests
+- Transcription Worker: 72 tests total
+- API: 210 tests total
+
+### Handoff File
+`PHASE_6_6_COMPLETE.md`
+
+---
+
 ## Phase 7: Admin Panel
 
 **Status:** ⬜ Not Started
@@ -509,11 +555,12 @@ _To be filled after phase completion_
 | 5 | Frontend Dashboard | ✅ | 90-120 min |
 | 6 | Integrations & Billing | ✅ | 90-120 min |
 | 6.5 | User API Keys | ✅ | 30-45 min |
+| 6.6 | Transcript Polish | ✅ | 30-45 min |
 | 7 | Admin Panel | ⬜ | 90-120 min |
 | 8 | Search & Polish | ⬜ | 60-90 min |
 | 8.5 | Hardening & Stress Testing | ⬜ | 60-90 min |
 
-**Total Estimated Time:** 10.5-15 hours
+**Total Estimated Time:** 11-16 hours
 
 ---
 
@@ -531,6 +578,7 @@ _To be filled after phase completion_
 | 2026-01-05 | Phase 5 | Frontend Dashboard with zigznote branding, 343 tests passing |
 | 2026-01-05 | Phase 6 | Integrations (Slack, HubSpot, Webhooks) + Billing (Stripe, Flutterwave) complete |
 | 2026-01-05 | Phase 6.5 | User API Keys with secure generation, bcrypt hashing, scopes, and settings UI |
+| 2026-01-05 | Phase 6.6 | Transcript Polish with filler removal, speaker aliases, custom vocabulary |
 
 ---
 

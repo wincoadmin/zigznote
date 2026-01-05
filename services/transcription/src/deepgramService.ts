@@ -61,9 +61,10 @@ class DeepgramService {
       paragraphs = true,
       utterances = true,
       model = 'nova-2',
+      keywords = [],
     } = options;
 
-    logger.info({ audioUrl, options }, 'Starting transcription');
+    logger.info({ audioUrl, keywordCount: keywords.length }, 'Starting transcription');
 
     // Build query params
     const params = new URLSearchParams({
@@ -75,6 +76,12 @@ class DeepgramService {
       paragraphs: String(paragraphs),
       utterances: String(utterances),
     });
+
+    // Add keywords for custom vocabulary boosting
+    // Format: keyword:boost (e.g., "zigznote:1.5")
+    for (const { keyword, boost } of keywords) {
+      params.append('keywords', `${keyword}:${boost}`);
+    }
 
     try {
       const response = await fetch(`${this.baseUrl}/listen?${params}`, {
@@ -118,9 +125,13 @@ class DeepgramService {
       paragraphs = true,
       utterances = true,
       model = 'nova-2',
+      keywords = [],
     } = options;
 
-    logger.info({ bufferSize: audioBuffer.length, mimeType }, 'Starting buffer transcription');
+    logger.info(
+      { bufferSize: audioBuffer.length, mimeType, keywordCount: keywords.length },
+      'Starting buffer transcription'
+    );
 
     const params = new URLSearchParams({
       model,
@@ -131,6 +142,11 @@ class DeepgramService {
       paragraphs: String(paragraphs),
       utterances: String(utterances),
     });
+
+    // Add keywords for custom vocabulary boosting
+    for (const { keyword, boost } of keywords) {
+      params.append('keywords', `${keyword}:${boost}`);
+    }
 
     try {
       const response = await fetch(`${this.baseUrl}/listen?${params}`, {

@@ -4,6 +4,8 @@ import { meetingsRouter } from './meetings';
 import calendarRouter from './calendar';
 import { insightsRouter } from './insights';
 import { apiKeysRouter } from './apiKeys';
+import { speakersRouter } from './speakers';
+import { vocabularyRouter } from './vocabulary';
 
 export const apiRouter: IRouter = Router();
 
@@ -14,6 +16,8 @@ apiRouter.use('/v1/meetings', meetingsRouter);
 apiRouter.use('/v1/calendar', calendarRouter);
 apiRouter.use('/v1/insights', insightsRouter);
 apiRouter.use('/v1/api-keys', apiKeysRouter);
+apiRouter.use('/v1/speakers', speakersRouter);
+apiRouter.use('/v1/vocabulary', vocabularyRouter);
 
 /**
  * API root - returns API information

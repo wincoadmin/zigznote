@@ -6,11 +6,21 @@
 import { Job } from 'bullmq';
 import pino from 'pino';
 import { deepgramService } from './deepgramService';
-import type { TranscriptionJob, TranscriptionResult } from './types';
-import { transcriptRepository, meetingRepository } from '@zigznote/database';
+import type { TranscriptionJob, TranscriptionResult, TranscriptionSegment } from './types';
+import {
+  transcriptRepository,
+  meetingRepository,
+  speakerAliasRepository,
+  customVocabularyRepository,
+} from '@zigznote/database';
 import { QUEUE_NAMES } from '@zigznote/shared';
 import { Queue } from 'bullmq';
 import Redis from 'ioredis';
+import {
+  TranscriptPostProcessor,
+  type TranscriptSegment as PostProcessorSegment,
+  type ProcessedSegment,
+} from './postProcessor';
 
 const logger = pino({
   level: process.env.LOG_LEVEL || 'info',
@@ -63,6 +73,19 @@ export async function processTranscriptionJob(
       status: 'processing',
     });
 
+    // Get meeting to retrieve organization ID early for custom vocabulary
+    const meetingForVocab = await meetingRepository.findById(meetingId);
+    const orgId = meetingForVocab?.organizationId;
+
+    // Load custom vocabulary for Deepgram keywords boosting
+    let keywords: Array<{ keyword: string; boost: number }> = [];
+    if (orgId) {
+      keywords = await customVocabularyRepository.getDeepgramKeywords(orgId);
+      if (keywords.length > 0) {
+        logger.debug({ orgId, keywordCount: keywords.length }, 'Using custom vocabulary');
+      }
+    }
+
     // Transcribe with Deepgram
     const transcript = await deepgramService.transcribeUrl(audioUrl, {
       language,
@@ -71,6 +94,7 @@ export async function processTranscriptionJob(
       smartFormat: true,
       paragraphs: true,
       utterances: true,
+      keywords,
     });
 
     // Check if meeting is too short (< 30 seconds)
@@ -97,11 +121,58 @@ export async function processTranscriptionJob(
       };
     }
 
-    // Store transcript in database
+    // Load speaker aliases for the organization (reuse orgId from vocabulary lookup)
+    let speakerAliases = new Map<string, string>();
+    if (orgId) {
+      speakerAliases = await speakerAliasRepository.findByOrganizationAsMap(orgId);
+      if (speakerAliases.size > 0) {
+        logger.debug({ orgId, aliasCount: speakerAliases.size }, 'Loaded speaker aliases');
+      }
+    }
+
+    // Apply post-processing to transcript segments
+    const postProcessor = new TranscriptPostProcessor({
+      removeFillers: true,
+      cleanSentenceBoundaries: true,
+      highlightLowConfidence: true,
+      confidenceThreshold: 0.7,
+      speakerAliases,
+    });
+
+    // Convert segments to post-processor format (startMs/endMs -> startTime/endTime)
+    const postProcessorSegments: PostProcessorSegment[] = transcript.segments.map(
+      (seg: TranscriptionSegment) => ({
+        speaker: seg.speaker,
+        text: seg.text,
+        startTime: seg.startMs,
+        endTime: seg.endMs,
+        confidence: seg.confidence,
+        words: seg.words?.map((w) => ({
+          word: w.word,
+          start: w.startMs,
+          end: w.endMs,
+          confidence: w.confidence,
+        })),
+      })
+    );
+
+    const processedSegments = postProcessor.processTranscript(postProcessorSegments);
+    const cleanedFullText = postProcessor.getFullText(processedSegments);
+
+    logger.debug(
+      {
+        meetingId,
+        originalWordCount: transcript.wordCount,
+        processedSegments: processedSegments.length,
+      },
+      'Post-processing completed'
+    );
+
+    // Store transcript in database with both raw and cleaned versions
     const storedTranscript = await transcriptRepository.createTranscript({
       meetingId,
       segments: JSON.parse(JSON.stringify(transcript.segments)),
-      fullText: transcript.fullText,
+      fullText: cleanedFullText, // Store cleaned version as main text
       wordCount: transcript.wordCount,
       language: transcript.language,
     });
