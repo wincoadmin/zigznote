@@ -17,3 +17,7 @@ export { Progress } from './progress';
 export { Select, type SelectProps } from './select';
 export { Checkbox, type CheckboxProps } from './checkbox';
 export { ToastProvider, useToast, ToastContainer } from './toast';
+export { EmptyState } from './EmptyState';
+export { CommandPalette } from './CommandPalette';
+export { ThemeToggle } from './ThemeToggle';
+export { CelebrationModal } from './CelebrationModal';

@@ -356,3 +356,359 @@ export const audioApi = {
     }
   },
 };
+
+// Analytics types
+export interface UserDashboardStats {
+  totalMeetings: number;
+  meetingsThisWeek: number;
+  meetingsThisMonth: number;
+  totalMeetingHours: number;
+  hoursSavedEstimate: number;
+  actionItemsCreated: number;
+  actionItemsCompleted: number;
+  completionRate: number;
+  currentStreak: number;
+  longestStreak: number;
+  dailyMeetings: { date: string; count: number }[];
+}
+
+export interface ProductivityScore {
+  score: number;
+  components: {
+    meetingEfficiency: number;
+    actionItemCompletion: number;
+    engagementStreak: number;
+  };
+  trend: 'up' | 'down' | 'stable';
+}
+
+export interface Achievement {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: string;
+  threshold: number;
+  points: number;
+  unlocked: boolean;
+  unlockedAt?: string;
+  progress?: number;
+}
+
+export interface OrgAnalyticsStats {
+  totalMeetings: number;
+  totalUsers: number;
+  activeUsers: number;
+  meetingsThisMonth: number;
+  newUsersThisMonth: number;
+  totalMeetingMinutes: number;
+  meetingsBySource: { source: string; count: number }[];
+  totalCost: number;
+  costByCategory: { category: string; amount: number }[];
+  dailyMeetings: { date: string; count: number }[];
+  dailyActiveUsers: { date: string; count: number }[];
+}
+
+// Analytics API methods
+export const analyticsApi = {
+  /** Get user dashboard statistics */
+  getDashboard: () => api.get<UserDashboardStats>('/api/v1/analytics/dashboard'),
+
+  /** Get user productivity score */
+  getProductivity: () => api.get<ProductivityScore>('/api/v1/analytics/productivity'),
+
+  /** Get user achievements */
+  getAchievements: () => api.get<Achievement[]>('/api/v1/analytics/achievements'),
+
+  /** Check and unlock new achievements */
+  checkAchievements: () =>
+    api.post<{ newlyUnlocked: Achievement[]; count: number }>(
+      '/api/v1/analytics/achievements/check'
+    ),
+
+  /** Get organization analytics (admin) */
+  getOrgAnalytics: () => api.get<OrgAnalyticsStats>('/api/v1/analytics/organization'),
+
+  /** Track a metric */
+  track: (metric: string, increment?: number) =>
+    api.post(`/api/v1/analytics/track/${metric}`, { increment }),
+
+  /** Preview weekly digest */
+  getDigestPreview: () =>
+    api.get<{
+      meetingsThisWeek: number;
+      actionItemsCompleted: number;
+      hoursSaved: number;
+      streak: number;
+      topAchievement: string | null;
+    }>('/api/v1/analytics/digest/preview'),
+};
+
+// Chat types
+export interface ChatCitation {
+  meetingId: string;
+  meetingTitle: string;
+  timestamp: number | null;
+  text: string;
+  speaker?: string;
+  relevance: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  citations?: ChatCitation[];
+  createdAt: string;
+}
+
+export interface ChatSession {
+  id: string;
+  title: string | null;
+  meetingId: string | null;
+  meetingTitle?: string;
+  messageCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChatResponse {
+  message: ChatMessage;
+  suggestedFollowups?: string[];
+}
+
+export interface ChatSearchResult {
+  meetingId: string;
+  meetingTitle: string;
+  text: string;
+  startTime: number;
+  speakers: string[];
+  similarity: number;
+}
+
+// Chat API methods
+export const chatApi = {
+  /** Create a new chat session */
+  createChat: (data?: { meetingId?: string; title?: string }) =>
+    api.post<{ chatId: string }>('/api/v1/chat', data || {}),
+
+  /** Get user's chat sessions */
+  getChats: (params?: { meetingId?: string; limit?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.meetingId) searchParams.set('meetingId', params.meetingId);
+    if (params?.limit) searchParams.set('limit', String(params.limit));
+    const query = searchParams.toString();
+    return api.get<ChatSession[]>(`/api/v1/chat${query ? `?${query}` : ''}`);
+  },
+
+  /** Get chat history */
+  getChatHistory: (chatId: string) =>
+    api.get<ChatMessage[]>(`/api/v1/chat/${chatId}`),
+
+  /** Send a message to chat */
+  sendMessage: (chatId: string, message: string) =>
+    api.post<ChatResponse>(`/api/v1/chat/${chatId}/messages`, { message }),
+
+  /** Delete a chat */
+  deleteChat: (chatId: string) =>
+    api.delete(`/api/v1/chat/${chatId}`),
+
+  /** Cross-meeting semantic search */
+  search: (query: string, options?: { meetingIds?: string[]; limit?: number }) =>
+    api.post<ChatSearchResult[]>('/api/v1/chat/search', {
+      query,
+      ...options,
+    }),
+
+  /** Get suggested questions for a meeting */
+  getSuggestions: (meetingId: string) =>
+    api.get<string[]>(`/api/v1/chat/meetings/${meetingId}/suggestions`),
+};
+
+// Settings types
+export interface NotificationPreferences {
+  emailMeetingReady: boolean;
+  emailActionItemReminder: boolean;
+  emailWeeklyDigest: boolean;
+  emailMeetingShared: boolean;
+  emailPaymentAlerts: boolean;
+  actionItemReminderDays: number;
+}
+
+export interface OrganizationSettings {
+  recordingConsentEnabled: boolean;
+  consentAnnouncementText: string | null;
+  requireExplicitConsent: boolean;
+  defaultBotName: string;
+  joinAnnouncementEnabled: boolean;
+}
+
+export interface UsageMetric {
+  current: number;
+  limit: number;
+  percentage: number;
+}
+
+export interface UsageSummary {
+  period: string;
+  usage: {
+    meetings: UsageMetric;
+    minutes: UsageMetric;
+    storage: UsageMetric;
+    chat: UsageMetric;
+  };
+  plan: string;
+}
+
+// Settings API methods
+export const settingsApi = {
+  /** Get notification preferences */
+  getNotifications: () =>
+    api.get<NotificationPreferences>('/api/v1/settings/notifications'),
+
+  /** Update notification preferences */
+  updateNotifications: (data: Partial<NotificationPreferences>) =>
+    api.patch<NotificationPreferences>('/api/v1/settings/notifications', data),
+
+  /** Get organization settings */
+  getOrganization: () =>
+    api.get<OrganizationSettings>('/api/v1/settings/organization'),
+
+  /** Update organization settings (admin only) */
+  updateOrganization: (data: Partial<OrganizationSettings>) =>
+    api.patch<OrganizationSettings>('/api/v1/settings/organization', data),
+
+  /** Get usage quota summary */
+  getUsage: () => api.get<UsageSummary>('/api/v1/settings/usage'),
+};
+
+// Data Export types
+export interface DataExportRequest {
+  id: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'expired';
+  includeAudio: boolean;
+  downloadUrl: string | null;
+  expiresAt: string | null;
+  sizeBytes: number | null;
+  errorMessage: string | null;
+  createdAt: string;
+  completedAt: string | null;
+}
+
+// Data Export API methods
+export const dataExportApi = {
+  /** List export requests */
+  list: () => api.get<DataExportRequest[]>('/api/v1/data-export'),
+
+  /** Request new data export */
+  create: (options?: { includeAudio?: boolean }) =>
+    api.post<DataExportRequest>('/api/v1/data-export', options || {}),
+
+  /** Get export status */
+  getById: (exportId: string) =>
+    api.get<DataExportRequest>(`/api/v1/data-export/${exportId}`),
+};
+
+// Meeting Share types
+export interface MeetingShare {
+  id: string;
+  shareType: 'link' | 'email' | 'team';
+  accessLevel: 'view' | 'comment' | 'edit';
+  recipientEmail: string | null;
+  recipientName: string | null;
+  shareUrl: string | null;
+  hasPassword: boolean;
+  expiresAt: string | null;
+  maxViews: number | null;
+  viewCount: number;
+  includeTranscript: boolean;
+  includeSummary: boolean;
+  includeActionItems: boolean;
+  includeRecording: boolean;
+  message: string | null;
+  sharedBy: { id: string; name: string | null; email: string };
+  createdAt: string;
+  lastAccessedAt: string | null;
+}
+
+export interface CreateShareOptions {
+  meetingId: string;
+  shareType: 'link' | 'email';
+  accessLevel?: 'view' | 'comment';
+  recipientEmail?: string;
+  recipientName?: string;
+  password?: string;
+  expiresInDays?: number;
+  maxViews?: number;
+  includeTranscript?: boolean;
+  includeSummary?: boolean;
+  includeActionItems?: boolean;
+  includeRecording?: boolean;
+  message?: string;
+}
+
+// Sharing API methods
+export const sharingApi = {
+  /** List shares for a meeting */
+  listShares: (meetingId: string) =>
+    api.get<MeetingShare[]>(`/api/v1/sharing/meetings/${meetingId}`),
+
+  /** Create a new share */
+  create: (options: CreateShareOptions) =>
+    api.post<MeetingShare>('/api/v1/sharing', options),
+
+  /** Update a share */
+  update: (
+    shareId: string,
+    data: Partial<{
+      accessLevel: 'view' | 'comment';
+      password: string | null;
+      expiresAt: string | null;
+      maxViews: number | null;
+      includeTranscript: boolean;
+      includeSummary: boolean;
+      includeActionItems: boolean;
+      includeRecording: boolean;
+    }>
+  ) => api.patch<MeetingShare>(`/api/v1/sharing/${shareId}`, data),
+
+  /** Revoke a share */
+  revoke: (shareId: string) => api.delete(`/api/v1/sharing/${shareId}`),
+};
+
+// Meeting Export types
+export interface MeetingExportOptions {
+  format: 'pdf' | 'docx' | 'srt' | 'txt' | 'json';
+  includeTranscript?: boolean;
+  includeSummary?: boolean;
+  includeActionItems?: boolean;
+  includeSpeakerNames?: boolean;
+  includeTimestamps?: boolean;
+}
+
+// Meeting Export API methods
+export const meetingExportApi = {
+  /** Export meeting in specified format */
+  export: async (
+    meetingId: string,
+    options: MeetingExportOptions
+  ): Promise<Blob> => {
+    const response = await fetch(
+      `${API_URL}/api/v1/meetings/${meetingId}/export`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(options),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Export failed');
+    }
+
+    return response.blob();
+  },
+};

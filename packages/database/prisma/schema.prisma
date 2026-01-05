@@ -55,6 +55,13 @@ model Organization {
   customVocabulary       CustomVocabulary[]
   voiceProfiles          VoiceProfile[]
   namePatterns           NamePattern[]
+  dailyMetrics           OrgDailyMetrics[]
+  userEngagements        UserEngagement[]
+  meetingChats           MeetingChat[]
+
+  // Phase 8.9: Production Readiness
+  organizationSettings   OrganizationSettings?
+  usageRecords           UsageRecord[]
 
   @@index([clerkId])
   @@index([deletedAt])
@@ -79,6 +86,13 @@ model User {
   meetingsCreated     Meeting[]            @relation("MeetingCreator")
   apiKeys             UserApiKey[]
   voiceProfiles       VoiceProfile[]
+  engagement          UserEngagement?
+  meetingChats        MeetingChat[]
+
+  // Phase 8.9: Production Readiness
+  notificationPreferences NotificationPreferences?
+  dataExports             DataExport[]
+  meetingShares           MeetingShare[]
 
   @@index([organizationId])
   @@index([clerkId])
@@ -320,8 +334,14 @@ model Meeting {
   embeddings         TranscriptEmbedding[]
   speakerAliases     SpeakerAlias[]
   speakerMatches     SpeakerMatch[]
-  voiceProfilesFirst VoiceProfile[]       @relation("FirstMeeting")
-  voiceProfilesLast  VoiceProfile[]       @relation("LastMeeting")
+  voiceProfilesFirst     VoiceProfile[]       @relation("FirstMeeting")
+  voiceProfilesLast      VoiceProfile[]       @relation("LastMeeting")
+  analytics              MeetingAnalytics?
+  chats                  MeetingChat[]
+  suggestedQuestions     SuggestedQuestion[]
+
+  // Phase 8.9: Production Readiness
+  shares                 MeetingShare[]
 
   @@index([organizationId])
   @@index([status])
@@ -850,4 +870,395 @@ model ConversationMessage {
   @@index([conversationId])
   @@index([createdAt])
   @@map("conversation_messages")
+}
+
+// ============================================
+// Analytics & Engagement
+// ============================================
+
+// Daily aggregated metrics per user
+model UserDailyMetrics {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  organizationId String   @map("organization_id")
+  date           DateTime @db.Date
+
+  // Meeting metrics
+  meetingsRecorded    Int @default(0) @map("meetings_recorded")
+  meetingsFromBot     Int @default(0) @map("meetings_from_bot")
+  meetingsFromUpload  Int @default(0) @map("meetings_from_upload")
+  meetingsFromBrowser Int @default(0) @map("meetings_from_browser")
+
+  // Time metrics (in seconds)
+  totalMeetingDuration Int @default(0) @map("total_meeting_duration")
+  totalSpeakingTime    Int @default(0) @map("total_speaking_time")
+
+  // Productivity metrics
+  actionItemsCreated   Int @default(0) @map("action_items_created")
+  actionItemsCompleted Int @default(0) @map("action_items_completed")
+
+  // Engagement metrics
+  summariesViewed   Int @default(0) @map("summaries_viewed")
+  transcriptsViewed Int @default(0) @map("transcripts_viewed")
+  searchesPerformed Int @default(0) @map("searches_performed")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, date])
+  @@index([organizationId, date])
+  @@index([date])
+  @@map("user_daily_metrics")
+}
+
+// Organization-level daily metrics
+model OrgDailyMetrics {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  date           DateTime @db.Date
+
+  // Meeting metrics
+  totalMeetings       Int @default(0) @map("total_meetings")
+  meetingsFromBot     Int @default(0) @map("meetings_from_bot")
+  meetingsFromUpload  Int @default(0) @map("meetings_from_upload")
+  meetingsFromBrowser Int @default(0) @map("meetings_from_browser")
+
+  // User engagement
+  activeUsers Int @default(0) @map("active_users")
+  newUsers    Int @default(0) @map("new_users")
+
+  // Usage metrics
+  totalMeetingMinutes Int @default(0) @map("total_meeting_minutes")
+  apiKeyRequests      Int @default(0) @map("api_key_requests")
+  webhookDeliveries   Int @default(0) @map("webhook_deliveries")
+
+  // Cost tracking (in cents)
+  transcriptionCost Int @default(0) @map("transcription_cost")
+  summarizationCost Int @default(0) @map("summarization_cost")
+  storageCost       Int @default(0) @map("storage_cost")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, date])
+  @@index([date])
+  @@map("org_daily_metrics")
+}
+
+// User engagement tracking for retention
+model UserEngagement {
+  id             String    @id @default(uuid())
+  userId         String    @unique @map("user_id")
+  organizationId String    @map("organization_id")
+
+  // Streaks
+  currentStreak  Int       @default(0) @map("current_streak") // Days in a row with activity
+  longestStreak  Int       @default(0) @map("longest_streak")
+  lastActiveDate DateTime? @map("last_active_date")
+
+  // Milestones
+  totalMeetings    Int   @default(0) @map("total_meetings")
+  totalActionItems Int   @default(0) @map("total_action_items")
+  totalHoursSaved  Float @default(0) @map("total_hours_saved") // Estimated time saved
+
+  // Onboarding
+  onboardingCompleted Boolean @default(false) @map("onboarding_completed")
+  onboardingStep      Int     @default(0) @map("onboarding_step")
+
+  // Notifications
+  weeklyDigestEnabled  Boolean   @default(true) @map("weekly_digest_enabled")
+  lastDigestSentAt     DateTime? @map("last_digest_sent_at")
+  inactivityReminderAt DateTime? @map("inactivity_reminder_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  achievements UserAchievement[]
+
+  @@index([organizationId])
+  @@index([lastActiveDate])
+  @@map("user_engagement")
+}
+
+// Achievements/badges for gamification
+model Achievement {
+  id          String @id @default(uuid())
+  code        String @unique // "first_meeting", "streak_7", "power_user"
+  name        String // "First Meeting"
+  description String // "Record your first meeting"
+  icon        String // Emoji or icon name
+  category    String // "onboarding", "streak", "milestone", "power_user"
+  threshold   Int    @default(1) // Value needed to unlock
+  points      Int    @default(10) // Gamification points
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  userAchievements UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  achievementId String   @map("achievement_id")
+  unlockedAt    DateTime @default(now()) @map("unlocked_at")
+
+  engagement  UserEngagement @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  achievement Achievement    @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+// Meeting-level analytics (for detailed insights)
+model MeetingAnalytics {
+  id        String @id @default(uuid())
+  meetingId String @unique @map("meeting_id")
+
+  // Participation
+  participantCount Int @default(0) @map("participant_count")
+  speakerCount     Int @default(0) @map("speaker_count")
+
+  // Speaking distribution (JSON: { "Speaker 0": 45.2, "Speaker 1": 32.1, ... })
+  speakingDistribution Json? @map("speaking_distribution")
+
+  // Sentiment (from AI analysis)
+  overallSentiment String? @map("overall_sentiment") // "positive", "neutral", "negative"
+  sentimentScore   Float?  @map("sentiment_score") // -1.0 to 1.0
+
+  // Efficiency metrics
+  actionItemsPerMinute Float? @map("action_items_per_minute")
+  decisionsCount       Int    @default(0) @map("decisions_count")
+  questionsCount       Int    @default(0) @map("questions_count")
+
+  // Topics (from AI extraction)
+  topicsDiscussed Json? @map("topics_discussed") // ["budget", "timeline", "hiring"]
+
+  // Quality indicators
+  transcriptConfidence Float? @map("transcript_confidence") // Average confidence
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@map("meeting_analytics")
+}
+
+// ============================================
+// Production Readiness (Phase 8.9)
+// ============================================
+
+// User notification preferences
+model NotificationPreferences {
+  id             String   @id @default(uuid())
+  userId         String   @unique @map("user_id")
+
+  // Email notifications
+  emailMeetingReady       Boolean @default(true) @map("email_meeting_ready")
+  emailActionItemReminder Boolean @default(true) @map("email_action_item_reminder")
+  emailWeeklyDigest       Boolean @default(true) @map("email_weekly_digest")
+  emailMeetingShared      Boolean @default(true) @map("email_meeting_shared")
+  emailPaymentAlerts      Boolean @default(true) @map("email_payment_alerts")
+
+  // Reminder timing
+  actionItemReminderDays  Int     @default(1) @map("action_item_reminder_days") // Days before due
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+// Organization-wide settings
+model OrganizationSettings {
+  id             String   @id @default(uuid())
+  organizationId String   @unique @map("organization_id")
+
+  // Recording consent
+  recordingConsentEnabled  Boolean @default(true) @map("recording_consent_enabled")
+  consentAnnouncementText  String? @map("consent_announcement_text")
+  requireExplicitConsent   Boolean @default(false) @map("require_explicit_consent")
+
+  // Bot settings
+  defaultBotName           String  @default("zigznote Notetaker") @map("default_bot_name")
+  joinAnnouncementEnabled  Boolean @default(true) @map("join_announcement_enabled")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("organization_settings")
+}
+
+// GDPR Data Export requests
+model DataExport {
+  id             String    @id @default(uuid())
+  userId         String    @map("user_id")
+  organizationId String    @map("organization_id")
+
+  status         String    @default("pending") // pending, processing, completed, failed, expired
+  includeAudio   Boolean   @default(false) @map("include_audio")
+  downloadUrl    String?   @map("download_url")
+  expiresAt      DateTime? @map("expires_at")
+  sizeBytes      Int?      @map("size_bytes")
+  errorMessage   String?   @map("error_message")
+
+  createdAt      DateTime  @default(now()) @map("created_at")
+  completedAt    DateTime? @map("completed_at")
+
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("data_exports")
+}
+
+// Meeting sharing
+model MeetingShare {
+  id             String    @id @default(uuid())
+  meetingId      String    @map("meeting_id")
+  sharedById     String    @map("shared_by_id")
+
+  // Share type
+  shareType      String    @map("share_type") // "link" | "email" | "team"
+  accessLevel    String    @map("access_level") // "view" | "comment" | "edit"
+
+  // Recipient (for email shares)
+  recipientEmail String?   @map("recipient_email")
+  recipientName  String?   @map("recipient_name")
+
+  // Link sharing
+  shareToken     String?   @unique @map("share_token")
+  password       String?   // Optional password protection
+
+  // Access limits
+  expiresAt      DateTime? @map("expires_at")
+  maxViews       Int?      @map("max_views")
+  viewCount      Int       @default(0) @map("view_count")
+
+  // Content permissions
+  includeTranscript  Boolean @default(true) @map("include_transcript")
+  includeSummary     Boolean @default(true) @map("include_summary")
+  includeActionItems Boolean @default(true) @map("include_action_items")
+  includeRecording   Boolean @default(false) @map("include_recording")
+
+  // Message
+  message        String?
+
+  // Lifecycle
+  createdAt      DateTime  @default(now()) @map("created_at")
+  lastAccessedAt DateTime? @map("last_accessed_at")
+  revokedAt      DateTime? @map("revoked_at")
+
+  meeting        Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  sharedBy       User      @relation(fields: [sharedById], references: [id])
+
+  @@index([meetingId])
+  @@index([shareToken])
+  @@index([sharedById])
+  @@map("meeting_shares")
+}
+
+// Usage tracking for quota enforcement
+model UsageRecord {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  period         String   // "2024-01" format for monthly billing cycles
+
+  // Meetings
+  meetingsCount      Int @default(0) @map("meetings_count")
+  meetingMinutes     Int @default(0) @map("meeting_minutes")
+
+  // Storage (in bytes)
+  storageUsed        BigInt @default(0) @map("storage_used")
+  audioStorageUsed   BigInt @default(0) @map("audio_storage_used")
+
+  // AI usage
+  transcriptionMinutes Int @default(0) @map("transcription_minutes")
+  summarizationTokens  Int @default(0) @map("summarization_tokens")
+  chatTokens           Int @default(0) @map("chat_tokens")
+
+  // API usage
+  apiRequests        Int @default(0) @map("api_requests")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, period])
+  @@index([organizationId])
+  @@index([period])
+  @@map("usage_records")
+}
+
+// ============================================
+// Meeting AI Chat (Cross-Meeting Support)
+// ============================================
+
+// Chat conversation per meeting (or cross-meeting)
+model MeetingChat {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  userId         String   @map("user_id")
+  meetingId      String?  @map("meeting_id") // null = cross-meeting chat
+  title          String?  // Auto-generated or user-set
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  meeting      Meeting?      @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  messages     ChatMessage[]
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([meetingId])
+  @@map("meeting_chats")
+}
+
+// Individual chat messages
+model ChatMessage {
+  id        String   @id @default(uuid())
+  chatId    String   @map("chat_id")
+  role      String   // "user" | "assistant"
+  content   String   @db.Text
+
+  // Source citations (for assistant messages)
+  citations Json?    // [{meetingId, timestamp, text, relevance}]
+
+  // Metadata
+  model     String?  // "claude-3.5-sonnet" | "gpt-4o"
+  tokens    Int?     // Token count for billing tracking
+  latencyMs Int?     @map("latency_ms")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  chat MeetingChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@index([chatId])
+  @@index([createdAt])
+  @@map("chat_messages")
+}
+
+// Suggested questions per meeting (auto-generated)
+model SuggestedQuestion {
+  id        String   @id @default(uuid())
+  meetingId String   @map("meeting_id")
+  question  String
+  category  String   // "decisions", "action_items", "key_points", "follow_up"
+  priority  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@index([meetingId])
+  @@map("suggested_questions")
 }

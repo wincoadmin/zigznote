@@ -21,3 +21,6 @@ export * from './logger';
 
 // Monitoring
 export * from './monitoring';
+
+// Email
+export * from './email';

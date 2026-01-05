@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { UsageQuotaDisplay } from '@/components/settings';
 import { cn } from '@/lib/utils';
 
 interface Plan {
@@ -229,6 +230,9 @@ export default function BillingPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Usage Quotas */}
+      <UsageQuotaDisplay />
 
       {/* Billing Interval Toggle */}
       <div className="flex items-center justify-center gap-4">

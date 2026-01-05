@@ -11,6 +11,12 @@ import { audioRouter } from './audio';
 import { searchRouter } from './search';
 import { conversationsRouter } from './conversations';
 import { helpRouter } from './help';
+import { analyticsRouter } from './analytics';
+import chatRouter from './chat';
+import settingsRouter from './settings';
+import dataExportRouter from './dataExport';
+import sharingRouter from './sharing';
+import meetingExportRouter from './meetingExport';
 
 export const apiRouter: IRouter = Router();
 
@@ -30,6 +36,18 @@ apiRouter.use('/v1/search', searchRouter);
 apiRouter.use('/v1', conversationsRouter);
 // Help Assistant
 apiRouter.use('/v1/help', helpRouter);
+// Analytics & Engagement
+apiRouter.use('/v1/analytics', analyticsRouter);
+// Meeting AI Chat
+apiRouter.use('/v1/chat', chatRouter);
+// Settings (notifications, organization)
+apiRouter.use('/v1/settings', settingsRouter);
+// GDPR Data Export
+apiRouter.use('/v1/data-export', dataExportRouter);
+// Meeting Sharing
+apiRouter.use('/v1/sharing', sharingRouter);
+// Meeting Export (PDF, DOCX, SRT)
+apiRouter.use('/v1/meetings', meetingExportRouter);
 
 /**
  * API root - returns API information
