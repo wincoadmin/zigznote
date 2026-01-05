@@ -800,3 +800,54 @@ model SystemConfig {
   @@index([category])
   @@map("system_configs")
 }
+
+// ============================================
+// AI Meeting Assistant (Q&A Conversations)
+// ============================================
+
+model Conversation {
+  id             String   @id @default(uuid())
+  meetingId      String   @map("meeting_id")
+  userId         String   @map("user_id")
+  organizationId String   @map("organization_id")
+
+  title          String?  // Auto-generated from first question
+
+  // Token usage tracking
+  totalTokens    Int      @default(0) @map("total_tokens")
+
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  messages ConversationMessage[]
+
+  @@index([meetingId])
+  @@index([userId])
+  @@index([organizationId])
+  @@index([createdAt])
+  @@map("conversations")
+}
+
+model ConversationMessage {
+  id             String   @id @default(uuid())
+  conversationId String   @map("conversation_id")
+
+  role           String   // 'user' | 'assistant'
+  content        String   @db.Text
+
+  // Metadata
+  tokensUsed     Int?     @map("tokens_used")
+  modelUsed      String?  @map("model_used")
+  latencyMs      Int?     @map("latency_ms")
+
+  // Source references (for grounding answers)
+  sources        Json?    @default("[]") // [{segmentIndex, text, relevance}]
+
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([createdAt])
+  @@map("conversation_messages")
+}

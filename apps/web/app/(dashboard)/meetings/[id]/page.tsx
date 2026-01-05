@@ -13,6 +13,7 @@ import {
   TranscriptViewer,
   SummaryPanel,
   ActionItems,
+  MeetingChat,
 } from '@/components/meetings';
 import { meetingsApi } from '@/lib/api';
 import { formatDate, formatTime, formatDuration } from '@/lib/utils';
@@ -264,6 +265,11 @@ export default function MeetingDetailPage() {
           />
         </div>
       </div>
+
+      {/* AI Meeting Assistant Chat */}
+      {meeting.status === 'completed' && transcript && (
+        <MeetingChat meetingId={meetingId} />
+      )}
     </div>
   );
 }

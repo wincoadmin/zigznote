@@ -96,3 +96,14 @@ export {
   systemConfigRepository,
   type SystemConfigFilter,
 } from './systemConfigRepository';
+
+// AI Meeting Assistant
+export {
+  conversationRepository,
+  type ConversationWithMessages,
+  type CreateConversationInput,
+  type CreateMessageInput,
+  type ConversationFilter,
+  type Conversation,
+  type ConversationMessage,
+} from './conversationRepository';
