@@ -211,3 +211,60 @@ export const apiKeysApi = {
 
   revoke: (keyId: string) => api.delete(`/api/v1/api-keys/${keyId}`),
 };
+
+// Voice Profile types
+export interface VoiceProfile {
+  id: string;
+  organizationId: string;
+  displayName: string;
+  email: string | null;
+  userId: string | null;
+  sampleCount: number;
+  totalDuration: number;
+  confidence: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SpeakerIdentification {
+  speakerLabel: string;
+  displayName: string;
+  confidence: number;
+  matchMethod: string;
+  voiceProfileId: string;
+}
+
+// Voice Profiles API methods
+export const voiceProfilesApi = {
+  list: () => api.get<VoiceProfile[]>('/api/v1/voice-profiles'),
+
+  getById: (id: string) => api.get<VoiceProfile>(`/api/v1/voice-profiles/${id}`),
+
+  create: (data: { displayName: string; email?: string }) =>
+    api.post<VoiceProfile>('/api/v1/voice-profiles', data),
+
+  update: (id: string, data: { displayName?: string; email?: string | null }) =>
+    api.patch<VoiceProfile>(`/api/v1/voice-profiles/${id}`, data),
+
+  delete: (id: string) => api.delete(`/api/v1/voice-profiles/${id}`),
+
+  merge: (keepId: string, mergeId: string) =>
+    api.post<VoiceProfile>('/api/v1/voice-profiles/merge', { keepId, mergeId }),
+
+  getMeetingSpeakers: (meetingId: string) =>
+    api.get<SpeakerIdentification[]>(`/api/v1/voice-profiles/meetings/${meetingId}/speakers`),
+
+  reprocessMeeting: (meetingId: string) =>
+    api.post(`/api/v1/voice-profiles/meetings/${meetingId}/speakers/reprocess`),
+
+  confirmSpeaker: (meetingId: string, speakerLabel: string, confirmed: boolean) =>
+    api.post(`/api/v1/voice-profiles/meetings/${meetingId}/speakers/${encodeURIComponent(speakerLabel)}/confirm`, { confirmed }),
+};
+
+// Speaker Aliases API methods
+export const speakersApi = {
+  list: () => api.get('/api/v1/speakers'),
+
+  upsert: (data: { speakerLabel: string; displayName: string; email?: string }) =>
+    api.put('/api/v1/speakers', data),
+};

@@ -21,6 +21,7 @@ import {
   type TranscriptSegment as PostProcessorSegment,
   type ProcessedSegment,
 } from './postProcessor';
+import { speakerRecognitionService } from './speakerRecognition';
 
 const logger = pino({
   level: process.env.LOG_LEVEL || 'info',
@@ -121,12 +122,52 @@ export async function processTranscriptionJob(
       };
     }
 
-    // Load speaker aliases for the organization (reuse orgId from vocabulary lookup)
+    // Load existing speaker aliases for the organization
     let speakerAliases = new Map<string, string>();
     if (orgId) {
       speakerAliases = await speakerAliasRepository.findByOrganizationAsMap(orgId);
       if (speakerAliases.size > 0) {
-        logger.debug({ orgId, aliasCount: speakerAliases.size }, 'Loaded speaker aliases');
+        logger.debug({ orgId, aliasCount: speakerAliases.size }, 'Loaded existing speaker aliases');
+      }
+    }
+
+    // === SPEAKER RECOGNITION ===
+    // Detect speaker names from verbal introductions
+    if (orgId) {
+      try {
+        // Convert to recognition format
+        const recognitionSegments = transcript.segments.map((seg: TranscriptionSegment) => ({
+          speaker: seg.speaker,
+          text: seg.text,
+          startTime: seg.startMs / 1000, // Convert ms to seconds
+          endTime: seg.endMs / 1000,
+        }));
+
+        const recognitionResult = await speakerRecognitionService.recognizeSpeakers(
+          recognitionSegments,
+          {
+            organizationId: orgId,
+            meetingId,
+            existingAliases: speakerAliases,
+          }
+        );
+
+        // Merge detected names with existing aliases (detected names take priority for new speakers)
+        for (const [label, name] of recognitionResult.speakerMap) {
+          if (!speakerAliases.has(label)) {
+            speakerAliases.set(label, name);
+          }
+        }
+
+        logger.info({
+          meetingId,
+          identifiedSpeakers: recognitionResult.speakerMap.size,
+          newProfiles: recognitionResult.newProfiles.length,
+          matchedProfiles: recognitionResult.matchedProfiles.length,
+        }, 'Speaker recognition complete');
+      } catch (recognitionError) {
+        // Log but don't fail the entire transcription
+        logger.error({ error: recognitionError, meetingId }, 'Speaker recognition failed, continuing with existing aliases');
       }
     }
 

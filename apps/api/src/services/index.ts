@@ -15,3 +15,10 @@ export {
   type CreateApiKeyInput,
   type ApiKeyResponse,
 } from './apiKeyService';
+
+export {
+  voiceProfileService,
+  type CreateVoiceProfileInput,
+  type MatchSpeakerInput,
+  type SpeakerIdentification,
+} from './voiceProfileService';

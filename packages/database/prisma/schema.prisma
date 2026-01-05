@@ -34,6 +34,8 @@ model Organization {
   userApiKeys            UserApiKey[]
   speakerAliases         SpeakerAlias[]
   customVocabulary       CustomVocabulary[]
+  voiceProfiles          VoiceProfile[]
+  namePatterns           NamePattern[]
 
   @@index([clerkId])
   @@index([deletedAt])
@@ -56,6 +58,7 @@ model User {
   calendarConnections CalendarConnection[]
   meetingsCreated     Meeting[]            @relation("MeetingCreator")
   apiKeys             UserApiKey[]
+  voiceProfiles       VoiceProfile[]
 
   @@index([organizationId])
   @@index([clerkId])
@@ -148,6 +151,92 @@ model CustomVocabulary {
 }
 
 // ============================================
+// Voice Profiles for Speaker Recognition
+// ============================================
+
+// Stored voice profile for cross-meeting recognition
+model VoiceProfile {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+
+  // Identity
+  displayName    String   @map("display_name")  // "Sarah Johnson"
+  email          String?                         // Link to known user if possible
+  userId         String?  @map("user_id")        // Link to User if internal
+
+  // Voice characteristics (from Deepgram or computed)
+  voiceEmbedding Bytes?   @map("voice_embedding") // Binary embedding vector
+  voiceHash      String?  @map("voice_hash")      // Quick comparison hash
+
+  // Learning metadata
+  sampleCount    Int      @default(1) @map("sample_count")  // How many meetings used to build profile
+  totalDuration  Int      @default(0) @map("total_duration") // Total seconds of speech analyzed
+  confidence     Float    @default(0.5)                      // 0-1 confidence in this profile
+
+  // Source tracking
+  firstMeetingId String?  @map("first_meeting_id")
+  lastMeetingId  String?  @map("last_meeting_id")
+
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  firstMeeting   Meeting?     @relation("FirstMeeting", fields: [firstMeetingId], references: [id], onDelete: SetNull)
+  lastMeeting    Meeting?     @relation("LastMeeting", fields: [lastMeetingId], references: [id], onDelete: SetNull)
+  speakerMatches SpeakerMatch[]
+
+  @@unique([organizationId, email])
+  @@index([organizationId])
+  @@index([voiceHash])
+  @@map("voice_profiles")
+}
+
+// Speaker match for a specific meeting
+model SpeakerMatch {
+  id             String   @id @default(uuid())
+  meetingId      String   @map("meeting_id")
+  voiceProfileId String   @map("voice_profile_id")
+
+  // Match details
+  speakerLabel   String   @map("speaker_label")  // "Speaker 0", "Speaker 1"
+  matchMethod    String   @map("match_method")   // "introduction", "voice_match", "calendar", "manual"
+  confidence     Float    @default(1.0)          // How confident we are in this match
+
+  // Detection context
+  detectedPhrase String?  @map("detected_phrase") // "Hi, I'm Sarah" - the phrase that identified them
+  detectedAt     Float?   @map("detected_at")     // Timestamp in audio where detected
+
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  meeting        Meeting      @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  voiceProfile   VoiceProfile @relation(fields: [voiceProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingId, speakerLabel])
+  @@unique([meetingId, voiceProfileId])
+  @@index([meetingId])
+  @@map("speaker_matches")
+}
+
+// Name detection patterns (configurable per org)
+model NamePattern {
+  id             String   @id @default(uuid())
+  organizationId String?  @map("organization_id") // null = global pattern
+
+  pattern        String   // Regex pattern
+  nameGroup      Int      @default(1) @map("name_group") // Capture group for name
+  priority       Int      @default(0) // Higher = checked first
+  isActive       Boolean  @default(true) @map("is_active")
+
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("name_patterns")
+}
+
+// ============================================
 // Calendar Integration
 // ============================================
 
@@ -193,14 +282,17 @@ model Meeting {
   updatedAt       DateTime  @updatedAt @map("updated_at")
   deletedAt       DateTime? @map("deleted_at")
 
-  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdBy      User?                @relation("MeetingCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  participants   MeetingParticipant[]
-  transcript     Transcript?
-  summary        Summary?
-  actionItems    ActionItem[]
-  embeddings     TranscriptEmbedding[]
-  speakerAliases SpeakerAlias[]
+  organization       Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy          User?                @relation("MeetingCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  participants       MeetingParticipant[]
+  transcript         Transcript?
+  summary            Summary?
+  actionItems        ActionItem[]
+  embeddings         TranscriptEmbedding[]
+  speakerAliases     SpeakerAlias[]
+  speakerMatches     SpeakerMatch[]
+  voiceProfilesFirst VoiceProfile[]       @relation("FirstMeeting")
+  voiceProfilesLast  VoiceProfile[]       @relation("LastMeeting")
 
   @@index([organizationId])
   @@index([status])

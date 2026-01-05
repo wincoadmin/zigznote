@@ -39,7 +39,9 @@
       "Bash(pnpm --filter @zigznote/web test -- --passWithNoTests --maxWorkers=2)",
       "Bash(pnpm --filter @zigznote/web add:*)",
       "Bash(cat:*)",
-      "Bash(pnpm --filter @zigznote/web test:*)"
+      "Bash(pnpm --filter @zigznote/web test:*)",
+      "Bash(pnpm --filter @zigznote/transcription-worker test -- --testPathPattern=postProcessor)",
+      "Bash(pnpm --filter @zigznote/transcription-worker test -- --testPathPattern=nameDetector --passWithNoTests)"
     ]
   }
 }

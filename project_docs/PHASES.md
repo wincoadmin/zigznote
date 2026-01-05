@@ -438,6 +438,58 @@
 
 ---
 
+## Phase 6.6.1: Intelligent Speaker Recognition
+
+**Status:** ✅ Complete
+**Estimated Time:** 45-60 minutes
+
+### Planned Deliverables
+- VoiceProfile database model for cross-meeting speaker persistence
+- SpeakerMatch model for per-meeting speaker identifications
+- NamePattern model for configurable detection patterns
+- NameDetector service for verbal introduction parsing
+- Voice Profile service for profile management
+- Speaker Recognition processor integrated into transcription pipeline
+- API routes for voice profile management
+- Speaker Editor component for UI corrections
+- Confirmation workflow for detection accuracy improvement
+
+### Key Features
+| Feature | Purpose |
+|---------|---------|
+| Name Detection | Parse "Hi, I'm Sarah" from transcripts |
+| Voice Profiles | Remember speakers across meetings |
+| Confidence Scoring | Track detection reliability |
+| Manual Corrections | Allow user edits in UI |
+| Profile Merging | Combine duplicate profiles |
+
+### Key Decisions Made
+- **Detection Patterns**: 7 built-in patterns ordered by confidence (0.6-0.95)
+- **Introduction Window**: First 5 minutes prioritized (higher confidence)
+- **Case Insensitive Matching**: Names normalized regardless of case in transcript
+- **False Positive Prevention**: Extensive list of common words to reject (days, months, platforms)
+- **Profile Lookup**: Case-insensitive name matching to find existing profiles
+- **Confidence Adjustment**: +0.1 for confirm, -0.1 for reject
+
+### Actual Changes from Plan
+- All planned deliverables implemented
+- NameDetector supports custom patterns per organization
+- Speaker recognition gracefully fails without breaking transcription
+- Added voiceProfilesApi to web lib for frontend integration
+- 24 name detector tests + 17 voice profile service tests
+
+### Test Coverage
+- Name Detector: 24 tests
+- Voice Profile Service: 17 tests
+- Transcription Worker: 96 tests total
+- API: 227 tests total
+- **Total: 559 tests**
+
+### Handoff File
+`PHASE_6_6_1_COMPLETE.md`
+
+---
+
 ## Phase 7: Admin Panel
 
 **Status:** ⬜ Not Started
@@ -556,6 +608,7 @@ _To be filled after phase completion_
 | 6 | Integrations & Billing | ✅ | 90-120 min |
 | 6.5 | User API Keys | ✅ | 30-45 min |
 | 6.6 | Transcript Polish | ✅ | 30-45 min |
+| 6.6.1 | Speaker Recognition | ✅ | 45-60 min |
 | 7 | Admin Panel | ⬜ | 90-120 min |
 | 8 | Search & Polish | ⬜ | 60-90 min |
 | 8.5 | Hardening & Stress Testing | ⬜ | 60-90 min |
@@ -579,6 +632,7 @@ _To be filled after phase completion_
 | 2026-01-05 | Phase 6 | Integrations (Slack, HubSpot, Webhooks) + Billing (Stripe, Flutterwave) complete |
 | 2026-01-05 | Phase 6.5 | User API Keys with secure generation, bcrypt hashing, scopes, and settings UI |
 | 2026-01-05 | Phase 6.6 | Transcript Polish with filler removal, speaker aliases, custom vocabulary |
+| 2026-01-05 | Phase 6.6.1 | Intelligent Speaker Recognition - auto-detect names from introductions, voice profiles, 559 tests |
 
 ---
 
