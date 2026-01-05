@@ -7,6 +7,7 @@ import { apiKeysRouter } from './apiKeys';
 import { speakersRouter } from './speakers';
 import { vocabularyRouter } from './vocabulary';
 import { voiceProfilesRouter } from './voiceProfiles';
+import { audioRouter } from './audio';
 
 export const apiRouter: IRouter = Router();
 
@@ -20,6 +21,7 @@ apiRouter.use('/v1/api-keys', apiKeysRouter);
 apiRouter.use('/v1/speakers', speakersRouter);
 apiRouter.use('/v1/vocabulary', vocabularyRouter);
 apiRouter.use('/v1/voice-profiles', voiceProfilesRouter);
+apiRouter.use('/v1/audio', audioRouter);
 
 /**
  * API root - returns API information

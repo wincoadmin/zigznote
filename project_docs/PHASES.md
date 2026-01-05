@@ -490,6 +490,53 @@
 
 ---
 
+## Phase 6.7: Audio Input Sources
+
+**Status:** ✅ Complete
+**Estimated Time:** 45-60 minutes
+
+### Planned Deliverables
+- Audio file upload (MP3, WAV, M4A, WebM, OGG, AAC)
+- Browser-based recording via MediaRecorder API
+- S3/S3-compatible storage integration
+- Presigned URL upload for large files
+- Automatic transcription pipeline integration
+- New Meeting page with upload/record tabs
+
+### Key Features
+| Feature | Purpose |
+|---------|---------|
+| File Upload | Drag-and-drop audio file processing |
+| Browser Recording | Record in-person meetings directly |
+| Presigned URLs | Efficient large file uploads |
+| Multi-source | Unified transcription for bot/upload/browser |
+
+### Key Decisions Made
+- **Presigned URLs**: Large files (>10MB) upload directly to S3 via presigned URLs
+- **Audio Sources**: Meeting.source field tracks origin (bot, upload, browser, mobile)
+- **Storage Abstraction**: Works with AWS S3, MinIO, Cloudflare R2
+- **Browser Recording**: WebM + Opus codec for efficient browser recordings
+- **Graceful Degradation**: Server-side upload fallback if S3 unavailable
+
+### Actual Changes from Plan
+- Added source tracking to Meeting schema (source, audioFileUrl, audioFileName, audioFileSize, audioDuration)
+- Storage service supports S3-compatible endpoints for flexibility
+- Audio processing service handles both upload and recording flows
+- TranscriptionJobData extended with source and organizationId fields
+- New /meetings/new page with tabbed upload/record UI
+
+### Test Coverage
+- API: 227 tests
+- Transcription Worker: 96 tests
+- Summarization Worker: 95 tests
+- Web: 141 tests
+- **Total: 559 tests**
+
+### Handoff File
+`PHASE_6_7_COMPLETE.md`
+
+---
+
 ## Phase 7: Admin Panel
 
 **Status:** ⬜ Not Started
@@ -609,6 +656,7 @@ _To be filled after phase completion_
 | 6.5 | User API Keys | ✅ | 30-45 min |
 | 6.6 | Transcript Polish | ✅ | 30-45 min |
 | 6.6.1 | Speaker Recognition | ✅ | 45-60 min |
+| 6.7 | Audio Input Sources | ✅ | 45-60 min |
 | 7 | Admin Panel | ⬜ | 90-120 min |
 | 8 | Search & Polish | ⬜ | 60-90 min |
 | 8.5 | Hardening & Stress Testing | ⬜ | 60-90 min |
@@ -633,6 +681,7 @@ _To be filled after phase completion_
 | 2026-01-05 | Phase 6.5 | User API Keys with secure generation, bcrypt hashing, scopes, and settings UI |
 | 2026-01-05 | Phase 6.6 | Transcript Polish with filler removal, speaker aliases, custom vocabulary |
 | 2026-01-05 | Phase 6.6.1 | Intelligent Speaker Recognition - auto-detect names from introductions, voice profiles, 559 tests |
+| 2026-01-05 | Phase 6.7 | Audio Input Sources - file upload, browser recording, S3 storage, 559 tests |
 
 ---
 

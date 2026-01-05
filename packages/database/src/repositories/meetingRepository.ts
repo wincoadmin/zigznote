@@ -135,7 +135,13 @@ export class MeetingRepository {
         endTime: data.endTime,
         calendarEventId: data.calendarEventId,
         metadata: data.metadata ?? {},
-        status: 'scheduled',
+        status: data.status ?? 'scheduled',
+        // Audio source tracking
+        source: data.source ?? 'bot',
+        audioFileUrl: data.audioFileUrl,
+        audioFileName: data.audioFileName,
+        audioFileSize: data.audioFileSize,
+        audioDuration: data.audioDuration,
       },
       include,
     });

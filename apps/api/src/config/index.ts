@@ -148,6 +148,19 @@ export const config = {
     secretKey: process.env.FLUTTERWAVE_SECRET_KEY || '',
     webhookSecret: process.env.FLUTTERWAVE_WEBHOOK_SECRET || '',
   },
+
+  /**
+   * AWS/S3 storage configuration
+   * Supports AWS S3 or S3-compatible services (MinIO, Cloudflare R2)
+   */
+  aws: {
+    region: process.env.AWS_REGION || 'us-east-1',
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    bucket: process.env.AWS_S3_BUCKET || 'zigznote-audio',
+    endpoint: process.env.AWS_S3_ENDPOINT, // For S3-compatible (MinIO, R2)
+    cdnUrl: process.env.AWS_CDN_URL, // CloudFront or CDN URL
+  },
 };
 
 export type Config = typeof config;

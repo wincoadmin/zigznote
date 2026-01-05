@@ -11,6 +11,10 @@ export interface TranscriptionJob {
   language?: string;
   diarize?: boolean;
   punctuate?: boolean;
+  organizationId?: string;
+  source?: 'bot' | 'upload' | 'browser' | 'mobile';
+  /** Recall.ai bot ID (only for bot source) */
+  recallBotId?: string;
 }
 
 /**

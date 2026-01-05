@@ -268,3 +268,91 @@ export const speakersApi = {
   upsert: (data: { speakerLabel: string; displayName: string; email?: string }) =>
     api.put('/api/v1/speakers', data),
 };
+
+// Audio upload types
+export interface PresignedUploadResult {
+  uploadUrl: string;
+  fileUrl: string;
+  key: string;
+  expiresAt: string;
+}
+
+export interface AudioUploadResult {
+  meetingId: string;
+}
+
+// Audio API methods
+export const audioApi = {
+  /** Get a presigned URL for direct upload to S3 */
+  getUploadUrl: (fileName: string, mimeType: string, fileSize: number) =>
+    api.post<PresignedUploadResult>('/api/v1/audio/upload-url', {
+      fileName,
+      mimeType,
+      fileSize,
+    }),
+
+  /** Finalize an upload after file is uploaded to S3 */
+  finalizeUpload: (data: {
+    title: string;
+    fileUrl: string;
+    fileName: string;
+    fileSize: number;
+    audioDuration?: number;
+  }) => api.post<AudioUploadResult>('/api/v1/audio/finalize', data),
+
+  /** Upload audio file directly (for smaller files) */
+  uploadDirect: async (
+    file: File,
+    title: string,
+    duration?: number
+  ): Promise<ApiResponse<AudioUploadResult>> => {
+    const formData = new FormData();
+    formData.append('audio', file);
+    formData.append('title', title);
+    if (duration) formData.append('duration', String(duration));
+
+    try {
+      const response = await fetch(`${API_URL}/api/v1/audio/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      return await response.json();
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          code: 'UPLOAD_ERROR',
+          message: error instanceof Error ? error.message : 'Upload failed',
+        },
+      };
+    }
+  },
+
+  /** Upload a browser recording */
+  uploadRecording: async (
+    blob: Blob,
+    title: string,
+    duration: number
+  ): Promise<ApiResponse<AudioUploadResult>> => {
+    const formData = new FormData();
+    formData.append('audio', blob, 'recording.webm');
+    formData.append('title', title);
+    formData.append('duration', String(duration));
+
+    try {
+      const response = await fetch(`${API_URL}/api/v1/audio/recording`, {
+        method: 'POST',
+        body: formData,
+      });
+      return await response.json();
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          code: 'UPLOAD_ERROR',
+          message: error instanceof Error ? error.message : 'Upload failed',
+        },
+      };
+    }
+  },
+};

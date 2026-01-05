@@ -278,6 +278,15 @@ model Meeting {
   botId           String?   @map("bot_id") // Recall.ai bot ID
   calendarEventId String?   @map("calendar_event_id")
   metadata        Json      @default("{}")
+
+  // Audio source tracking
+  // source values: "bot" (Recall.ai), "upload" (user uploaded file), "browser" (recorded via browser), "mobile" (future)
+  source          String    @default("bot")
+  audioFileUrl    String?   @map("audio_file_url")   // S3/storage URL for uploaded/recorded audio
+  audioFileName   String?   @map("audio_file_name")  // Original filename
+  audioFileSize   Int?      @map("audio_file_size")  // Size in bytes
+  audioDuration   Int?      @map("audio_duration")   // Duration in seconds
+
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
   deletedAt       DateTime? @map("deleted_at")
@@ -299,6 +308,7 @@ model Meeting {
   @@index([startTime])
   @@index([createdById])
   @@index([deletedAt])
+  @@index([source])
   @@map("meetings")
 }
 

@@ -118,6 +118,13 @@ export interface CreateMeetingInput {
   endTime?: Date;
   calendarEventId?: string;
   metadata?: Prisma.InputJsonValue;
+  // Audio source tracking
+  source?: 'bot' | 'upload' | 'browser' | 'mobile';
+  status?: string;
+  audioFileUrl?: string;
+  audioFileName?: string;
+  audioFileSize?: number;
+  audioDuration?: number;
 }
 
 /**
