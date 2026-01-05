@@ -23,6 +23,9 @@ jest.mock('@/lib/api', () => ({
     createChat: jest.fn(),
     sendMessage: jest.fn(),
   },
+  documentsApi: {
+    generate: jest.fn(),
+  },
 }));
 
 const mockChatApi = chatApi as jest.Mocked<typeof chatApi>;
@@ -92,8 +95,26 @@ describe('MeetingChat', () => {
     });
   });
 
-  it('should fill input when suggestion is clicked', async () => {
+  it('should send message when suggestion is clicked', async () => {
     const user = userEvent.setup();
+
+    mockChatApi.createChat.mockResolvedValue({
+      success: true,
+      data: { chatId: 'chat-123' },
+    });
+    mockChatApi.sendMessage.mockResolvedValue({
+      success: true,
+      data: {
+        message: {
+          id: 'msg-1',
+          role: 'assistant',
+          content: 'The key decisions were...',
+          citations: [],
+          createdAt: new Date().toISOString(),
+        },
+      },
+    });
+
     render(<MeetingChat meetingId="meeting-123" />, { wrapper: createWrapper() });
 
     fireEvent.click(screen.getByTitle('Ask AI about this meeting'));
@@ -106,11 +127,13 @@ describe('MeetingChat', () => {
 
     await user.click(screen.getByText('What were the key decisions?'));
 
-    const input = screen.getByPlaceholderText('Ask about this meeting...');
-    expect(input).toHaveValue('What were the key decisions?');
+    // Suggestion click now sends the message directly
+    await waitFor(() => {
+      expect(mockChatApi.createChat).toHaveBeenCalled();
+    });
   });
 
-  it('should send message when form is submitted', async () => {
+  it('should send message when send button is clicked', async () => {
     const user = userEvent.setup();
 
     mockChatApi.createChat.mockResolvedValue({
@@ -135,13 +158,13 @@ describe('MeetingChat', () => {
 
     fireEvent.click(screen.getByTitle('Ask AI about this meeting'));
 
-    const input = await screen.findByPlaceholderText('Ask about this meeting...');
+    const input = await screen.findByPlaceholderText(/Ask about this meeting/);
     await user.type(input, 'What was discussed?');
 
-    // Find the submit button (the button right after the textarea in the form)
-    const form = input.closest('form');
-    const submitButton = form?.querySelector('button[type="submit"]');
-    if (submitButton) await user.click(submitButton);
+    // Click the send button (it's not disabled now since there's text)
+    const sendButtons = screen.getAllByRole('button');
+    const sendButton = sendButtons.find((btn) => !btn.hasAttribute('disabled') && btn.querySelector('svg.lucide-send'));
+    if (sendButton) await user.click(sendButton);
 
     await waitFor(() => {
       expect(mockChatApi.createChat).toHaveBeenCalledWith({
@@ -182,12 +205,13 @@ describe('MeetingChat', () => {
 
     fireEvent.click(screen.getByTitle('Ask AI about this meeting'));
 
-    const input = await screen.findByPlaceholderText('Ask about this meeting...');
+    const input = await screen.findByPlaceholderText(/Ask about this meeting/);
     await user.type(input, 'Test message');
 
-    const form = input.closest('form');
-    const submitButton = form?.querySelector('button[type="submit"]');
-    if (submitButton) await user.click(submitButton);
+    // Find and click the send button
+    const sendButtons = screen.getAllByRole('button');
+    const sendButton = sendButtons.find((btn) => !btn.hasAttribute('disabled') && btn.querySelector('svg.lucide-send'));
+    if (sendButton) await user.click(sendButton);
 
     await waitFor(() => {
       expect(input).toBeDisabled();
@@ -227,12 +251,13 @@ describe('MeetingChat', () => {
 
     fireEvent.click(screen.getByTitle('Ask AI about this meeting'));
 
-    const input = await screen.findByPlaceholderText('Ask about this meeting...');
+    const input = await screen.findByPlaceholderText(/Ask about this meeting/);
     await user.type(input, 'When is the launch?');
 
-    const form = input.closest('form');
-    const submitButton = form?.querySelector('button[type="submit"]');
-    if (submitButton) await user.click(submitButton);
+    // Find and click the send button
+    const sendButtons = screen.getAllByRole('button');
+    const sendButton = sendButtons.find((btn) => !btn.hasAttribute('disabled') && btn.querySelector('svg.lucide-send'));
+    if (sendButton) await user.click(sendButton);
 
     await waitFor(() => {
       expect(

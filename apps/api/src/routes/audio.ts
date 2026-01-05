@@ -8,6 +8,7 @@ import type { Router as IRouter, Request, Response } from 'express';
 import { z } from 'zod';
 import multer from 'multer';
 import { audioProcessingService } from '../services/audioProcessingService';
+import { inlineTranscriptionService } from '../services/inlineTranscriptionService';
 import {
   requireAuth,
   optionalApiKeyAuth,
@@ -193,6 +194,57 @@ audioRouter.post(
       success: true,
       data: result,
       message: 'Recording saved. Processing will begin shortly.',
+    });
+  })
+);
+
+/**
+ * @route POST /api/v1/audio/transcribe-inline
+ * @description Transcribe audio file directly without creating a meeting
+ * Used for chat attachments - synchronous transcription
+ */
+audioRouter.post(
+  '/transcribe-inline',
+  requireScope('meetings:write'),
+  upload.single('file'),
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const file = req.file;
+
+    if (!file) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'NO_FILE', message: 'No audio file provided' },
+      });
+      return;
+    }
+
+    // Validate audio type
+    if (!file.mimetype.startsWith('audio/')) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_TYPE', message: 'File must be an audio file' },
+      });
+      return;
+    }
+
+    // Check if service is configured
+    if (!inlineTranscriptionService.isConfigured()) {
+      res.status(503).json({
+        success: false,
+        error: { code: 'NOT_CONFIGURED', message: 'Transcription service not configured' },
+      });
+      return;
+    }
+
+    const result = await inlineTranscriptionService.transcribe(file.buffer, file.mimetype);
+
+    res.json({
+      success: true,
+      data: {
+        text: result.text,
+        duration: result.duration,
+        wordCount: result.wordCount,
+      },
     });
   })
 );

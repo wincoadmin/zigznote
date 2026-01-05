@@ -4,7 +4,6 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   MessageSquare,
-  Send,
   Loader2,
   Sparkles,
   ChevronDown,
@@ -20,6 +19,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { chatApi, documentsApi, type ChatMessage, type FileOffer } from '@/lib/api';
+import { ChatInput } from '@/components/chat/ChatInput';
+import { useChatWithAttachments } from '@/lib/hooks/useChatWithAttachments';
+import type { ChatAttachment } from '@/types/chat';
 
 interface MeetingChatProps {
   meetingId: string;
@@ -98,14 +100,17 @@ function FileOfferCard({
 
 export function MeetingChat({ meetingId, meetingTitle, className }: MeetingChatProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatId, setChatId] = useState<string | null>(null);
   const [expandedCitations, setExpandedCitations] = useState<string | null>(null);
   const [followups, setFollowups] = useState<string[]>([]);
   const [generatingFormat, setGeneratingFormat] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Chat with attachments hook
+  const { isProcessing, prepareAttachments, buildPromptWithAttachments } = useChatWithAttachments({
+    meetingId,
+  });
 
   // Fetch suggested questions
   const { data: suggestionsData } = useQuery({
@@ -214,13 +219,6 @@ export function MeetingChat({ meetingId, meetingTitle, className }: MeetingChatP
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Focus input when opened
-  useEffect(() => {
-    if (isOpen) {
-      inputRef.current?.focus();
-    }
-  }, [isOpen]);
-
   // Set initial suggestions
   useEffect(() => {
     if (suggestionsData && suggestionsData.length > 0 && followups.length === 0) {
@@ -229,12 +227,21 @@ export function MeetingChat({ meetingId, meetingTitle, className }: MeetingChatP
   }, [suggestionsData, followups.length]);
 
   const handleSubmit = useCallback(
-    async (e?: React.FormEvent) => {
-      e?.preventDefault();
-      const message = input.trim();
-      if (!message || sendMessageMutation.isPending) return;
+    async (message: string, attachments: ChatAttachment[]) => {
+      if (sendMessageMutation.isPending || isProcessing) return;
 
-      setInput('');
+      // Process attachments (transcribe audio if needed)
+      const processedAttachments = await prepareAttachments(attachments);
+
+      // Check for errors
+      const hasErrors = processedAttachments.some((a) => a.status === 'error');
+      if (hasErrors) {
+        console.error('Some attachments failed to process');
+        return;
+      }
+
+      // Build full prompt with attachment contents
+      const fullPrompt = buildPromptWithAttachments(message, processedAttachments);
 
       // Create chat if needed
       let activeChatId = chatId;
@@ -248,27 +255,17 @@ export function MeetingChat({ meetingId, meetingTitle, className }: MeetingChatP
         }
       }
 
-      sendMessageMutation.mutate({ activeChatId, message });
+      sendMessageMutation.mutate({ activeChatId, message: fullPrompt });
     },
-    [input, chatId, sendMessageMutation, createChatMutation]
+    [chatId, sendMessageMutation, createChatMutation, prepareAttachments, buildPromptWithAttachments, isProcessing]
   );
 
   const handleSuggestionClick = useCallback((suggestion: string) => {
-    setInput(suggestion);
-    inputRef.current?.focus();
-  }, []);
+    // Send the suggestion directly
+    handleSubmit(suggestion, []);
+  }, [handleSubmit]);
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        handleSubmit();
-      }
-    },
-    [handleSubmit]
-  );
-
-  const isLoading = createChatMutation.isPending || sendMessageMutation.isPending;
+  const isLoading = createChatMutation.isPending || sendMessageMutation.isPending || isProcessing;
 
   if (!isOpen) {
     return (
@@ -505,31 +502,13 @@ export function MeetingChat({ meetingId, meetingTitle, className }: MeetingChatP
       )}
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="p-3 border-t border-gray-200 dark:border-gray-800">
-        <div className="flex gap-2">
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask about this meeting..."
-            rows={1}
-            className="flex-1 resize-none rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-            disabled={isLoading}
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || isLoading}
-            className="bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-xl p-2 transition-colors"
-          >
-            {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Send className="w-5 h-5" />
-            )}
-          </button>
-        </div>
-      </form>
+      <div className="p-3 border-t border-gray-200 dark:border-gray-800">
+        <ChatInput
+          onSend={handleSubmit}
+          isLoading={isLoading}
+          placeholder="Ask about this meeting, paste text, or attach audio..."
+        />
+      </div>
     </motion.div>
   );
 }
