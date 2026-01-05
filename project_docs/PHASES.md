@@ -665,6 +665,99 @@
 
 ---
 
+## Phase 8.6: Analytics & Retention
+
+**Status:** ✅ Complete
+**Estimated Time:** 45-60 minutes
+
+### Planned Deliverables
+- Analytics database schema (daily metrics, engagement, achievements)
+- Analytics service layer
+- User dashboard statistics API
+- Productivity score calculation
+- Achievement/gamification system
+- Weekly digest email job
+- Frontend dashboard components (charts, achievements)
+- Organization analytics page
+
+### Key Features
+| Feature | Purpose |
+|---------|---------|
+| Daily Metrics | Track meetings, actions, engagement per user/org |
+| Productivity Score | 0-100 score with component breakdown |
+| Achievements | 14 badges for gamification |
+| Weekly Digest | Email summary of user activity |
+
+### Key Decisions Made
+- UserDailyMetrics and OrgDailyMetrics for time-series analytics
+- Engagement streaks tracked automatically on activity
+- 14 achievements across 4 categories (onboarding, milestone, streak, power_user)
+- Recharts for frontend data visualization
+- Weekly digest cron job scheduled for Mondays 9:00 AM UTC
+
+### Actual Changes from Plan
+- Created comprehensive analytics schema with 5 new models
+- Achievement seeder integrated into database seed script
+- Frontend components: ProductivityScore, AchievementsCard, MeetingTrendsChart
+- Analytics API endpoints: dashboard, productivity, achievements, organization
+- 7 analytics service tests passing
+
+### Handoff File
+`PHASE_8_6_COMPLETE.md`
+
+---
+
+## Phase 8.7: UI/UX Polish & Retention
+
+**Status:** ✅ Complete
+**Estimated Time:** 45-60 minutes
+
+### Planned Deliverables
+- Welcome modal with onboarding flow
+- Enhanced empty states with CTAs
+- Command palette (Cmd+K)
+- Time saved widget
+- Toast notification system (existing, enhanced)
+- Dark mode support with next-themes
+- Animation utilities with framer-motion
+- Celebration modal with confetti
+- Theme toggle component
+
+### Key Features
+| Feature | Purpose |
+|---------|---------|
+| WelcomeModal | Animated onboarding wizard for new users |
+| CommandPalette | Quick navigation via Cmd+K shortcut |
+| EmptyState | Contextual empty states with actions |
+| CelebrationModal | Achievement unlock animations with confetti |
+| ThemeToggle | Dark/light mode switching |
+| TimeSavedWidget | Shows estimated time saved with animations |
+
+### Key Decisions Made
+- framer-motion for all animations (modals, lists, transitions)
+- @headlessui/react for accessible modal/dialog components
+- next-themes for system-aware dark mode with localStorage persistence
+- canvas-confetti for celebration effects
+- Separated motion.div from Headless UI DialogPanel for proper typing
+
+### Actual Changes from Plan
+- All planned components created and integrated
+- ThemeProvider wrapped in providers.tsx
+- CommandPaletteProvider handles global Cmd+K shortcut
+- Animation utilities exported from lib/animations.ts
+- Fixed Tabs component typing (defaultValue now optional)
+- Fixed OnboardingChecklist props (items now optional)
+- Dark mode support added to layout.tsx body
+
+### Test Coverage
+- Web: 187 tests passing
+- Build: Successful with all static pages generated
+
+### Handoff File
+`PHASE_8_7_COMPLETE.md`
+
+---
+
 ## Summary Table
 
 | Phase | Name | Status | Est. Time |
@@ -683,8 +776,10 @@
 | 7 | Admin Panel | ✅ | 90-120 min |
 | 8 | Search & Polish | ✅ | 60-90 min |
 | 8.5 | Hardening & Stress Testing | ✅ | 60-90 min |
+| 8.6 | Analytics & Retention | ✅ | 45-60 min |
+| 8.7 | UI/UX Polish & Retention | ✅ | 45-60 min |
 
-**Total Estimated Time:** 11-16 hours
+**Total Estimated Time:** 13-19 hours
 **Status:** All phases complete!
 
 ---
@@ -709,6 +804,8 @@
 | 2026-01-05 | Phase 7 | Admin Panel - separate Next.js app, admin auth, user/org management |
 | 2026-01-05 | Phase 8 | Search & Polish - semantic search, hybrid search, help assistant, docs |
 | 2026-01-05 | Phase 8.5 | Hardening & Stress Testing - 8 comprehensive test suites (security, load, chaos, a11y, etc.) |
+| 2026-01-05 | Phase 8.6 | Analytics & Retention - daily metrics, productivity score, achievements, weekly digest |
+| 2026-01-05 | Phase 8.7 | UI/UX Polish - WelcomeModal, CommandPalette, EmptyState, dark mode, animations, confetti celebrations |
 
 ---
 

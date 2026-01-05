@@ -17,6 +17,7 @@ import settingsRouter from './settings';
 import dataExportRouter from './dataExport';
 import sharingRouter from './sharing';
 import meetingExportRouter from './meetingExport';
+import { documentsRouter } from './documents';
 
 export const apiRouter: IRouter = Router();
 
@@ -48,6 +49,8 @@ apiRouter.use('/v1/data-export', dataExportRouter);
 apiRouter.use('/v1/sharing', sharingRouter);
 // Meeting Export (PDF, DOCX, SRT)
 apiRouter.use('/v1/meetings', meetingExportRouter);
+// Document Generation (from AI chat)
+apiRouter.use('/v1/documents', documentsRouter);
 
 /**
  * API root - returns API information

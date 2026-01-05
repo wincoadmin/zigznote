@@ -13,10 +13,13 @@ import {
   Bot,
   User,
   Clock,
+  Download,
+  FileText,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { chatApi, type ChatMessage, type ChatCitation } from '@/lib/api';
+import { chatApi, documentsApi, type ChatMessage, type FileOffer } from '@/lib/api';
 
 interface MeetingChatProps {
   meetingId: string;
@@ -36,6 +39,63 @@ const messageVariants = {
   visible: { opacity: 1, y: 0 },
 };
 
+// Format labels for file types
+const formatLabels: Record<string, { icon: React.ReactNode; label: string }> = {
+  pdf: { icon: <FileText className="w-3.5 h-3.5" />, label: 'PDF' },
+  docx: { icon: <FileText className="w-3.5 h-3.5" />, label: 'Word' },
+  md: { icon: <FileText className="w-3.5 h-3.5" />, label: 'Markdown' },
+  csv: { icon: <FileSpreadsheet className="w-3.5 h-3.5" />, label: 'CSV' },
+};
+
+// FileOfferCard component
+function FileOfferCard({
+  fileOffer,
+  content,
+  meetingId,
+  onGenerate,
+  isGenerating,
+  generatingFormat,
+}: {
+  fileOffer: FileOffer;
+  content: string;
+  meetingId: string;
+  onGenerate: (format: string) => void;
+  isGenerating: boolean;
+  generatingFormat: string | null;
+}) {
+  return (
+    <div className="mt-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+      <p className="text-xs text-slate-600 dark:text-slate-400 mb-2 flex items-center gap-1.5">
+        <Download className="w-3.5 h-3.5" />
+        {fileOffer.description}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {fileOffer.formats.map((format) => (
+          <button
+            key={format}
+            onClick={() => onGenerate(format)}
+            disabled={isGenerating}
+            className={cn(
+              'inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs',
+              'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600',
+              'rounded-md hover:bg-slate-100 dark:hover:bg-slate-600',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              'transition-colors'
+            )}
+          >
+            {isGenerating && generatingFormat === format ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              formatLabels[format]?.icon || <FileText className="w-3.5 h-3.5" />
+            )}
+            <span>{formatLabels[format]?.label || format.toUpperCase()}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function MeetingChat({ meetingId, meetingTitle, className }: MeetingChatProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
@@ -43,6 +103,7 @@ export function MeetingChat({ meetingId, meetingTitle, className }: MeetingChatP
   const [chatId, setChatId] = useState<string | null>(null);
   const [expandedCitations, setExpandedCitations] = useState<string | null>(null);
   const [followups, setFollowups] = useState<string[]>([]);
+  const [generatingFormat, setGeneratingFormat] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -104,6 +165,47 @@ export function MeetingChat({ meetingId, meetingTitle, className }: MeetingChatP
     onError: () => {
       // Remove optimistic message on error
       setMessages((prev) => prev.slice(0, -1));
+    },
+  });
+
+  // Document generation mutation
+  const generateDocMutation = useMutation({
+    mutationFn: async ({
+      content,
+      format,
+      title,
+      contentType,
+    }: {
+      content: string;
+      format: 'pdf' | 'docx' | 'md' | 'csv';
+      title: string;
+      contentType?: string;
+    }) => {
+      setGeneratingFormat(format);
+      const response = await documentsApi.generate({
+        content,
+        format,
+        title,
+        meetingId,
+        contentType: contentType as 'summary' | 'action_items' | 'decisions' | 'transcript_excerpt' | 'custom',
+      });
+      if (response.success && response.data) {
+        return response.data;
+      }
+      throw new Error('Failed to generate document');
+    },
+    onSuccess: (data) => {
+      setGeneratingFormat(null);
+      // Trigger download
+      const link = document.createElement('a');
+      link.href = data.downloadUrl;
+      link.download = data.fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    },
+    onError: () => {
+      setGeneratingFormat(null);
     },
   });
 
@@ -335,6 +437,25 @@ export function MeetingChat({ meetingId, meetingTitle, className }: MeetingChatP
                         </AnimatePresence>
                       </div>
                     )}
+
+                  {/* File offer */}
+                  {message.role === 'assistant' && message.fileOffer && (
+                    <FileOfferCard
+                      fileOffer={message.fileOffer}
+                      content={message.content}
+                      meetingId={meetingId}
+                      onGenerate={(format) =>
+                        generateDocMutation.mutate({
+                          content: message.content,
+                          format: format as 'pdf' | 'docx' | 'md' | 'csv',
+                          title: message.fileOffer?.suggestedTitle || 'Meeting Document',
+                          contentType: message.fileOffer?.contentType,
+                        })
+                      }
+                      isGenerating={generateDocMutation.isPending}
+                      generatingFormat={generatingFormat}
+                    />
+                  )}
                 </div>
 
                 {message.role === 'user' && (

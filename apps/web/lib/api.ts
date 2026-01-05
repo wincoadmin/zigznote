@@ -455,11 +455,20 @@ export interface ChatCitation {
   relevance: number;
 }
 
+export interface FileOffer {
+  shouldOffer: true;
+  formats: ('pdf' | 'docx' | 'md' | 'csv')[];
+  suggestedTitle: string;
+  description: string;
+  contentType: 'summary' | 'action_items' | 'decisions' | 'transcript_excerpt' | 'custom';
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   citations?: ChatCitation[];
+  fileOffer?: FileOffer;
   createdAt: string;
 }
 
@@ -711,4 +720,25 @@ export const meetingExportApi = {
 
     return response.blob();
   },
+};
+
+// Document Generation types
+export interface GeneratedDocument {
+  downloadUrl: string;
+  fileName: string;
+  fileSize: number;
+  expiresAt: string;
+  mimeType: string;
+}
+
+// Document Generation API methods
+export const documentsApi = {
+  /** Generate a document from content */
+  generate: (options: {
+    content: string;
+    format: 'pdf' | 'docx' | 'md' | 'csv';
+    title: string;
+    meetingId?: string;
+    contentType?: 'summary' | 'action_items' | 'decisions' | 'transcript_excerpt' | 'custom';
+  }) => api.post<GeneratedDocument>('/api/v1/documents/generate', options),
 };

@@ -26,12 +26,21 @@ interface SourceReference {
   timestamp?: number;
 }
 
+interface FileOffer {
+  shouldOffer: true;
+  formats: ('pdf' | 'docx' | 'md' | 'csv')[];
+  suggestedTitle: string;
+  description: string;
+  contentType: 'summary' | 'action_items' | 'decisions' | 'transcript_excerpt' | 'custom';
+}
+
 interface QAResponse {
   answer: string;
   sources: SourceReference[];
   tokensUsed: number;
   modelUsed: string;
   latencyMs: number;
+  fileOffer?: FileOffer;
 }
 
 interface ConversationContext {
@@ -72,7 +81,90 @@ Guidelines:
 - Be concise but thorough.
 - If the question is ambiguous, ask for clarification.
 
-Format your responses in a clear, readable way. Use bullet points for lists.`;
+Format your responses in a clear, readable way. Use bullet points for lists.
+
+## File Generation Guidelines
+
+You can offer to generate downloadable files when appropriate. Include a file offer when:
+
+OFFER a file when:
+- User explicitly asks to "create", "generate", "export", "make", "prepare", or "download" a document
+- User asks for something "to share", "to send", or "for my manager/team"
+- Your response contains a structured list (action items, decisions, key points) with 3+ items
+- User asks for a "summary", "report", "checklist", or "notes"
+- Response would be useful as a standalone document
+
+DO NOT offer a file when:
+- Simple factual question ("Who said X?", "When was Y mentioned?")
+- Clarification or explanation requests
+- Yes/no questions
+- Short conversational responses
+- User is asking follow-up questions in a back-and-forth
+
+When offering a file, naturally mention it at the end of your response like:
+"Would you like this as a downloadable document?" or
+"I can generate this as a PDF if you'd like to share it."
+
+For structured output that warrants a file, include this metadata at the very end of your response on its own line:
+
+:::FILE_OFFER:::{"shouldOffer":true,"formats":["pdf","docx"],"suggestedTitle":"Document Title","description":"Brief description","contentType":"action_items"}:::END_FILE_OFFER:::
+
+Only include this metadata line when offering a file. The formats should match the content:
+- Lists/checklists: ["pdf", "md"]
+- Formal summaries: ["pdf", "docx"]
+- Data/tables: ["csv", "pdf"]
+- General content: ["pdf", "docx", "md"]
+
+Valid contentType values: summary, action_items, decisions, transcript_excerpt, custom`;
+
+/**
+ * Parse AI response to extract file offer metadata
+ */
+interface ParsedAIResponse {
+  answer: string;
+  fileOffer?: FileOffer;
+}
+
+function parseAIResponse(rawResponse: string): ParsedAIResponse {
+  const fileOfferMatch = rawResponse.match(
+    /:::FILE_OFFER:::(\{.*?\}):::END_FILE_OFFER:::/s
+  );
+
+  if (!fileOfferMatch) {
+    return { answer: rawResponse.trim() };
+  }
+
+  // Extract and remove the metadata from visible response
+  const answer = rawResponse
+    .replace(/:::FILE_OFFER:::.*?:::END_FILE_OFFER:::/s, '')
+    .trim();
+
+  try {
+    const parsed = JSON.parse(fileOfferMatch[1]!);
+    // Validate the parsed object has required fields
+    if (
+      parsed.shouldOffer === true &&
+      Array.isArray(parsed.formats) &&
+      typeof parsed.suggestedTitle === 'string' &&
+      typeof parsed.description === 'string' &&
+      typeof parsed.contentType === 'string'
+    ) {
+      const fileOffer: FileOffer = {
+        shouldOffer: true,
+        formats: parsed.formats,
+        suggestedTitle: parsed.suggestedTitle,
+        description: parsed.description,
+        contentType: parsed.contentType,
+      };
+      return { answer, fileOffer };
+    }
+    logger.warn({ raw: fileOfferMatch[1] }, 'Invalid file offer metadata structure');
+    return { answer };
+  } catch (e) {
+    logger.warn({ raw: fileOfferMatch[1], error: e }, 'Failed to parse file offer metadata');
+    return { answer };
+  }
+}
 
 // Anthropic client type
 interface AnthropicClient {
@@ -348,28 +440,33 @@ export class MeetingQAService {
 
     const latencyMs = Date.now() - startTime;
 
+    // Parse response for file offer metadata
+    const { answer: parsedAnswer, fileOffer } = parseAIResponse(answer);
+
     // Find relevant source segments
-    const sources = this.findRelevantSegments(segments, answer);
+    const sources = this.findRelevantSegments(segments, parsedAnswer);
 
     logger.info(
       {
         meetingId,
         questionLength: question.length,
-        answerLength: answer.length,
+        answerLength: parsedAnswer.length,
         tokensUsed,
         modelUsed,
         latencyMs,
         sourcesFound: sources.length,
+        hasFileOffer: !!fileOffer,
       },
       'Q&A completed'
     );
 
     return {
-      answer,
+      answer: parsedAnswer,
       sources,
       tokensUsed,
       modelUsed,
       latencyMs,
+      fileOffer,
     };
   }
 
@@ -479,3 +576,6 @@ export class MeetingQAService {
 
 // Export singleton
 export const meetingQAService = new MeetingQAService();
+
+// Export types for external use
+export type { FileOffer, QAResponse };
