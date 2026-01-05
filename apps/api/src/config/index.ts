@@ -188,6 +188,20 @@ export const config = {
    * Anthropic configuration
    */
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
+
+  /**
+   * Resend email configuration
+   */
+  resend: {
+    apiKey: process.env.RESEND_API_KEY || '',
+  },
+
+  /**
+   * Email configuration
+   */
+  email: {
+    from: process.env.EMAIL_FROM || 'zigznote <noreply@zigznote.com>',
+  },
 };
 
 export type Config = typeof config;

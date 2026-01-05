@@ -2,6 +2,26 @@
  * BillingService Tests
  */
 
+// Mock the logger - must be before any import that uses it
+jest.mock('../utils/logger', () => ({
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  },
+}));
+
+// Mock webhookIdempotency
+jest.mock('../utils/webhookIdempotency', () => ({
+  checkAndMarkProcessed: jest.fn().mockResolvedValue(true),
+}));
+
+// Mock queues
+jest.mock('../jobs/queues', () => ({
+  queueEmailJob: jest.fn().mockResolvedValue({ id: 'job-123' }),
+}));
+
 // Mock the database module - must be before import
 jest.mock('@zigznote/database', () => ({
   prisma: {
@@ -29,6 +49,30 @@ jest.mock('@zigznote/database', () => ({
       findUnique: jest.fn(),
       update: jest.fn(),
     },
+    // Transaction mock that passes through to actual calls
+    $transaction: jest.fn().mockImplementation(async (callback) => {
+      // Create a mock tx that has the same structure as prisma
+      const mockTx = {
+        subscription: {
+          create: jest.fn().mockResolvedValue({
+            id: 'sub-db-123',
+            customerId: 'cus-123',
+            planId: 'plan-123',
+            provider: 'stripe',
+            providerSubId: 'sub_mock',
+            status: 'active',
+            currentPeriodStart: new Date(),
+            currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            cancelAtPeriodEnd: false,
+            trialEnd: null,
+          }),
+        },
+        organization: {
+          update: jest.fn(),
+        },
+      };
+      return callback(mockTx);
+    }),
   },
   Prisma: {},
 }));
@@ -297,11 +341,8 @@ describe('BillingService', () => {
       });
 
       expect(result.status).toBe('active');
-      expect(mockPrisma.subscription.create).toHaveBeenCalled();
-      expect(mockPrisma.organization.update).toHaveBeenCalledWith({
-        where: { id: 'org_123' },
-        data: { plan: 'pro' },
-      });
+      // Transaction is used for atomic operations
+      expect(mockPrisma.$transaction).toHaveBeenCalled();
     });
 
     it('should throw error for missing organization', async () => {

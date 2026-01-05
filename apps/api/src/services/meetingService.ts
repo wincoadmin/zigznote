@@ -9,8 +9,10 @@
 import {
   meetingRepository,
   transcriptRepository,
+  prisma,
 } from '@zigznote/database';
 import type { Meeting, Transcript, Summary, ActionItem } from '@zigznote/database';
+import { recallService } from './recallService';
 import { Queue } from 'bullmq';
 import Redis from 'ioredis';
 import { QUEUE_NAMES } from '@zigznote/shared';
@@ -217,6 +219,74 @@ export class MeetingService {
     logger.info({ meetingId: meeting.id }, 'Meeting created');
 
     return this.toMeetingResponse(meeting);
+  }
+
+  /**
+   * Create a meeting with optional bot in an atomic transaction
+   * If bot creation fails, the meeting creation is rolled back
+   * @param data - Meeting data with optional bot flag
+   */
+  async createMeetingWithBot(data: CreateMeetingData & { startBot?: boolean; botName?: string }): Promise<MeetingResponse> {
+    logger.debug({ data, startBot: data.startBot }, 'Creating meeting with optional bot');
+
+    return prisma.$transaction(async (tx) => {
+      // Create the meeting
+      const meeting = await tx.meeting.create({
+        data: {
+          title: data.title,
+          organizationId: data.organizationId,
+          createdById: data.createdById,
+          platform: data.platform,
+          meetingUrl: data.meetingUrl,
+          startTime: data.startTime,
+          endTime: data.endTime,
+          calendarEventId: data.calendarEventId,
+          status: data.startBot ? 'pending' : 'scheduled',
+        },
+        include: {
+          participants: true,
+        },
+      });
+
+      // If bot requested and meeting URL exists, create bot
+      if (data.startBot && data.meetingUrl) {
+        try {
+          const bot = await recallService.createBot({
+            meetingId: meeting.id,
+            organizationId: data.organizationId,
+            meetingUrl: data.meetingUrl,
+            botName: data.botName,
+          });
+
+          // Update meeting with bot info
+          const updatedMeeting = await tx.meeting.update({
+            where: { id: meeting.id },
+            data: {
+              botId: bot.id,
+              status: 'joining',
+            },
+            include: {
+              participants: true,
+            },
+          });
+
+          logger.info({ meetingId: meeting.id, botId: bot.id }, 'Meeting created with bot');
+
+          return this.toMeetingResponse(updatedMeeting as unknown as MeetingWithRelations);
+        } catch (error) {
+          // Log and re-throw to rollback the transaction
+          logger.error({ meetingId: meeting.id, error }, 'Failed to create bot, rolling back meeting');
+          throw error;
+        }
+      }
+
+      logger.info({ meetingId: meeting.id }, 'Meeting created without bot');
+
+      return this.toMeetingResponse(meeting as unknown as MeetingWithRelations);
+    }, {
+      maxWait: 5000, // 5s max wait to acquire lock
+      timeout: 10000, // 10s max transaction duration
+    });
   }
 
   /**

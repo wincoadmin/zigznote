@@ -15,6 +15,10 @@ import {
   BillingInterval,
 } from './providers';
 import { config } from '../config';
+import { checkAndMarkProcessed } from '../utils/webhookIdempotency';
+import { logger } from '../utils/logger';
+import { queueEmailJob } from '../jobs/queues';
+import { paymentFailedTemplates, type PaymentFailedTemplateKey } from '../email/templates/payment-failed';
 
 interface BillingCustomer {
   id: string;
@@ -281,7 +285,7 @@ export class BillingService {
       throw new Error('Customer not set up for this provider');
     }
 
-    // Create subscription with provider
+    // Create subscription with provider (external call - cannot be rolled back)
     const result = await providerInstance.createSubscription({
       customerId: providerCustomerId,
       planId: providerPlanId,
@@ -293,25 +297,33 @@ export class BillingService {
       throw new Error(result.error || 'Failed to create subscription');
     }
 
-    // Store subscription in database
-    const subscription = await prisma.subscription.create({
-      data: {
-        customerId: customer.id,
-        planId: plan.id,
-        provider,
-        providerSubId: result.data.providerId,
-        status: result.data.status,
-        currentPeriodStart: result.data.currentPeriodStart,
-        currentPeriodEnd: result.data.currentPeriodEnd,
-        cancelAtPeriodEnd: result.data.cancelAtPeriodEnd,
-        trialEnd: result.data.trialEnd,
-      },
-    });
+    // Use transaction for atomic local DB operations
+    const subscription = await prisma.$transaction(async (tx) => {
+      // Store subscription in database
+      const sub = await tx.subscription.create({
+        data: {
+          customerId: customer.id,
+          planId: plan.id,
+          provider,
+          providerSubId: result.data!.providerId,
+          status: result.data!.status,
+          currentPeriodStart: result.data!.currentPeriodStart,
+          currentPeriodEnd: result.data!.currentPeriodEnd,
+          cancelAtPeriodEnd: result.data!.cancelAtPeriodEnd,
+          trialEnd: result.data!.trialEnd,
+        },
+      });
 
-    // Update organization plan
-    await prisma.organization.update({
-      where: { id: input.organizationId },
-      data: { plan: plan.slug },
+      // Update organization plan
+      await tx.organization.update({
+        where: { id: input.organizationId },
+        data: { plan: plan.slug },
+      });
+
+      return sub;
+    }, {
+      maxWait: 5000,
+      timeout: 10000,
     });
 
     return {
@@ -590,7 +602,7 @@ export class BillingService {
     provider: PaymentProviderType,
     payload: string | Buffer,
     signature: string
-  ): Promise<void> {
+  ): Promise<{ received: boolean; duplicate?: boolean }> {
     const providerInstance = this.getProvider(provider);
 
     const result = await providerInstance.constructWebhookEvent(payload, signature);
@@ -600,6 +612,20 @@ export class BillingService {
     }
 
     const event = result.data;
+
+    // Idempotency check - get event ID from provider
+    // Stripe: event.id, Flutterwave: event.data.tx_ref or id
+    const eventId = provider === 'stripe'
+      ? (event.id as string)
+      : (event.data?.tx_ref as string) || (event.data?.id as string) || (event.id as string);
+
+    if (eventId) {
+      const isNew = await checkAndMarkProcessed(provider, eventId, event.type);
+      if (!isNew) {
+        logger.info({ provider, eventId, eventType: event.type }, 'Duplicate billing webhook, skipping');
+        return { received: true, duplicate: true };
+      }
+    }
 
     // Handle different event types
     switch (event.type) {
@@ -626,6 +652,8 @@ export class BillingService {
       default:
         console.log(`[Billing] Unhandled webhook event: ${event.type}`);
     }
+
+    return { received: true };
   }
 
   /**
@@ -676,14 +704,14 @@ export class BillingService {
   }
 
   /**
-   * Handle failed payment - set grace period
+   * Handle failed payment - set grace period and send dunning email
    * Phase 8.95: Implements dunning flow with retry tracking
    */
   private async handlePaymentFailed(
     provider: PaymentProviderType,
     data: Record<string, unknown>
   ): Promise<void> {
-    console.log(`[Billing] Payment failed (${provider}):`, data.id);
+    logger.info({ provider, paymentId: data.id }, 'Payment failed');
 
     // Find subscription by provider ID
     const subscriptionId = (data.subscription as string) || (data.subscription_id as string);
@@ -691,7 +719,20 @@ export class BillingService {
 
     const subscription = await prisma.subscription.findFirst({
       where: { providerSubId: subscriptionId, provider },
-      include: { customer: true },
+      include: {
+        customer: {
+          include: {
+            organization: {
+              include: {
+                users: {
+                  where: { role: 'owner', deletedAt: null },
+                  take: 1,
+                },
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!subscription) return;
@@ -713,15 +754,42 @@ export class BillingService {
       },
     });
 
-    console.log(
-      `[Billing] Payment failed, grace period active until ${graceEndsAt.toISOString()} ` +
-        `(attempt ${retryCount}/${this.MAX_RETRY_COUNT})`
+    logger.info(
+      { subscriptionId: subscription.id, graceEndsAt, retryCount, maxRetries: this.MAX_RETRY_COUNT },
+      'Payment failed, grace period active'
     );
 
-    // TODO: Send dunning email based on retry count
-    // const emailType = retryCount === 1 ? 'payment-failed-first' :
-    //                   retryCount === 2 ? 'payment-failed-second' :
-    //                   retryCount >= 3 ? 'payment-failed-final' : 'payment-failed';
+    // Send dunning email based on retry count
+    const owner = subscription.customer?.organization?.users?.[0];
+    if (owner?.email) {
+      const templateKey: PaymentFailedTemplateKey =
+        retryCount === 1 ? 'first' :
+        retryCount === 2 ? 'second' :
+        'final';
+
+      const template = paymentFailedTemplates[templateKey];
+      const emailData = {
+        userName: owner.name || 'there',
+        graceEndsAt: graceEndsAt.toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        }),
+        updateUrl: `${config.webUrl}/settings/billing`,
+      };
+
+      await queueEmailJob({
+        to: owner.email,
+        subject: template.subject,
+        html: template.html(emailData),
+      });
+
+      logger.info(
+        { email: owner.email, templateKey, subscriptionId: subscription.id },
+        'Queued dunning email'
+      );
+    }
   }
 
   private async handleSubscriptionUpdated(

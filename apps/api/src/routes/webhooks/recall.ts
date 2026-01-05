@@ -6,6 +6,7 @@
 import { Router, Request, Response } from 'express';
 import { recallService, type RecallWebhookEvent } from '../../services/recallService';
 import { logger } from '../../utils/logger';
+import { checkAndMarkProcessed } from '../../utils/webhookIdempotency';
 
 const router: Router = Router();
 
@@ -36,6 +37,18 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
     const event: RecallWebhookEvent = typeof req.body === 'string'
       ? JSON.parse(req.body)
       : req.body;
+
+    // Idempotency check - prevent duplicate processing
+    const botId = event.data?.bot_id || 'unknown';
+    const timestamp = event.data?.timestamp || Date.now();
+    const eventId = `${botId}-${event.event}-${timestamp}`;
+
+    const isNew = await checkAndMarkProcessed('recall', eventId, event.event);
+    if (!isNew) {
+      logger.info({ eventId, event: event.event }, 'Duplicate Recall webhook, skipping');
+      res.status(200).json({ received: true, duplicate: true });
+      return;
+    }
 
     logger.info({ event: event.event, botId: event.data?.bot_id }, 'Received Recall.ai webhook');
 

@@ -16,6 +16,16 @@ import {
 } from '@zigznote/shared';
 
 /**
+ * Email job data for dunning/notification emails
+ */
+export interface EmailJobData {
+  to: string;
+  subject: string;
+  html: string;
+  from?: string;
+}
+
+/**
  * Redis connection for BullMQ
  */
 let connection: IORedis | null = null;
@@ -50,6 +60,7 @@ let transcriptionQueue: Queue<TranscriptionJobData> | null = null;
 let summarizationQueue: Queue<SummarizationJobData> | null = null;
 let webhookQueue: Queue<WebhookJobData> | null = null;
 let calendarSyncQueue: Queue<CalendarSyncJobData> | null = null;
+let emailQueue: Queue<EmailJobData> | null = null;
 
 /**
  * Gets or creates the transcription queue
@@ -116,6 +127,22 @@ export function getCalendarSyncQueue(): Queue<CalendarSyncJobData> {
 }
 
 /**
+ * Gets or creates the email queue
+ */
+export function getEmailQueue(): Queue<EmailJobData> {
+  if (!emailQueue) {
+    emailQueue = new Queue<EmailJobData>('email', {
+      connection: getRedisConnection(),
+      defaultJobOptions: {
+        ...DEFAULT_JOB_OPTIONS,
+        attempts: 5, // More retries for emails
+      },
+    });
+  }
+  return emailQueue;
+}
+
+/**
  * Adds a transcription job to the queue
  */
 export async function queueTranscriptionJob(
@@ -172,6 +199,20 @@ export async function queueCalendarSyncJob(
 }
 
 /**
+ * Adds an email job to the queue
+ */
+export async function queueEmailJob(
+  data: EmailJobData,
+  options?: { priority?: number; delay?: number }
+): Promise<Job<EmailJobData>> {
+  const queue = getEmailQueue();
+  return queue.add('send', data, {
+    priority: options?.priority,
+    delay: options?.delay,
+  });
+}
+
+/**
  * Closes all queue connections
  */
 export async function closeQueues(): Promise<void> {
@@ -180,6 +221,7 @@ export async function closeQueues(): Promise<void> {
     summarizationQueue,
     webhookQueue,
     calendarSyncQueue,
+    emailQueue,
   ].filter(Boolean) as Queue[];
 
   await Promise.all(queues.map((q) => q.close()));
@@ -193,6 +235,7 @@ export async function closeQueues(): Promise<void> {
   summarizationQueue = null;
   webhookQueue = null;
   calendarSyncQueue = null;
+  emailQueue = null;
 
   logger.info('All queues closed');
 }
@@ -212,6 +255,7 @@ export async function getQueueStats(): Promise<Record<string, {
     summarization: getSummarizationQueue(),
     webhook: getWebhookQueue(),
     calendarSync: getCalendarSyncQueue(),
+    email: getEmailQueue(),
   };
 
   const stats: Record<string, {

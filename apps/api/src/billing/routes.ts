@@ -247,9 +247,9 @@ router.post(
       throw new BadRequestError('Missing Stripe signature');
     }
 
-    await billingService.handleWebhook('stripe', req.body, signature);
+    const result = await billingService.handleWebhook('stripe', req.body, signature);
 
-    res.json({ received: true });
+    res.json(result);
   })
 );
 
@@ -266,9 +266,9 @@ router.post(
       throw new BadRequestError('Missing Flutterwave signature');
     }
 
-    await billingService.handleWebhook('flutterwave', JSON.stringify(req.body), signature);
+    const result = await billingService.handleWebhook('flutterwave', JSON.stringify(req.body), signature);
 
-    res.json({ received: true });
+    res.json(result);
   })
 );
 

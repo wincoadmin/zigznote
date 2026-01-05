@@ -9,6 +9,7 @@ import { Webhook } from 'svix';
 import { authService, type ClerkWebhookEvent } from '../../services/authService';
 import { logger } from '../../utils/logger';
 import { config } from '../../config';
+import { checkAndMarkProcessed } from '../../utils/webhookIdempotency';
 
 const router: IRouter = Router();
 
@@ -48,6 +49,14 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
       'svix-timestamp': svixTimestamp,
       'svix-signature': svixSignature,
     }) as ClerkWebhookEvent;
+
+    // Idempotency check - prevent duplicate processing
+    const isNew = await checkAndMarkProcessed('clerk', svixId, event.type);
+    if (!isNew) {
+      logger.info({ svixId, eventType: event.type }, 'Duplicate Clerk webhook, skipping');
+      res.status(200).json({ received: true, duplicate: true });
+      return;
+    }
 
     // Process the event
     await authService.syncUserFromWebhook(event);
