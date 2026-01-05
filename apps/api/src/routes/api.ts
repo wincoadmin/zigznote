@@ -10,6 +10,7 @@ import { voiceProfilesRouter } from './voiceProfiles';
 import { audioRouter } from './audio';
 import { searchRouter } from './search';
 import { conversationsRouter } from './conversations';
+import { helpRouter } from './help';
 
 export const apiRouter: IRouter = Router();
 
@@ -27,6 +28,8 @@ apiRouter.use('/v1/audio', audioRouter);
 apiRouter.use('/v1/search', searchRouter);
 // AI Meeting Assistant Q&A
 apiRouter.use('/v1', conversationsRouter);
+// Help Assistant
+apiRouter.use('/v1/help', helpRouter);
 
 /**
  * API root - returns API information

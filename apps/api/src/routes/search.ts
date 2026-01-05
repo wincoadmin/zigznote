@@ -7,6 +7,7 @@ import { Router } from 'express';
 import type { Router as IRouter, Request, Response } from 'express';
 import { z } from 'zod';
 import { searchService } from '../services/searchService';
+import { embeddingService } from '../services/embeddingService';
 import { requireAuth, type AuthenticatedRequest } from '../middleware/auth';
 import { asyncHandler, validateRequest } from '../middleware';
 
@@ -213,6 +214,140 @@ searchRouter.get(
     res.json({
       success: true,
       data: suggestions,
+    });
+  })
+);
+
+const semanticSearchSchema = z.object({
+  query: z.object({
+    q: z.string().min(1).max(500),
+    limit: z.coerce.number().int().min(1).max(50).default(10).optional(),
+    threshold: z.coerce.number().min(0).max(1).default(0.7).optional(),
+  }),
+});
+
+/**
+ * @route GET /api/search/semantic
+ * @description Semantic search using vector embeddings
+ */
+searchRouter.get(
+  '/semantic',
+  validateRequest(semanticSearchSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const authReq = req as AuthenticatedRequest;
+    const { q, limit, threshold } = req.query as z.infer<typeof semanticSearchSchema>['query'];
+
+    if (!embeddingService.isAvailable()) {
+      res.status(503).json({
+        success: false,
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Semantic search is not available',
+        },
+      });
+      return;
+    }
+
+    const results = await embeddingService.searchSimilar({
+      query: q,
+      organizationId: authReq.auth.organizationId,
+      limit,
+      threshold,
+    });
+
+    res.json({
+      success: true,
+      data: results,
+      meta: {
+        query: q,
+        total: results.length,
+      },
+    });
+  })
+);
+
+/**
+ * @route GET /api/search/hybrid
+ * @description Hybrid search combining full-text and semantic search
+ */
+searchRouter.get(
+  '/hybrid',
+  validateRequest(semanticSearchSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const authReq = req as AuthenticatedRequest;
+    const { q, limit } = req.query as z.infer<typeof semanticSearchSchema>['query'];
+
+    // Get both full-text and semantic results
+    const [textResults, semanticResults] = await Promise.all([
+      searchService.search({
+        query: q,
+        organizationId: authReq.auth.organizationId,
+        types: ['transcript', 'summary'],
+        limit: limit ? limit * 2 : 20,
+      }),
+      embeddingService.isAvailable()
+        ? embeddingService.hybridSearch({
+            query: q,
+            organizationId: authReq.auth.organizationId,
+            limit: limit ? limit * 2 : 20,
+          })
+        : Promise.resolve([]),
+    ]);
+
+    // Combine and dedupe results
+    const combinedMeetingIds = new Set<string>();
+    const combinedResults: Array<{
+      meetingId: string;
+      meetingTitle: string;
+      preview: string;
+      source: 'text' | 'semantic' | 'both';
+      score: number;
+    }> = [];
+
+    // Add semantic results
+    for (const result of semanticResults) {
+      combinedMeetingIds.add(result.meetingId);
+      combinedResults.push({
+        meetingId: result.meetingId,
+        meetingTitle: result.meetingTitle,
+        preview: result.chunkText.substring(0, 200) + '...',
+        source: 'semantic',
+        score: result.similarity,
+      });
+    }
+
+    // Add text results that aren't already included
+    for (const result of textResults.results) {
+      if (!combinedMeetingIds.has(result.meetingId)) {
+        combinedMeetingIds.add(result.meetingId);
+        combinedResults.push({
+          meetingId: result.meetingId,
+          meetingTitle: result.meetingTitle || result.title,
+          preview: result.preview,
+          source: 'text',
+          score: result.score,
+        });
+      } else {
+        // Mark existing result as from both sources
+        const existing = combinedResults.find(r => r.meetingId === result.meetingId);
+        if (existing) {
+          existing.source = 'both';
+          existing.score = Math.max(existing.score, result.score);
+        }
+      }
+    }
+
+    // Sort by score
+    combinedResults.sort((a, b) => b.score - a.score);
+
+    res.json({
+      success: true,
+      data: combinedResults.slice(0, limit || 10),
+      meta: {
+        query: q,
+        total: combinedResults.length,
+        semanticAvailable: embeddingService.isAvailable(),
+      },
     });
   })
 );
