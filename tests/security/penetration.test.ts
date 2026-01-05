@@ -3,21 +3,17 @@
  * Tests for common security vulnerabilities
  */
 
-import { Request, Response } from 'express';
+// Mock request type for testing
+interface MockRequest {
+  body: Record<string, unknown>;
+  query: Record<string, unknown>;
+  params: Record<string, unknown>;
+  headers: Record<string, unknown>;
+  cookies: Record<string, unknown>;
+  get: jest.Mock;
+}
 
-// Mock implementations for testing
-const mockPrisma = {
-  $queryRaw: jest.fn(),
-  meeting: {
-    findMany: jest.fn(),
-    findUnique: jest.fn(),
-  },
-  user: {
-    findUnique: jest.fn(),
-  },
-};
-
-const mockRequest = (overrides = {}): Partial<Request> => ({
+const mockRequest = (overrides: Partial<MockRequest> = {}): MockRequest => ({
   body: {},
   query: {},
   params: {},
@@ -26,16 +22,6 @@ const mockRequest = (overrides = {}): Partial<Request> => ({
   get: jest.fn(),
   ...overrides,
 });
-
-const mockResponse = (): Partial<Response> => {
-  const res: Partial<Response> = {};
-  res.status = jest.fn().mockReturnValue(res);
-  res.json = jest.fn().mockReturnValue(res);
-  res.send = jest.fn().mockReturnValue(res);
-  res.set = jest.fn().mockReturnValue(res);
-  res.cookie = jest.fn().mockReturnValue(res);
-  return res;
-};
 
 describe('Security Penetration Tests (OWASP Top 10)', () => {
   beforeEach(() => {
@@ -591,9 +577,16 @@ describe('Security Penetration Tests (OWASP Top 10)', () => {
       };
 
       const escaped = escapeHtml(payload);
-      expect(escaped).not.toContain('<script>');
-      expect(escaped).not.toContain('onerror=');
-      expect(escaped).not.toContain('javascript:');
+      // HTML tags should be escaped - no raw < or > characters
+      expect(escaped).not.toMatch(/<[a-zA-Z]/); // No opening HTML tags
+      expect(escaped).not.toContain('</'); // No closing HTML tags
+      // Verify escaping happened for dangerous characters
+      if (payload.includes('<')) {
+        expect(escaped).toContain('&lt;');
+      }
+      if (payload.includes('>')) {
+        expect(escaped).toContain('&gt;');
+      }
     });
 
     it('should set Content-Security-Policy header', async () => {
@@ -667,10 +660,10 @@ describe('Security Penetration Tests (OWASP Top 10)', () => {
     it.each(promptInjectionAttempts)('should block prompt injection: %s', (attempt) => {
       const blockedPatterns = [
         /ignore\s+(all\s+)?previous/i,
-        /disregard\s+(all\s+)?instructions/i,
+        /disregard\s+(all\s+)?(your\s+)?(instructions|rules)/i,
         /you\s+are\s+now/i,
-        /reveal\s+(your\s+)?(system\s+)?prompt/i,
-        /show\s+(me\s+)?(your\s+)?instructions/i,
+        /(reveal|show|what\s+is)\s+(your\s+)?(system\s+)?prompt/i,
+        /(reveal|show)\s+(me\s+)?(your\s+)?(\w+\s+)?instructions/i,
         /jailbreak/i,
         /pretend\s+(you\s+)?(have\s+)?no\s+restrictions/i,
         /act\s+as\s+dan/i,

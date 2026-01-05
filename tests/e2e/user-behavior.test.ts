@@ -3,8 +3,6 @@
  * Tests for real-world user behavior scenarios
  */
 
-import { prisma } from '@zigznote/database';
-
 // Mock services for testing
 const mockNotificationService = {
   send: jest.fn(),

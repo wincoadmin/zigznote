@@ -579,13 +579,14 @@ describe('WCAG 2.1 AA Accessibility Audit', () => {
     describe('3.2.2 On Input', () => {
       it('should not change context on input without warning', () => {
         const inputBehaviors = [
-          { element: 'search', autoSubmit: false },
-          { element: 'filter', autoNavigate: false },
-          { element: 'dropdown', autoSubmit: false },
+          { element: 'search', autoSubmit: false, autoNavigate: false },
+          { element: 'filter', autoSubmit: false, autoNavigate: false },
+          { element: 'dropdown', autoSubmit: false, autoNavigate: false },
         ];
 
         inputBehaviors.forEach(behavior => {
           expect(behavior.autoSubmit).toBe(false);
+          expect(behavior.autoNavigate).toBe(false);
         });
       });
     });
