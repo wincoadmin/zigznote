@@ -2,10 +2,13 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { StatsCards, RecentMeetings, UpcomingMeetings, QuickActions } from '@/components/dashboard';
+import { OnboardingWizard, OnboardingChecklist } from '@/components/onboarding';
+import { useOnboarding } from '@/lib/onboarding-context';
 import { meetingsApi } from '@/lib/api';
 import type { Meeting } from '@/types';
 
 export default function DashboardPage() {
+  const { state, completeOnboarding, dismissOnboarding } = useOnboarding();
   const { data: statsData, isLoading: statsLoading } = useQuery({
     queryKey: ['meetingStats'],
     queryFn: async () => {
@@ -51,33 +54,48 @@ export default function DashboardPage() {
   });
 
   return (
-    <div className="space-y-6">
-      {/* Page header */}
-      <div>
-        <h1 className="font-heading text-2xl font-bold text-slate-900">
-          Welcome back
-        </h1>
-        <p className="text-slate-500">
-          Here&apos;s what&apos;s happening with your meetings
-        </p>
-      </div>
+    <>
+      {/* Onboarding Wizard Modal */}
+      {state.showWizard && (
+        <OnboardingWizard
+          onComplete={completeOnboarding}
+          onSkip={dismissOnboarding}
+        />
+      )}
 
-      {/* Stats cards */}
-      <StatsCards stats={statsData} isLoading={statsLoading} />
-
-      {/* Main content grid */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Recent meetings - spans 2 columns */}
-        <div className="lg:col-span-2">
-          <RecentMeetings meetings={recentData} isLoading={recentLoading} />
+      <div className="space-y-6">
+        {/* Page header */}
+        <div>
+          <h1 className="font-heading text-2xl font-bold text-slate-900">
+            Welcome back
+          </h1>
+          <p className="text-slate-500">
+            Here&apos;s what&apos;s happening with your meetings
+          </p>
         </div>
 
-        {/* Sidebar - Quick actions and upcoming */}
-        <div className="space-y-6">
-          <QuickActions />
-          <UpcomingMeetings meetings={upcomingData} isLoading={upcomingLoading} />
+        {/* Onboarding Checklist */}
+        {state.showChecklist && !state.dismissed && (
+          <OnboardingChecklist onDismiss={dismissOnboarding} />
+        )}
+
+        {/* Stats cards */}
+        <StatsCards stats={statsData} isLoading={statsLoading} />
+
+        {/* Main content grid */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Recent meetings - spans 2 columns */}
+          <div className="lg:col-span-2">
+            <RecentMeetings meetings={recentData} isLoading={recentLoading} />
+          </div>
+
+          {/* Sidebar - Quick actions and upcoming */}
+          <div className="space-y-6">
+            <QuickActions />
+            <UpcomingMeetings meetings={upcomingData} isLoading={upcomingLoading} />
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

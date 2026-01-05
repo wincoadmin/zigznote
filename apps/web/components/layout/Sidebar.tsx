@@ -11,6 +11,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,7 @@ const navItems = [
   { href: '/calendar', icon: Calendar, label: 'Calendar' },
   { href: '/search', icon: Search, label: 'Search' },
   { href: '/settings', icon: Settings, label: 'Settings' },
+  { href: '/help', icon: HelpCircle, label: 'Help' },
 ];
 
 interface SidebarProps {
