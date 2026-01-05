@@ -23,6 +23,23 @@ export {
   schedulePeriodicCalendarSync,
 } from './calendarSyncWorker';
 
+export {
+  getWeeklyDigestQueue,
+  queueWeeklyDigest,
+  queueAllWeeklyDigests,
+  startWeeklyDigestWorker,
+  stopWeeklyDigestWorker,
+  scheduleWeeklyDigestCron,
+} from './weeklyDigestWorker';
+
+export {
+  cleanupOrphanedBots,
+  cleanupOrphanedStorage,
+  checkExpiredGracePeriods,
+  checkStorageGracePeriods,
+  startCleanupWorker,
+} from './cleanupWorker';
+
 // Re-export shared queue definitions
 export {
   QUEUE_NAMES,

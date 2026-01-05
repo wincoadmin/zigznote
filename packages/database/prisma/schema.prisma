@@ -44,6 +44,10 @@ model Organization {
   billingOverrideAt     DateTime?   @map("billing_override_at")       // When override was set
   accountNotes          String?     @map("account_notes")             // Internal notes for support
 
+  // Phase 8.95: Plan downgrade violations
+  planViolations    Json?     @map("plan_violations")      // Array of PlanViolation objects
+  planViolationsAt  DateTime? @map("plan_violations_at")   // When violations were detected
+
   users                  User[]
   meetings               Meeting[]
   integrationConnections IntegrationConnection[]
@@ -578,7 +582,7 @@ model Subscription {
   planId             String    @map("plan_id")
   provider           String    // stripe, flutterwave
   providerSubId      String?   @map("provider_subscription_id")
-  status             String    @default("active") // active, past_due, cancelled, incomplete, trialing, paused
+  status             String    @default("active") // active, past_due, cancelled, incomplete, trialing, paused, suspended
   currentPeriodStart DateTime  @map("current_period_start")
   currentPeriodEnd   DateTime  @map("current_period_end")
   cancelAtPeriodEnd  Boolean   @default(false) @map("cancel_at_period_end")
@@ -588,6 +592,11 @@ model Subscription {
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
+  // Phase 8.95: Payment grace period
+  graceEndsAt       DateTime? @map("grace_ends_at")
+  paymentFailedAt   DateTime? @map("payment_failed_at")
+  paymentRetryCount Int       @default(0) @map("payment_retry_count")
+
   customer BillingCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   plan     BillingPlan     @relation(fields: [planId], references: [id])
 
@@ -595,6 +604,7 @@ model Subscription {
   @@index([planId])
   @@index([status])
   @@index([providerSubId])
+  @@index([graceEndsAt])
   @@map("subscriptions")
 }
 
@@ -1261,4 +1271,21 @@ model SuggestedQuestion {
 
   @@index([meetingId])
   @@map("suggested_questions")
+}
+
+// ============================================
+// Phase 8.95: Critical Infrastructure Fixes
+// ============================================
+
+// Webhook idempotency tracking
+model ProcessedWebhook {
+  id          String   @id @default(uuid())
+  provider    String   // 'recall' | 'clerk' | 'stripe' | 'deepgram' | 'flutterwave'
+  eventId     String   @map("event_id")
+  eventType   String   @map("event_type")
+  processedAt DateTime @default(now()) @map("processed_at")
+
+  @@unique([provider, eventId])
+  @@index([processedAt])
+  @@map("processed_webhooks")
 }

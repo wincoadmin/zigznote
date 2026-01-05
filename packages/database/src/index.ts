@@ -1,5 +1,8 @@
 export { prisma, PrismaClient } from './client';
 
+// Re-export Prisma namespace for utilities (DbNull, JsonNull, etc.)
+export { Prisma } from '@prisma/client';
+
 // Re-export Prisma types for convenience
 export type {
   Organization,
@@ -22,7 +25,6 @@ export type {
   Payment,
   Invoice,
   Refund,
-  Prisma,
 } from '@prisma/client';
 
 // Export repositories

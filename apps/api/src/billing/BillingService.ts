@@ -3,7 +3,7 @@
  * Provider-agnostic billing service that abstracts over Stripe and Flutterwave
  */
 
-import { PrismaClient } from '@prisma/client';
+import { prisma, Prisma } from '@zigznote/database';
 import {
   PaymentProvider,
   PaymentProviderType,
@@ -78,7 +78,7 @@ interface CheckoutSessionInput {
 export class BillingService {
   private providers: Map<PaymentProviderType, PaymentProvider> = new Map();
 
-  constructor(private prisma: PrismaClient) {
+  constructor() {
     this.initializeProviders();
   }
 
@@ -131,7 +131,7 @@ export class BillingService {
     preferredProvider?: PaymentProviderType
   ): Promise<BillingCustomer> {
     // Check if customer exists
-    let customer = await this.prisma.billingCustomer.findUnique({
+    let customer = await prisma.billingCustomer.findUnique({
       where: { organizationId },
     });
 
@@ -161,7 +161,7 @@ export class BillingService {
     }
 
     // Store customer in database
-    customer = await this.prisma.billingCustomer.create({
+    customer = await prisma.billingCustomer.create({
       data: {
         organizationId,
         email,
@@ -185,7 +185,7 @@ export class BillingService {
    * Get all available plans
    */
   async getPlans(): Promise<BillingPlan[]> {
-    const plans = await this.prisma.billingPlan.findMany({
+    const plans = await prisma.billingPlan.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: 'asc' },
     });
@@ -208,7 +208,7 @@ export class BillingService {
    * Get plan by slug
    */
   async getPlanBySlug(slug: string): Promise<BillingPlan | null> {
-    const plan = await this.prisma.billingPlan.findUnique({
+    const plan = await prisma.billingPlan.findUnique({
       where: { slug },
     });
 
@@ -233,7 +233,7 @@ export class BillingService {
    */
   async createSubscription(input: CreateSubscriptionInput): Promise<Subscription> {
     // Get organization
-    const organization = await this.prisma.organization.findUnique({
+    const organization = await prisma.organization.findUnique({
       where: { id: input.organizationId },
       include: { billingCustomer: true },
     });
@@ -243,7 +243,7 @@ export class BillingService {
     }
 
     // Get plan
-    const plan = await this.prisma.billingPlan.findUnique({
+    const plan = await prisma.billingPlan.findUnique({
       where: { slug: input.planSlug },
     });
 
@@ -272,9 +272,9 @@ export class BillingService {
     // Get provider customer ID
     const providerCustomerId =
       provider === 'stripe'
-        ? (await this.prisma.billingCustomer.findUnique({ where: { id: customer.id } }))
+        ? (await prisma.billingCustomer.findUnique({ where: { id: customer.id } }))
             ?.stripeCustomerId
-        : (await this.prisma.billingCustomer.findUnique({ where: { id: customer.id } }))
+        : (await prisma.billingCustomer.findUnique({ where: { id: customer.id } }))
             ?.flutterwaveId;
 
     if (!providerCustomerId) {
@@ -294,7 +294,7 @@ export class BillingService {
     }
 
     // Store subscription in database
-    const subscription = await this.prisma.subscription.create({
+    const subscription = await prisma.subscription.create({
       data: {
         customerId: customer.id,
         planId: plan.id,
@@ -309,7 +309,7 @@ export class BillingService {
     });
 
     // Update organization plan
-    await this.prisma.organization.update({
+    await prisma.organization.update({
       where: { id: input.organizationId },
       data: { plan: plan.slug },
     });
@@ -332,7 +332,7 @@ export class BillingService {
    */
   async createCheckoutSession(input: CheckoutSessionInput): Promise<{ url: string }> {
     // Get organization
-    const organization = await this.prisma.organization.findUnique({
+    const organization = await prisma.organization.findUnique({
       where: { id: input.organizationId },
       include: { billingCustomer: true },
     });
@@ -342,7 +342,7 @@ export class BillingService {
     }
 
     // Get plan
-    const plan = await this.prisma.billingPlan.findUnique({
+    const plan = await prisma.billingPlan.findUnique({
       where: { slug: input.planSlug },
     });
 
@@ -369,7 +369,7 @@ export class BillingService {
     }
 
     // Get provider customer ID
-    const dbCustomer = await this.prisma.billingCustomer.findUnique({ where: { id: customer.id } });
+    const dbCustomer = await prisma.billingCustomer.findUnique({ where: { id: customer.id } });
     const providerCustomerId =
       provider === 'stripe' ? dbCustomer?.stripeCustomerId : dbCustomer?.flutterwaveId;
 
@@ -401,7 +401,7 @@ export class BillingService {
    * Cancel a subscription
    */
   async cancelSubscription(subscriptionId: string, immediately: boolean = false): Promise<Subscription> {
-    const subscription = await this.prisma.subscription.findUnique({
+    const subscription = await prisma.subscription.findUnique({
       where: { id: subscriptionId },
     });
 
@@ -418,7 +418,7 @@ export class BillingService {
     }
 
     // Update database
-    const updated = await this.prisma.subscription.update({
+    const updated = await prisma.subscription.update({
       where: { id: subscriptionId },
       data: {
         status: result.data.status,
@@ -444,7 +444,7 @@ export class BillingService {
    * Resume a cancelled subscription
    */
   async resumeSubscription(subscriptionId: string): Promise<Subscription> {
-    const subscription = await this.prisma.subscription.findUnique({
+    const subscription = await prisma.subscription.findUnique({
       where: { id: subscriptionId },
     });
 
@@ -465,7 +465,7 @@ export class BillingService {
     }
 
     // Update database
-    const updated = await this.prisma.subscription.update({
+    const updated = await prisma.subscription.update({
       where: { id: subscriptionId },
       data: {
         status: result.data.status,
@@ -491,13 +491,13 @@ export class BillingService {
    * Get subscription for organization
    */
   async getSubscription(organizationId: string): Promise<Subscription | null> {
-    const customer = await this.prisma.billingCustomer.findUnique({
+    const customer = await prisma.billingCustomer.findUnique({
       where: { organizationId },
     });
 
     if (!customer) return null;
 
-    const subscription = await this.prisma.subscription.findFirst({
+    const subscription = await prisma.subscription.findFirst({
       where: {
         customerId: customer.id,
         status: { in: ['active', 'trialing', 'past_due'] },
@@ -524,13 +524,13 @@ export class BillingService {
    * Get payment history for organization
    */
   async getPaymentHistory(organizationId: string): Promise<Payment[]> {
-    const customer = await this.prisma.billingCustomer.findUnique({
+    const customer = await prisma.billingCustomer.findUnique({
       where: { organizationId },
     });
 
     if (!customer) return [];
 
-    const payments = await this.prisma.payment.findMany({
+    const payments = await prisma.payment.findMany({
       where: { customerId: customer.id },
       orderBy: { createdAt: 'desc' },
       take: 50,
@@ -561,13 +561,13 @@ export class BillingService {
       createdAt: Date;
     }>
   > {
-    const customer = await this.prisma.billingCustomer.findUnique({
+    const customer = await prisma.billingCustomer.findUnique({
       where: { organizationId },
     });
 
     if (!customer) return [];
 
-    const invoices = await this.prisma.invoice.findMany({
+    const invoices = await prisma.invoice.findMany({
       where: { customerId: customer.id },
       orderBy: { createdAt: 'desc' },
       take: 50,
@@ -637,21 +637,91 @@ export class BillingService {
     throw new Error('No payment providers configured');
   }
 
+  // Phase 8.95: Grace period configuration
+  private readonly GRACE_PERIOD_DAYS = 7;
+  private readonly MAX_RETRY_COUNT = 4;
+
   // Webhook handlers
+  /**
+   * Handle successful payment - clears grace period
+   */
   private async handlePaymentSucceeded(
     provider: PaymentProviderType,
     data: Record<string, unknown>
   ): Promise<void> {
     console.log(`[Billing] Payment succeeded (${provider}):`, data.id);
-    // Update payment status in database
+
+    // Find subscription by provider ID
+    const subscriptionId = (data.subscription as string) || (data.subscription_id as string);
+    if (!subscriptionId) return;
+
+    const subscription = await prisma.subscription.findFirst({
+      where: { providerSubId: subscriptionId, provider },
+    });
+
+    if (subscription) {
+      // Phase 8.95: Clear grace period on successful payment
+      await prisma.subscription.update({
+        where: { id: subscription.id },
+        data: {
+          status: 'active',
+          graceEndsAt: null,
+          paymentFailedAt: null,
+          paymentRetryCount: 0,
+        },
+      });
+
+      console.log(`[Billing] Grace period cleared for subscription ${subscription.id}`);
+    }
   }
 
+  /**
+   * Handle failed payment - set grace period
+   * Phase 8.95: Implements dunning flow with retry tracking
+   */
   private async handlePaymentFailed(
     provider: PaymentProviderType,
     data: Record<string, unknown>
   ): Promise<void> {
     console.log(`[Billing] Payment failed (${provider}):`, data.id);
-    // Update subscription status, send notification
+
+    // Find subscription by provider ID
+    const subscriptionId = (data.subscription as string) || (data.subscription_id as string);
+    if (!subscriptionId) return;
+
+    const subscription = await prisma.subscription.findFirst({
+      where: { providerSubId: subscriptionId, provider },
+      include: { customer: true },
+    });
+
+    if (!subscription) return;
+
+    const retryCount = (subscription.paymentRetryCount || 0) + 1;
+
+    // Calculate grace period end (only set on first failure)
+    const graceEndsAt =
+      subscription.graceEndsAt ||
+      new Date(Date.now() + this.GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
+
+    await prisma.subscription.update({
+      where: { id: subscription.id },
+      data: {
+        status: 'past_due',
+        graceEndsAt,
+        paymentFailedAt: new Date(),
+        paymentRetryCount: retryCount,
+      },
+    });
+
+    console.log(
+      `[Billing] Payment failed, grace period active until ${graceEndsAt.toISOString()} ` +
+        `(attempt ${retryCount}/${this.MAX_RETRY_COUNT})`
+    );
+
+    // TODO: Send dunning email based on retry count
+    // const emailType = retryCount === 1 ? 'payment-failed-first' :
+    //                   retryCount === 2 ? 'payment-failed-second' :
+    //                   retryCount >= 3 ? 'payment-failed-final' : 'payment-failed';
   }
 
   private async handleSubscriptionUpdated(
@@ -663,12 +733,12 @@ export class BillingService {
     const providerSubId = data.id as string;
 
     // Find and update subscription in database
-    const subscription = await this.prisma.subscription.findFirst({
+    const subscription = await prisma.subscription.findFirst({
       where: { providerSubId, provider },
     });
 
     if (subscription) {
-      await this.prisma.subscription.update({
+      await prisma.subscription.update({
         where: { id: subscription.id },
         data: {
           status: (data.status as string) || subscription.status,
@@ -690,13 +760,13 @@ export class BillingService {
     const providerSubId = data.id as string;
 
     // Find and update subscription in database
-    const subscription = await this.prisma.subscription.findFirst({
+    const subscription = await prisma.subscription.findFirst({
       where: { providerSubId, provider },
       include: { customer: true },
     });
 
     if (subscription) {
-      await this.prisma.subscription.update({
+      await prisma.subscription.update({
         where: { id: subscription.id },
         data: {
           status: 'cancelled',
@@ -704,11 +774,155 @@ export class BillingService {
         },
       });
 
-      // Downgrade organization to free plan
-      await this.prisma.organization.update({
+      // Phase 8.95: Check for plan violations before downgrading
+      const violations = await this.checkPlanViolations(
+        subscription.customer.organizationId,
+        'free'
+      );
+
+      // Store violations and downgrade organization
+      await prisma.organization.update({
         where: { id: subscription.customer.organizationId },
-        data: { plan: 'free' },
+        data: {
+          plan: 'free',
+          planViolations: violations.length > 0 ? violations : Prisma.DbNull,
+          planViolationsAt: violations.length > 0 ? new Date() : null,
+        },
+      });
+
+      if (violations.length > 0) {
+        console.log(
+          `[Billing] Plan violations detected for org ${subscription.customer.organizationId}:`,
+          violations
+        );
+      }
+    }
+  }
+
+  /**
+   * Phase 8.95: Check for plan limit violations
+   * Returns array of violations that need to be addressed
+   */
+  async checkPlanViolations(
+    organizationId: string,
+    targetPlan: string
+  ): Promise<Array<{
+    type: 'meetings' | 'storage' | 'team_members';
+    current: number;
+    limit: number;
+    action: 'read_only' | 'notify_admin' | 'grace_period';
+    graceEndsAt?: string;
+  }>> {
+    const violations: Array<{
+      type: 'meetings' | 'storage' | 'team_members';
+      current: number;
+      limit: number;
+      action: 'read_only' | 'notify_admin' | 'grace_period';
+      graceEndsAt?: string;
+    }> = [];
+
+    // Get plan limits
+    const plan = await prisma.billingPlan.findUnique({
+      where: { slug: targetPlan },
+    });
+
+    if (!plan) return violations;
+
+    const limits = (plan.limits as Record<string, number>) || {};
+
+    // Get current usage
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      include: {
+        users: { where: { deletedAt: null } },
+        meetings: { where: { deletedAt: null } },
+      },
+    });
+
+    if (!org) return violations;
+
+    // Check team member limit
+    const maxTeamMembers = limits.maxTeamMembers || Infinity;
+    if (org.users.length > maxTeamMembers) {
+      violations.push({
+        type: 'team_members',
+        current: org.users.length,
+        limit: maxTeamMembers,
+        action: 'notify_admin',
       });
     }
+
+    // Check storage limit
+    const currentPeriod = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+    const usageRecord = await prisma.usageRecord.findUnique({
+      where: { organizationId_period: { organizationId, period: currentPeriod } },
+    });
+
+    const maxStorageGb = limits.maxStorageGb || Infinity;
+    const currentStorageGb = usageRecord
+      ? Number(usageRecord.storageUsed) / (1024 * 1024 * 1024)
+      : 0;
+
+    if (currentStorageGb > maxStorageGb) {
+      violations.push({
+        type: 'storage',
+        current: Math.round(currentStorageGb * 100) / 100,
+        limit: maxStorageGb,
+        action: 'grace_period',
+        graceEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 day grace
+      });
+    }
+
+    // Check meeting limit (per month)
+    const maxMeetingsPerMonth = limits.maxMeetingsPerMonth || Infinity;
+    const currentMeetings = usageRecord?.meetingsCount || 0;
+
+    if (currentMeetings > maxMeetingsPerMonth) {
+      violations.push({
+        type: 'meetings',
+        current: currentMeetings,
+        limit: maxMeetingsPerMonth,
+        action: 'read_only',
+      });
+    }
+
+    return violations;
+  }
+
+  /**
+   * Phase 8.95: Get active violations for an organization
+   */
+  async getActiveViolations(organizationId: string): Promise<Array<{
+    type: string;
+    current: number;
+    limit: number;
+    action: string;
+    graceEndsAt?: string;
+  }> | null> {
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { planViolations: true },
+    });
+
+    return org?.planViolations as Array<{
+      type: string;
+      current: number;
+      limit: number;
+      action: string;
+      graceEndsAt?: string;
+    }> | null;
+  }
+
+  /**
+   * Phase 8.95: Clear violations after they're resolved
+   */
+  async clearViolations(organizationId: string): Promise<void> {
+    await prisma.organization.update({
+      where: { id: organizationId },
+      data: {
+        planViolations: Prisma.DbNull,
+        planViolationsAt: null,
+      },
+    });
   }
 }

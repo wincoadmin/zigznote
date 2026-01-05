@@ -84,6 +84,15 @@ export class RateLimitError extends AppError {
 }
 
 /**
+ * 429 Too Many Requests - Generic rate limiting with custom message
+ */
+export class TooManyRequestsError extends AppError {
+  constructor(message = 'Too many requests', context?: Partial<ErrorContext>) {
+    super(message, 429, 'TOO_MANY_REQUESTS', context);
+  }
+}
+
+/**
  * 503 Service Unavailable
  */
 export class ServiceUnavailableError extends AppError {

@@ -6,8 +6,8 @@
 import crypto from 'crypto';
 import { config } from '../config';
 import { logger } from '../utils/logger';
-import { BadRequestError, RecallApiError } from '@zigznote/shared';
-import { meetingRepository } from '@zigznote/database';
+import { BadRequestError, RecallApiError, ConflictError } from '@zigznote/shared';
+import { meetingRepository, prisma } from '@zigznote/database';
 import { addTranscriptionJob } from '../jobs';
 import { emitBotStatus, emitTranscriptChunk } from '../websocket';
 
@@ -15,7 +15,9 @@ import { emitBotStatus, emitTranscriptChunk } from '../websocket';
  * Bot creation parameters
  */
 export interface CreateBotParams {
+  meetingId: string;
   meetingUrl: string;
+  organizationId: string;
   botName?: string;
   joinAt?: Date;
   transcriptionEnabled?: boolean;
@@ -183,11 +185,48 @@ class RecallService {
 
   /**
    * Create a bot to join a meeting
+   * Includes duplicate prevention to avoid multiple bots for the same meeting
    */
   async createBot(params: CreateBotParams): Promise<BotStatus> {
-    const { meetingUrl, botName, joinAt, transcriptionEnabled = false } = params;
+    const { meetingId, meetingUrl, organizationId, botName, joinAt, transcriptionEnabled = false } = params;
 
-    logger.info({ meetingUrl, joinAt }, 'Creating Recall.ai bot');
+    logger.info({ meetingId, meetingUrl, joinAt }, 'Creating Recall.ai bot');
+
+    // Phase 8.95: Duplicate bot prevention
+    // Check 1: Existing active bot for this meeting record
+    const existingBot = await prisma.meeting.findFirst({
+      where: {
+        id: meetingId,
+        status: { in: ['joining', 'in_progress', 'recording'] },
+        botId: { not: null },
+      },
+    });
+
+    if (existingBot) {
+      logger.warn({ meetingId, existingBotId: existingBot.botId }, 'Duplicate bot creation attempt blocked');
+      throw new ConflictError(
+        'A recording is already in progress for this meeting. ' +
+        'Please wait for it to complete or stop it first.'
+      );
+    }
+
+    // Check 2: Active bot for same meeting URL (different meeting record in same org)
+    const duplicateUrl = await prisma.meeting.findFirst({
+      where: {
+        meetingUrl,
+        organizationId,
+        status: { in: ['joining', 'in_progress', 'recording'] },
+        botId: { not: null },
+        id: { not: meetingId },
+      },
+    });
+
+    if (duplicateUrl) {
+      logger.warn({ meetingId, meetingUrl, duplicateMeetingId: duplicateUrl.id }, 'Duplicate URL bot creation attempt blocked');
+      throw new ConflictError(
+        'This meeting URL is already being recorded in another session.'
+      );
+    }
 
     const body: Record<string, unknown> = {
       meeting_url: meetingUrl,
