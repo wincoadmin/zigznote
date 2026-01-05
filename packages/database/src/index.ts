@@ -4,6 +4,7 @@ export { prisma, PrismaClient } from './client';
 export type {
   Organization,
   User,
+  UserApiKey,
   CalendarConnection,
   Meeting,
   MeetingParticipant,
@@ -14,7 +15,13 @@ export type {
   IntegrationConnection,
   AutomationRule,
   Webhook,
-  WebhookLog,
+  WebhookDelivery,
+  BillingCustomer,
+  BillingPlan,
+  Subscription,
+  Payment,
+  Invoice,
+  Refund,
   Prisma,
 } from '@prisma/client';
 

@@ -11,6 +11,7 @@ interface SettingsLayoutProps {
 
 const settingsNav = [
   { name: 'General', href: '/settings' },
+  { name: 'API Keys', href: '/settings/api-keys' },
   { name: 'Integrations', href: '/settings/integrations' },
   { name: 'Webhooks', href: '/settings/webhooks' },
   { name: 'Billing', href: '/settings/billing' },

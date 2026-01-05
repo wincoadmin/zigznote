@@ -175,3 +175,39 @@ export const insightsApi = {
 export const healthApi = {
   check: () => api.get('/health'),
 };
+
+// API Key types
+export interface ApiKeyScope {
+  scope: string;
+  description: string;
+}
+
+export interface ApiKey {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  scopes: string[];
+  lastUsedAt: string | null;
+  usageCount: number;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
+export interface ApiKeyWithSecret extends ApiKey {
+  key: string; // Full key - only returned on creation
+}
+
+// API Keys API methods
+export const apiKeysApi = {
+  list: () => api.get<ApiKey[]>('/api/v1/api-keys'),
+
+  getScopes: () => api.get<ApiKeyScope[]>('/api/v1/api-keys/scopes'),
+
+  create: (data: { name: string; scopes: string[]; expiresInDays?: number }) =>
+    api.post<ApiKeyWithSecret>('/api/v1/api-keys', data),
+
+  update: (keyId: string, data: { name?: string; scopes?: string[] }) =>
+    api.patch<ApiKey>(`/api/v1/api-keys/${keyId}`, data),
+
+  revoke: (keyId: string) => api.delete(`/api/v1/api-keys/${keyId}`),
+};

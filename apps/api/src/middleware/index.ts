@@ -12,3 +12,10 @@ export {
   requireOrgAccess,
   type AuthenticatedRequest,
 } from './auth';
+
+export {
+  optionalApiKeyAuth,
+  requireApiKeyAuth,
+  requireScope,
+  type ApiKeyAuthenticatedRequest,
+} from './apiKeyAuth';

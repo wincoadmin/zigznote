@@ -43,3 +43,8 @@ export {
   type CreateCalendarConnectionInput,
   type UpdateCalendarConnectionInput,
 } from './calendarRepository';
+
+export {
+  UserApiKeyRepository,
+  userApiKeyRepository,
+} from './userApiKeyRepository';

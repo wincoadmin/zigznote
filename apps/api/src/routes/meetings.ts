@@ -1,16 +1,17 @@
 /**
  * Meeting routes
- * All routes require authentication
+ * All routes require authentication (session or API key)
  */
 
 import { Router } from 'express';
 import type { Router as IRouter } from 'express';
 import { meetingController } from '../controllers/meetingController';
-import { requireAuth } from '../middleware';
+import { requireAuth, optionalApiKeyAuth, requireScope } from '../middleware';
 
 export const meetingsRouter: IRouter = Router();
 
-// All meeting routes require authentication
+// Check for API key first, then fall back to session auth
+meetingsRouter.use(optionalApiKeyAuth);
 meetingsRouter.use(requireAuth);
 
 /**
@@ -24,33 +25,53 @@ meetingsRouter.use(requireAuth);
  * @query {string} startTimeFrom - Filter meetings starting after this date
  * @query {string} startTimeTo - Filter meetings starting before this date
  */
-meetingsRouter.get('/', meetingController.list.bind(meetingController));
+meetingsRouter.get(
+  '/',
+  requireScope('meetings:read'),
+  meetingController.list.bind(meetingController)
+);
 
 /**
  * @route GET /api/v1/meetings/upcoming
  * @description Get upcoming scheduled meetings
  * @query {number} limit - Maximum number to return (default: 10)
  */
-meetingsRouter.get('/upcoming', meetingController.getUpcoming.bind(meetingController));
+meetingsRouter.get(
+  '/upcoming',
+  requireScope('meetings:read'),
+  meetingController.getUpcoming.bind(meetingController)
+);
 
 /**
  * @route GET /api/v1/meetings/recent
  * @description Get recent completed meetings
  * @query {number} limit - Maximum number to return (default: 10)
  */
-meetingsRouter.get('/recent', meetingController.getRecent.bind(meetingController));
+meetingsRouter.get(
+  '/recent',
+  requireScope('meetings:read'),
+  meetingController.getRecent.bind(meetingController)
+);
 
 /**
  * @route GET /api/v1/meetings/stats
  * @description Get meeting statistics for the organization
  */
-meetingsRouter.get('/stats', meetingController.getStats.bind(meetingController));
+meetingsRouter.get(
+  '/stats',
+  requireScope('meetings:read'),
+  meetingController.getStats.bind(meetingController)
+);
 
 /**
  * @route GET /api/v1/meetings/:id
  * @description Get a single meeting by ID
  */
-meetingsRouter.get('/:id', meetingController.getById.bind(meetingController));
+meetingsRouter.get(
+  '/:id',
+  requireScope('meetings:read'),
+  meetingController.getById.bind(meetingController)
+);
 
 /**
  * @route POST /api/v1/meetings
@@ -61,37 +82,61 @@ meetingsRouter.get('/:id', meetingController.getById.bind(meetingController));
  * @body {string} startTime - Scheduled start time
  * @body {string} endTime - Scheduled end time
  */
-meetingsRouter.post('/', meetingController.create.bind(meetingController));
+meetingsRouter.post(
+  '/',
+  requireScope('meetings:write'),
+  meetingController.create.bind(meetingController)
+);
 
 /**
  * @route PUT /api/v1/meetings/:id
  * @description Update a meeting
  */
-meetingsRouter.put('/:id', meetingController.update.bind(meetingController));
+meetingsRouter.put(
+  '/:id',
+  requireScope('meetings:write'),
+  meetingController.update.bind(meetingController)
+);
 
 /**
  * @route DELETE /api/v1/meetings/:id
  * @description Delete a meeting (soft delete)
  */
-meetingsRouter.delete('/:id', meetingController.delete.bind(meetingController));
+meetingsRouter.delete(
+  '/:id',
+  requireScope('meetings:write'),
+  meetingController.delete.bind(meetingController)
+);
 
 /**
  * @route GET /api/v1/meetings/:id/transcript
  * @description Get the transcript for a meeting
  */
-meetingsRouter.get('/:id/transcript', meetingController.getTranscript.bind(meetingController));
+meetingsRouter.get(
+  '/:id/transcript',
+  requireScope('transcripts:read'),
+  meetingController.getTranscript.bind(meetingController)
+);
 
 /**
  * @route GET /api/v1/meetings/:id/summary
  * @description Get the AI-generated summary for a meeting
  */
-meetingsRouter.get('/:id/summary', meetingController.getSummary.bind(meetingController));
+meetingsRouter.get(
+  '/:id/summary',
+  requireScope('transcripts:read'),
+  meetingController.getSummary.bind(meetingController)
+);
 
 /**
  * @route GET /api/v1/meetings/:id/action-items
  * @description Get action items extracted from a meeting
  */
-meetingsRouter.get('/:id/action-items', meetingController.getActionItems.bind(meetingController));
+meetingsRouter.get(
+  '/:id/action-items',
+  requireScope('action-items:read'),
+  meetingController.getActionItems.bind(meetingController)
+);
 
 /**
  * @route PATCH /api/v1/meetings/:id/action-items/:actionItemId
@@ -103,6 +148,7 @@ meetingsRouter.get('/:id/action-items', meetingController.getActionItems.bind(me
  */
 meetingsRouter.patch(
   '/:id/action-items/:actionItemId',
+  requireScope('action-items:write'),
   meetingController.updateActionItem.bind(meetingController)
 );
 
@@ -112,6 +158,7 @@ meetingsRouter.patch(
  */
 meetingsRouter.delete(
   '/:id/action-items/:actionItemId',
+  requireScope('action-items:write'),
   meetingController.deleteActionItem.bind(meetingController)
 );
 
@@ -122,6 +169,7 @@ meetingsRouter.delete(
  */
 meetingsRouter.post(
   '/:id/summary/regenerate',
+  requireScope('transcripts:write'),
   meetingController.regenerateSummary.bind(meetingController)
 );
 
@@ -132,7 +180,11 @@ meetingsRouter.post(
  * @body {string} forceModel - Optional: "claude" or "gpt" to force a specific model
  */
 import { insightsController } from '../controllers/insightsController';
-meetingsRouter.post('/:id/insights', insightsController.extractInsights.bind(insightsController));
+meetingsRouter.post(
+  '/:id/insights',
+  requireScope('meetings:read'),
+  insightsController.extractInsights.bind(insightsController)
+);
 
 /**
  * @route POST /api/v1/meetings/:id/bot
@@ -140,16 +192,28 @@ meetingsRouter.post('/:id/insights', insightsController.extractInsights.bind(ins
  * @body {string} botName - Optional custom bot name
  * @body {Date} joinAt - Optional scheduled join time
  */
-meetingsRouter.post('/:id/bot', meetingController.createBot.bind(meetingController));
+meetingsRouter.post(
+  '/:id/bot',
+  requireScope('meetings:write'),
+  meetingController.createBot.bind(meetingController)
+);
 
 /**
  * @route GET /api/v1/meetings/:id/bot
  * @description Get the bot status for a meeting
  */
-meetingsRouter.get('/:id/bot', meetingController.getBotStatus.bind(meetingController));
+meetingsRouter.get(
+  '/:id/bot',
+  requireScope('meetings:read'),
+  meetingController.getBotStatus.bind(meetingController)
+);
 
 /**
  * @route DELETE /api/v1/meetings/:id/bot
  * @description Stop and remove the bot from a meeting
  */
-meetingsRouter.delete('/:id/bot', meetingController.stopBot.bind(meetingController));
+meetingsRouter.delete(
+  '/:id/bot',
+  requireScope('meetings:write'),
+  meetingController.stopBot.bind(meetingController)
+);

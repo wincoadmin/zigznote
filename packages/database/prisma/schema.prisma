@@ -31,6 +31,7 @@ model Organization {
   automationRules        AutomationRule[]
   webhooks               Webhook[]
   billingCustomer        BillingCustomer?
+  userApiKeys            UserApiKey[]
 
   @@index([clerkId])
   @@index([deletedAt])
@@ -52,11 +53,47 @@ model User {
   organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   calendarConnections CalendarConnection[]
   meetingsCreated     Meeting[]            @relation("MeetingCreator")
+  apiKeys             UserApiKey[]
 
   @@index([organizationId])
   @@index([clerkId])
   @@index([deletedAt])
   @@map("users")
+}
+
+// ============================================
+// User API Keys
+// ============================================
+
+model UserApiKey {
+  id             String    @id @default(uuid())
+  userId         String    @map("user_id")
+  organizationId String    @map("organization_id")
+
+  name           String    // User-provided name: "My Zapier Key", "Mobile App"
+  keyPrefix      String    @map("key_prefix") // First 12 chars for identification: "sk_live_xxxx"
+  keyHash        String    @unique @map("key_hash") // bcrypt hash of full key
+
+  // Permissions (granular scopes)
+  scopes         String[]  // ["meetings:read", "meetings:write", "transcripts:read"]
+
+  // Usage tracking
+  lastUsedAt     DateTime? @map("last_used_at")
+  lastUsedIp     String?   @map("last_used_ip")
+  usageCount     Int       @default(0) @map("usage_count")
+
+  // Lifecycle
+  expiresAt      DateTime? @map("expires_at")
+  revokedAt      DateTime? @map("revoked_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([keyPrefix])
+  @@map("user_api_keys")
 }
 
 // ============================================

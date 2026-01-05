@@ -7,6 +7,7 @@ let meetingsStore: Map<string, MockMeeting> = new Map();
 let transcriptsStore: Map<string, MockTranscript> = new Map();
 let summariesStore: Map<string, MockSummary> = new Map();
 let actionItemsStore: Map<string, MockActionItem> = new Map();
+let apiKeysStore: Map<string, MockApiKey> = new Map();
 let idCounter = 1;
 
 interface MockMeeting {
@@ -58,6 +59,22 @@ interface MockActionItem {
   completed: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+interface MockApiKey {
+  id: string;
+  userId: string;
+  organizationId: string;
+  name: string;
+  keyPrefix: string;
+  keyHash: string;
+  scopes: string[];
+  lastUsedAt: Date | null;
+  lastUsedIp: string | null;
+  usageCount: number;
+  expiresAt: Date | null;
+  revokedAt: Date | null;
+  createdAt: Date;
 }
 
 function generateId(): string {
@@ -433,6 +450,83 @@ export const transcriptRepository = {
   })),
 };
 
+export const userApiKeyRepository = {
+  create: jest.fn(async (data: Partial<MockApiKey>) => {
+    const key: MockApiKey = {
+      id: generateId(),
+      userId: data.userId || 'test-user-id',
+      organizationId: data.organizationId || 'test-org-id',
+      name: data.name || 'Test Key',
+      keyPrefix: data.keyPrefix || 'sk_live_',
+      keyHash: data.keyHash || 'hashed-key',
+      scopes: data.scopes || ['meetings:read'],
+      lastUsedAt: data.lastUsedAt || null,
+      lastUsedIp: data.lastUsedIp || null,
+      usageCount: data.usageCount || 0,
+      expiresAt: data.expiresAt || null,
+      revokedAt: data.revokedAt || null,
+      createdAt: new Date(),
+    };
+    apiKeysStore.set(key.id, key);
+    return key;
+  }),
+
+  findById: jest.fn(async (id: string) => {
+    return apiKeysStore.get(id) || null;
+  }),
+
+  findByUser: jest.fn(async (userId: string) => {
+    return Array.from(apiKeysStore.values()).filter(
+      (k) => k.userId === userId && !k.revokedAt
+    );
+  }),
+
+  findByPrefix: jest.fn(async (prefix: string) => {
+    return Array.from(apiKeysStore.values()).filter(
+      (k) => k.keyPrefix === prefix
+    );
+  }),
+
+  countByUser: jest.fn(async (userId: string) => {
+    return Array.from(apiKeysStore.values()).filter(
+      (k) => k.userId === userId && !k.revokedAt
+    ).length;
+  }),
+
+  recordUsage: jest.fn(async (id: string, ip?: string) => {
+    const key = apiKeysStore.get(id);
+    if (!key) return;
+    key.lastUsedAt = new Date();
+    key.lastUsedIp = ip || null;
+    key.usageCount += 1;
+  }),
+
+  revoke: jest.fn(async (id: string) => {
+    const key = apiKeysStore.get(id);
+    if (!key) return;
+    key.revokedAt = new Date();
+  }),
+
+  update: jest.fn(async (id: string, data: Partial<MockApiKey>) => {
+    const key = apiKeysStore.get(id);
+    if (!key) return null;
+    Object.assign(key, data);
+    return key;
+  }),
+
+  deleteExpired: jest.fn(async () => {
+    const now = new Date();
+    let count = 0;
+    for (const [id, key] of apiKeysStore.entries()) {
+      if (key.expiresAt && key.expiresAt < now) {
+        apiKeysStore.delete(id);
+        count++;
+      }
+    }
+    return count;
+  }),
+};
+
 export const prisma = {
   $queryRaw: jest.fn(async () => [{ '?column?': 1 }]),
   $connect: jest.fn(async () => undefined),
@@ -445,6 +539,7 @@ export function __resetMocks() {
   transcriptsStore.clear();
   summariesStore.clear();
   actionItemsStore.clear();
+  apiKeysStore.clear();
   idCounter = 1;
 
   jest.clearAllMocks();
@@ -456,4 +551,5 @@ export const __stores = {
   transcripts: transcriptsStore,
   summaries: summariesStore,
   actionItems: actionItemsStore,
+  apiKeys: apiKeysStore,
 };

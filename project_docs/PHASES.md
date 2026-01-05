@@ -338,6 +338,60 @@
 
 ---
 
+## Phase 6.5: User API Keys
+
+**Status:** ✅ Complete
+**Estimated Time:** 30-45 minutes
+
+### Planned Deliverables
+- UserApiKey database schema with scopes
+- API key service (secure generation, bcrypt hashing)
+- API key authentication middleware
+- Dual auth support (session + API key)
+- API key management endpoints (CRUD)
+- Granular permission scopes
+- Settings page for key management
+- Usage tracking (last used, request count)
+- API documentation for external developers
+
+### Key Features
+| Feature | Purpose |
+|---------|---------|
+| Secure Key Generation | `sk_live_` prefixed, 256-bit random |
+| Granular Scopes | `meetings:read`, `transcripts:write`, etc. |
+| Key Expiration | Optional time-limited keys |
+| Usage Tracking | Monitor key usage and last access |
+
+### Available Scopes
+| Scope | Description |
+|-------|-------------|
+| `meetings:read` | View meetings and details |
+| `meetings:write` | Create, update, delete meetings |
+| `transcripts:read` | View transcripts and summaries |
+| `transcripts:write` | Update transcripts and summaries |
+| `action-items:read` | View action items |
+| `action-items:write` | Manage action items |
+| `webhooks:manage` | Create and manage webhooks |
+
+### Key Decisions Made
+- **Key Format**: `sk_live_` prefix + 256-bit base64url encoded random bytes
+- **Storage**: Only bcrypt hash stored (10 rounds), never the actual key
+- **Prefix Lookup**: Store first 12 chars to optimize validation (narrow candidates before bcrypt compare)
+- **Scope Enforcement**: Only checked for API key auth, session auth bypasses scope checks
+- **One-Time Display**: Full key only returned on creation
+- **Max Keys**: 10 keys per user limit
+
+### Actual Changes from Plan
+- All planned deliverables implemented
+- Added 29 tests for API key service and middleware
+- Frontend settings page fully functional with create/list/revoke
+- Meetings routes updated with dual auth and scope requirements
+
+### Handoff File
+`PHASE_6_5_COMPLETE.md`
+
+---
+
 ## Phase 7: Admin Panel
 
 **Status:** ⬜ Not Started
@@ -454,11 +508,12 @@ _To be filled after phase completion_
 | 4 | AI Summarization | ✅ | 45-60 min |
 | 5 | Frontend Dashboard | ✅ | 90-120 min |
 | 6 | Integrations & Billing | ✅ | 90-120 min |
+| 6.5 | User API Keys | ✅ | 30-45 min |
 | 7 | Admin Panel | ⬜ | 90-120 min |
 | 8 | Search & Polish | ⬜ | 60-90 min |
 | 8.5 | Hardening & Stress Testing | ⬜ | 60-90 min |
 
-**Total Estimated Time:** 10-14 hours
+**Total Estimated Time:** 10.5-15 hours
 
 ---
 
@@ -475,6 +530,7 @@ _To be filled after phase completion_
 | 2026-01-04 | Phase 4 | AI Summarization (Claude/GPT) with insights and action items complete |
 | 2026-01-05 | Phase 5 | Frontend Dashboard with zigznote branding, 343 tests passing |
 | 2026-01-05 | Phase 6 | Integrations (Slack, HubSpot, Webhooks) + Billing (Stripe, Flutterwave) complete |
+| 2026-01-05 | Phase 6.5 | User API Keys with secure generation, bcrypt hashing, scopes, and settings UI |
 
 ---
 

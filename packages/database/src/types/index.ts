@@ -207,3 +207,24 @@ export interface CreateActionItemInput {
   assignee?: string;
   dueDate?: Date;
 }
+
+/**
+ * Create user API key input
+ */
+export interface CreateUserApiKeyInput {
+  userId: string;
+  organizationId: string;
+  name: string;
+  keyPrefix: string;
+  keyHash: string;
+  scopes: string[];
+  expiresAt?: Date | null;
+}
+
+/**
+ * Update user API key input
+ */
+export interface UpdateUserApiKeyInput {
+  name?: string;
+  scopes?: string[];
+}
