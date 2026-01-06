@@ -8,6 +8,7 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
+import { prisma } from '@zigznote/database';
 import { meetingChatService, embeddingService } from '../services';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { validateRequest } from '../middleware/validateRequest';
@@ -226,7 +227,6 @@ router.get(
       const meetingId = req.params.meetingId!;
 
       // Verify meeting belongs to user's organization
-      const { prisma } = await import('@zigznote/database');
       const meeting = await prisma.meeting.findFirst({
         where: {
           id: meetingId,

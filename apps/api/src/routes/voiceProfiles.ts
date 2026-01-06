@@ -5,6 +5,7 @@
 
 import { Router } from 'express';
 import type { Router as IRouter, Request, Response, NextFunction } from 'express';
+import { prisma } from '@zigznote/database';
 import { voiceProfileService, speakerRecognitionService } from '../services/voiceProfileService';
 import { requireAuth, optionalApiKeyAuth, requireScope, type AuthenticatedRequest } from '../middleware';
 import { z } from 'zod';
@@ -276,7 +277,6 @@ voiceProfilesRouter.get(
       }
 
       // Verify meeting belongs to user's organization
-      const { prisma } = await import('@zigznote/database');
       const meeting = await prisma.meeting.findFirst({
         where: { id: meetingId, organizationId: auth.organizationId, deletedAt: null },
       });
@@ -314,7 +314,6 @@ voiceProfilesRouter.post(
       }
 
       // Verify meeting belongs to user's organization
-      const { prisma } = await import('@zigznote/database');
       const meeting = await prisma.meeting.findFirst({
         where: { id: meetingId, organizationId: auth.organizationId, deletedAt: null },
       });

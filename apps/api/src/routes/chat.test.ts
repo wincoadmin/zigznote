@@ -53,6 +53,19 @@ jest.mock('@zigznote/shared', () => ({
   }),
 }));
 
+// Mock @zigznote/database for security checks
+jest.mock('@zigznote/database', () => ({
+  prisma: {
+    meeting: {
+      findFirst: jest.fn().mockResolvedValue({
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        organizationId: 'org-123',
+        title: 'Test Meeting',
+      }),
+    },
+  },
+}));
+
 const mockMeetingChatService = meetingChatService as jest.Mocked<typeof meetingChatService>;
 const mockEmbeddingService = embeddingService as jest.Mocked<typeof embeddingService>;
 
