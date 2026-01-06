@@ -1087,6 +1087,103 @@ pnpm --filter @zigznote/api test -- --testPathPattern=idor
 
 ---
 
+## Phase 11: NextAuth.js Authentication
+
+**Status:** ✅ Complete
+**Estimated Time:** 2-3 hours
+
+### Planned Deliverables
+- Replace Clerk with NextAuth.js for self-hosted authentication
+- Email/password authentication with bcrypt
+- OAuth providers (Google, GitHub, Microsoft)
+- Two-factor authentication (TOTP)
+- Email verification flow
+- Password reset flow
+- Rate limiting with brute force protection
+- Session management with JWT
+
+### Key Features
+| Feature | Purpose |
+|---------|---------|
+| Email/Password | Primary authentication method |
+| OAuth Providers | Google, GitHub, Microsoft sign-in |
+| 2FA (TOTP) | Time-based one-time passwords |
+| Email Verification | Verify user email addresses |
+| Password Reset | Secure password recovery flow |
+| Rate Limiting | Brute force attack prevention |
+
+### Key Decisions Made
+- **NextAuth.js v5**: Using latest version with App Router support
+- **Prisma Adapter**: Direct database integration for sessions/accounts
+- **bcryptjs**: Password hashing with 12 rounds
+- **speakeasy**: TOTP generation and verification
+- **jose**: JWT verification for API authentication
+- **Redis Rate Limiting**: Sliding window with ioredis
+
+### Database Changes
+- User model extended with password, 2FA fields, login tracking
+- Added Account, Session, VerificationToken models (NextAuth)
+- Added LoginHistory model for security audit trail
+- Added TwoFactorBackupCode model for recovery
+
+### Actual Changes from Plan
+- Replaced Clerk entirely with self-hosted NextAuth.js
+- Added comprehensive auth pages (sign-in, sign-up, forgot-password, reset-password, verify-email)
+- API middleware updated from Clerk to JWT verification
+- All 37 auth-related files created/modified
+- Tests: 449 API + 247 Web passing
+
+### Handoff File
+`PHASE_11_NEXTAUTH_SPEC.md`
+
+---
+
+## Phase 11.5: Self-Hosted Infrastructure
+
+**Status:** ✅ Complete
+**Estimated Time:** 1-2 hours
+
+### Planned Deliverables
+- Replace Resend with AWS SES for email
+- Replace Upstash with self-hosted Redis (ioredis)
+- Add MinIO for S3-compatible object storage
+- Update environment configuration
+
+### Key Features
+| Feature | Purpose |
+|---------|---------|
+| AWS SES | Self-hosted transactional email |
+| ioredis | Self-hosted Redis connectivity |
+| MinIO | S3-compatible local object storage |
+| Bucket Init | Auto-create storage buckets on startup |
+
+### Key Decisions Made
+- **AWS SES**: Using @aws-sdk/client-ses for email delivery
+- **ioredis**: Full Redis client with connection pooling
+- **MinIO**: S3-compatible storage for local development
+- **Fail-Open**: Rate limiting allows requests if Redis unavailable
+- **Lazy Init**: Services initialize on first use, not import
+
+### Infrastructure Changes
+| Service | Before | After |
+|---------|--------|-------|
+| Email | Resend (paid) | AWS SES (self-hosted) |
+| Rate Limiting | Upstash (paid) | ioredis + Redis (self-hosted) |
+| Object Storage | — | MinIO (S3-compatible) |
+
+### Actual Changes from Plan
+- Email service fully migrated to AWS SES
+- Rate limiting uses Redis sorted sets for sliding window
+- MinIO added to Docker Compose (ports 9000/9001)
+- Storage service enhanced with bucket initialization
+- Added babel-jest for ESM module support (jose)
+- Tests: 449 API + 247 Web passing
+
+### Handoff File
+`PHASE_11.5_INFRASTRUCTURE_SPEC.md`
+
+---
+
 ## Summary Table
 
 | Phase | Name | Status | Est. Time |
@@ -1115,8 +1212,10 @@ pnpm --filter @zigznote/api test -- --testPathPattern=idor
 | 9.5 | Smart Chat Input & Attachments | ✅ | 2-3 hrs |
 | 10 | Pre-Launch Polish & Infrastructure | ✅ | 2-3 hrs |
 | — | Security Audit | ✅ | 45-60 min |
+| 11 | NextAuth.js Authentication | ✅ | 2-3 hrs |
+| 11.5 | Self-Hosted Infrastructure | ✅ | 1-2 hrs |
 
-**Total Estimated Time:** 23-34 hours
+**Total Estimated Time:** 26-39 hours
 **Status:** All phases complete + Security Audit passed!
 
 ---
@@ -1151,6 +1250,8 @@ pnpm --filter @zigznote/api test -- --testPathPattern=idor
 | 2026-01-06 | Phase 8.95.1 | Critical Gap Fixes - idempotency integration, transactions, dunning emails, 589 tests |
 | 2026-01-06 | Phase 10 | Pre-Launch Polish - backup system, legal pages, mobile responsive, alerting, OpenAPI docs, Docker production, 640 tests |
 | 2026-01-06 | Security Audit | Fixed 3 IDOR vulnerabilities, created 56 security tests, audited 25+ route files, 998 total tests passing |
+| 2026-01-06 | Phase 11 | NextAuth.js Authentication - replaced Clerk with self-hosted auth, email/password, OAuth, 2FA, 37 files changed |
+| 2026-01-06 | Phase 11.5 | Self-Hosted Infrastructure - AWS SES email, ioredis rate limiting, MinIO storage, 14 files changed |
 
 ---
 
