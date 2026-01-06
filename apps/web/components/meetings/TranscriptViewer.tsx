@@ -113,15 +113,15 @@ export function TranscriptViewer({
   return (
     <div className={cn('flex flex-col rounded-lg border border-slate-200 bg-white', className)}>
       {/* Search header */}
-      <div className="border-b border-slate-200 p-3">
+      <div className="border-b border-slate-200 p-2 sm:p-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="absolute left-2 sm:left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <Input
             type="search"
-            placeholder="Search transcript..."
+            placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-8 sm:pl-9 text-sm"
           />
         </div>
       </div>
@@ -129,11 +129,11 @@ export function TranscriptViewer({
       {/* Transcript content */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-4"
+        className="flex-1 overflow-y-auto p-2 sm:p-4"
         style={{ maxHeight: '500px' }}
         onScroll={handleScroll}
       >
-        <div className="space-y-3">
+        <div className="space-y-2 sm:space-y-3">
           {filteredSegments.map((segment, index) => {
             const actualIndex = segments.indexOf(segment);
             const isActive = actualIndex === currentSegmentIndex;
@@ -145,14 +145,14 @@ export function TranscriptViewer({
                 data-segment-index={actualIndex}
                 onClick={() => onSegmentClick?.(segment.startMs)}
                 className={cn(
-                  'cursor-pointer rounded-lg border-l-4 p-3 transition-all',
+                  'cursor-pointer rounded-lg border-l-2 sm:border-l-4 p-2 sm:p-3 transition-all',
                   colorClass,
                   isActive && 'ring-2 ring-primary-500',
                   !isActive && 'hover:bg-slate-50'
                 )}
               >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium text-sm text-slate-900">
+                <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+                  <span className="font-medium text-xs sm:text-sm text-slate-900 truncate max-w-[60%]">
                     {segment.speaker}
                   </span>
                   <button
@@ -160,12 +160,12 @@ export function TranscriptViewer({
                       e.stopPropagation();
                       onSegmentClick?.(segment.startMs);
                     }}
-                    className="font-mono text-xs text-slate-500 hover:text-primary-600"
+                    className="font-mono text-[10px] sm:text-xs text-slate-500 hover:text-primary-600 shrink-0"
                   >
                     {formatTimestamp(segment.startMs)}
                   </button>
                 </div>
-                <p className="text-sm text-slate-700 leading-relaxed">
+                <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
                   {searchQuery ? (
                     highlightText(segment.text, searchQuery)
                   ) : (

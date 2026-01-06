@@ -15,15 +15,59 @@ meetingsRouter.use(optionalApiKeyAuth);
 meetingsRouter.use(requireAuth);
 
 /**
- * @route GET /api/v1/meetings
- * @description List all meetings with pagination and filtering
- * @query {number} page - Page number (default: 1)
- * @query {number} limit - Items per page (default: 20, max: 100)
- * @query {string} status - Filter by status (scheduled, recording, processing, completed, failed)
- * @query {string} platform - Filter by platform (zoom, meet, teams, webex, other)
- * @query {string} search - Search in meeting titles
- * @query {string} startTimeFrom - Filter meetings starting after this date
- * @query {string} startTimeTo - Filter meetings starting before this date
+ * @openapi
+ * /api/v1/meetings:
+ *   get:
+ *     summary: List meetings
+ *     description: Get paginated list of meetings for the authenticated user's organization
+ *     tags: [Meetings]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 100
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [scheduled, pending, joining, recording, processing, completed, failed, cancelled]
+ *       - in: query
+ *         name: platform
+ *         schema:
+ *           type: string
+ *           enum: [zoom, meet, teams, webex, other]
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search in meeting titles
+ *     responses:
+ *       200:
+ *         description: List of meetings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 meetings:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Meeting'
+ *                 pagination:
+ *                   $ref: '#/components/schemas/Pagination'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 meetingsRouter.get(
   '/',
@@ -64,8 +108,31 @@ meetingsRouter.get(
 );
 
 /**
- * @route GET /api/v1/meetings/:id
- * @description Get a single meeting by ID
+ * @openapi
+ * /api/v1/meetings/{id}:
+ *   get:
+ *     summary: Get meeting details
+ *     description: Get detailed information about a specific meeting
+ *     tags: [Meetings]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Meeting details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 meeting:
+ *                   $ref: '#/components/schemas/Meeting'
+ *       404:
+ *         description: Meeting not found
  */
 meetingsRouter.get(
   '/:id',
@@ -74,13 +141,51 @@ meetingsRouter.get(
 );
 
 /**
- * @route POST /api/v1/meetings
- * @description Create a new meeting
- * @body {string} title - Meeting title (required)
- * @body {string} platform - Platform (zoom, meet, teams, webex, other)
- * @body {string} meetingUrl - Meeting URL
- * @body {string} startTime - Scheduled start time
- * @body {string} endTime - Scheduled end time
+ * @openapi
+ * /api/v1/meetings:
+ *   post:
+ *     summary: Create a meeting
+ *     description: Create a new meeting and optionally start the recording bot
+ *     tags: [Meetings]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 description: Meeting title
+ *               platform:
+ *                 type: string
+ *                 enum: [zoom, meet, teams, webex, other]
+ *               meetingUrl:
+ *                 type: string
+ *                 format: uri
+ *                 description: Meeting URL (Zoom, Meet, Teams)
+ *               startTime:
+ *                 type: string
+ *                 format: date-time
+ *               endTime:
+ *                 type: string
+ *                 format: date-time
+ *     responses:
+ *       201:
+ *         description: Meeting created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 meeting:
+ *                   $ref: '#/components/schemas/Meeting'
+ *       400:
+ *         description: Invalid request
+ *       401:
+ *         description: Unauthorized
  */
 meetingsRouter.post(
   '/',
@@ -109,8 +214,31 @@ meetingsRouter.delete(
 );
 
 /**
- * @route GET /api/v1/meetings/:id/transcript
- * @description Get the transcript for a meeting
+ * @openapi
+ * /api/v1/meetings/{id}/transcript:
+ *   get:
+ *     summary: Get meeting transcript
+ *     description: Get the full transcript for a meeting
+ *     tags: [Transcripts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Meeting transcript
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 transcript:
+ *                   $ref: '#/components/schemas/Transcript'
+ *       404:
+ *         description: Transcript not found
  */
 meetingsRouter.get(
   '/:id/transcript',
@@ -119,8 +247,31 @@ meetingsRouter.get(
 );
 
 /**
- * @route GET /api/v1/meetings/:id/summary
- * @description Get the AI-generated summary for a meeting
+ * @openapi
+ * /api/v1/meetings/{id}/summary:
+ *   get:
+ *     summary: Get meeting summary
+ *     description: Get the AI-generated summary for a meeting
+ *     tags: [Summaries]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Meeting summary
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 summary:
+ *                   $ref: '#/components/schemas/Summary'
+ *       404:
+ *         description: Summary not found
  */
 meetingsRouter.get(
   '/:id/summary',

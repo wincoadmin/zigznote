@@ -204,15 +204,15 @@ export function ChatInput({ onSend, isLoading, placeholder, disabled }: ChatInpu
       )}
 
       {/* Input area */}
-      <div className="flex items-end gap-2 p-2">
+      <div className="flex items-end gap-1.5 sm:gap-2 p-2">
         {/* Attach button */}
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled}
-          className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg disabled:opacity-50"
+          className="p-1.5 sm:p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg disabled:opacity-50"
           title="Attach file"
         >
-          <Paperclip className="w-5 h-5" />
+          <Paperclip className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
         <input
           ref={fileInputRef}
@@ -227,10 +227,10 @@ export function ChatInput({ onSend, isLoading, placeholder, disabled }: ChatInpu
         <button
           onClick={() => setIsRecording(true)}
           disabled={isRecording || disabled}
-          className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg disabled:opacity-50"
+          className="p-1.5 sm:p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg disabled:opacity-50"
           title="Record audio"
         >
-          <Mic className="w-5 h-5" />
+          <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
 
         {/* Textarea */}
@@ -239,9 +239,9 @@ export function ChatInput({ onSend, isLoading, placeholder, disabled }: ChatInpu
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder || 'Ask a question or paste content...'}
+          placeholder={placeholder || 'Ask a question...'}
           rows={1}
-          className="flex-1 resize-none border-0 focus:ring-0 text-sm py-2 max-h-[200px] bg-transparent dark:text-white placeholder:text-slate-400"
+          className="flex-1 resize-none border-0 focus:ring-0 text-xs sm:text-sm py-1.5 sm:py-2 max-h-[200px] bg-transparent dark:text-white placeholder:text-slate-400"
           disabled={isLoading || disabled}
         />
 
@@ -249,9 +249,9 @@ export function ChatInput({ onSend, isLoading, placeholder, disabled }: ChatInpu
         <button
           onClick={handleSend}
           disabled={isLoading || disabled || (!message.trim() && attachments.length === 0)}
-          className="p-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="p-1.5 sm:p-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+          {isLoading ? <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> : <Send className="w-4 h-4 sm:w-5 sm:h-5" />}
         </button>
       </div>
     </div>

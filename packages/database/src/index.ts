@@ -59,10 +59,12 @@ export type {
   ConversationMessage,
   // Webhook types
   ProcessedWebhook,
+  // Backup types
+  DatabaseBackup,
 } from '@prisma/client';
 
 // Re-export enums
-export { AccountType } from '@prisma/client';
+export { AccountType, BackupType, BackupStatus } from '@prisma/client';
 
 // Export repositories
 export * from './repositories';

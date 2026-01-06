@@ -49,7 +49,7 @@ export function AttachmentChip({ attachment, onRemove, readonly }: AttachmentChi
   return (
     <div
       className={cn(
-        'inline-flex items-start gap-2 p-2 rounded-lg border max-w-xs',
+        'inline-flex items-start gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded-lg border max-w-[200px] sm:max-w-xs',
         hasError ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800' : 'bg-slate-50 border-slate-200 dark:bg-slate-800 dark:border-slate-700',
         isProcessing && 'animate-pulse'
       )}
@@ -57,7 +57,7 @@ export function AttachmentChip({ attachment, onRemove, readonly }: AttachmentChi
       {/* Icon */}
       <div
         className={cn(
-          'flex-shrink-0 w-8 h-8 rounded flex items-center justify-center',
+          'flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 rounded flex items-center justify-center',
           hasError
             ? 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400'
             : isAudio
@@ -66,22 +66,22 @@ export function AttachmentChip({ attachment, onRemove, readonly }: AttachmentChi
         )}
       >
         {isProcessing ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
+          <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
         ) : hasError ? (
-          <AlertCircle className="w-4 h-4" />
+          <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4" />
         ) : isAudio ? (
-          <Music className="w-4 h-4" />
+          <Music className="w-3 h-3 sm:w-4 sm:h-4" />
         ) : (
-          <FileText className="w-4 h-4" />
+          <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
         )}
       </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+        <p className="text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
           {attachment.name}
         </p>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
           {isAudio && attachment.duration && <span>{formatDuration(attachment.duration)} • </span>}
           {isText && attachment.wordCount && (
             <span>{attachment.wordCount.toLocaleString()} words • </span>
@@ -118,9 +118,9 @@ export function AttachmentChip({ attachment, onRemove, readonly }: AttachmentChi
       {!readonly && (
         <button
           onClick={onRemove}
-          className="flex-shrink-0 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded"
+          className="flex-shrink-0 p-0.5 sm:p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded"
         >
-          <X className="w-4 h-4" />
+          <X className="w-3 h-3 sm:w-4 sm:h-4" />
         </button>
       )}
 

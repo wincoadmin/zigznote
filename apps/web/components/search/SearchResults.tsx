@@ -83,18 +83,18 @@ export function SearchResults({
 }: SearchResultsProps) {
   if (isLoading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-2 sm:space-y-4">
         {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className="bg-white rounded-lg border border-slate-200 p-4 animate-pulse"
+            className="bg-white rounded-lg border border-slate-200 p-3 sm:p-4 animate-pulse"
           >
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-8 h-8 bg-slate-200 rounded" />
-              <div className="h-5 bg-slate-200 rounded w-1/3" />
+            <div className="flex items-center gap-2 sm:gap-3 mb-2">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 bg-slate-200 rounded" />
+              <div className="h-4 sm:h-5 bg-slate-200 rounded w-1/3" />
             </div>
-            <div className="h-4 bg-slate-200 rounded w-full mb-2" />
-            <div className="h-4 bg-slate-200 rounded w-2/3" />
+            <div className="h-3 sm:h-4 bg-slate-200 rounded w-full mb-1.5 sm:mb-2" />
+            <div className="h-3 sm:h-4 bg-slate-200 rounded w-2/3" />
           </div>
         ))}
       </div>
@@ -103,14 +103,14 @@ export function SearchResults({
 
   if (results.length === 0) {
     return (
-      <div className="text-center py-12">
-        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <FileText className="w-8 h-8 text-slate-400" />
+      <div className="text-center py-8 sm:py-12">
+        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+          <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-slate-400" />
         </div>
-        <h3 className="text-lg font-medium text-slate-900 mb-2">
+        <h3 className="text-base sm:text-lg font-medium text-slate-900 mb-1.5 sm:mb-2">
           No results found
         </h3>
-        <p className="text-slate-500">
+        <p className="text-sm sm:text-base text-slate-500">
           Try different keywords or adjust your filters
         </p>
       </div>
@@ -118,10 +118,10 @@ export function SearchResults({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2 sm:space-y-4">
       {/* Results header */}
       {total !== undefined && took !== undefined && (
-        <p className="text-sm text-slate-500">
+        <p className="text-xs sm:text-sm text-slate-500">
           Found {total.toLocaleString()} results in {took}ms
         </p>
       )}
@@ -140,44 +140,44 @@ export function SearchResults({
           <Link
             key={`${result.type}-${result.id}`}
             href={link}
-            className="block bg-white rounded-lg border border-slate-200 p-4 hover:border-primary-300 hover:shadow-sm transition-all group"
+            className="block bg-white rounded-lg border border-slate-200 p-3 sm:p-4 hover:border-primary-300 hover:shadow-sm transition-all group"
           >
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-2 sm:gap-3">
               <div
-                className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${typeColors[result.type]}`}
+                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${typeColors[result.type]}`}
               >
-                <Icon className="w-5 h-5" />
+                <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
                   <span
-                    className={`text-xs font-medium px-2 py-0.5 rounded ${typeColors[result.type]}`}
+                    className={`text-[10px] sm:text-xs font-medium px-1.5 sm:px-2 py-0.5 rounded ${typeColors[result.type]}`}
                   >
                     {typeLabels[result.type]}
                   </span>
                   {result.meetingDate && (
-                    <span className="flex items-center gap-1 text-xs text-slate-400">
-                      <Calendar className="w-3 h-3" />
+                    <span className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-400">
+                      <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                       {formatDistanceToNow(new Date(result.meetingDate), {
                         addSuffix: true,
                       })}
                     </span>
                   )}
                 </div>
-                <h3 className="font-medium text-slate-900 mb-1 line-clamp-1">
+                <h3 className="font-medium text-sm sm:text-base text-slate-900 mb-0.5 sm:mb-1 line-clamp-1">
                   {highlightText(result.title, query)}
                 </h3>
-                <p className="text-sm text-slate-500 line-clamp-2">
+                <p className="text-xs sm:text-sm text-slate-500 line-clamp-2">
                   {highlightText(result.preview, query)}
                 </p>
 
                 {/* Highlights */}
                 {result.highlights.length > 0 && (
-                  <div className="mt-2 space-y-1">
+                  <div className="mt-1.5 sm:mt-2 space-y-1">
                     {result.highlights.slice(0, 2).map((highlight, i) => (
                       <p
                         key={i}
-                        className="text-xs text-slate-500 bg-slate-50 rounded px-2 py-1 line-clamp-1"
+                        className="text-[10px] sm:text-xs text-slate-500 bg-slate-50 rounded px-1.5 sm:px-2 py-0.5 sm:py-1 line-clamp-1"
                       >
                         ...{highlightText(highlight, query)}...
                       </p>
@@ -185,7 +185,7 @@ export function SearchResults({
                   </div>
                 )}
               </div>
-              <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-primary-500 flex-shrink-0 mt-2" />
+              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-slate-300 group-hover:text-primary-500 flex-shrink-0 mt-1 sm:mt-2" />
             </div>
           </Link>
         );

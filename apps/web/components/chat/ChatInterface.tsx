@@ -179,22 +179,22 @@ export function ChatInterface({
       )}
     >
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-800">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/40">
-          <MessageSquare className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+      <div className="flex items-center gap-2 sm:gap-3 border-b border-gray-200 px-3 sm:px-4 py-2 sm:py-3 dark:border-gray-800">
+        <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/40">
+          <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 dark:text-amber-400" />
         </div>
         <div>
-          <h3 className="font-semibold text-gray-900 dark:text-white">
+          <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white truncate">
             {meetingTitle ? `Chat: ${meetingTitle}` : 'Meeting Assistant'}
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
             Ask questions about {meetingId ? 'this meeting' : 'your meetings'}
           </p>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6">
         <AnimatePresence initial={false}>
           {messages.length === 0 ? (
             <motion.div
@@ -215,12 +215,12 @@ export function ChatInterface({
 
               {/* Suggested questions */}
               {followups.length > 0 && (
-                <div className="flex flex-wrap justify-center gap-2">
+                <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
                   {followups.map((question, index) => (
                     <button
                       key={index}
                       onClick={() => handleSuggestion(question)}
-                      className="rounded-full bg-gray-100 px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                      className="rounded-full bg-gray-100 px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm text-gray-700 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                     >
                       {question}
                     </button>
@@ -229,7 +229,7 @@ export function ChatInterface({
               )}
             </motion.div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {messages.map((message) => (
                 <motion.div
                   key={message.id}
@@ -237,25 +237,25 @@ export function ChatInterface({
                   initial="hidden"
                   animate="visible"
                   className={cn(
-                    'flex gap-3',
+                    'flex gap-2 sm:gap-3',
                     message.role === 'user' ? 'justify-end' : ''
                   )}
                 >
                   {message.role === 'assistant' && (
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/40">
-                      <Bot className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <div className="flex h-6 w-6 sm:h-8 sm:w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/40">
+                      <Bot className="h-3 w-3 sm:h-4 sm:w-4 text-amber-600 dark:text-amber-400" />
                     </div>
                   )}
 
                   <div
                     className={cn(
-                      'max-w-[80%] rounded-2xl px-4 py-3',
+                      'max-w-[85%] sm:max-w-[80%] rounded-2xl px-3 py-2 sm:px-4 sm:py-3',
                       message.role === 'user'
                         ? 'bg-amber-500 text-white'
                         : 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white'
                     )}
                   >
-                    <p className="whitespace-pre-wrap">{message.content}</p>
+                    <p className="whitespace-pre-wrap text-sm sm:text-base">{message.content}</p>
 
                     {/* Citations */}
                     {message.citations && message.citations.length > 0 && (
@@ -317,8 +317,8 @@ export function ChatInterface({
                   </div>
 
                   {message.role === 'user' && (
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
-                      <User className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                    <div className="flex h-6 w-6 sm:h-8 sm:w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
+                      <User className="h-3 w-3 sm:h-4 sm:w-4 text-gray-600 dark:text-gray-400" />
                     </div>
                   )}
                 </motion.div>
@@ -364,8 +364,8 @@ export function ChatInterface({
       )}
 
       {/* Input */}
-      <div className="border-t border-gray-200 p-4 dark:border-gray-800">
-        <div className="flex gap-2">
+      <div className="border-t border-gray-200 p-2 sm:p-4 dark:border-gray-800">
+        <div className="flex gap-1.5 sm:gap-2">
           <textarea
             ref={inputRef}
             value={input}
@@ -373,17 +373,17 @@ export function ChatInterface({
             onKeyDown={handleKeyDown}
             placeholder="Ask a question..."
             rows={1}
-            className="flex-1 resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-amber-500"
+            className="flex-1 resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base text-gray-900 placeholder:text-gray-400 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-amber-500"
           />
           <Button
             onClick={handleSend}
             disabled={!input.trim() || isLoading}
-            className="h-auto rounded-xl px-4"
+            className="h-auto rounded-xl px-3 sm:px-4"
           >
             {isLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
             ) : (
-              <Send className="h-5 w-5" />
+              <Send className="h-4 w-4 sm:h-5 sm:w-5" />
             )}
           </Button>
         </div>

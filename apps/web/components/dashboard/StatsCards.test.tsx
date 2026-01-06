@@ -25,7 +25,7 @@ describe('StatsCards', () => {
     expect(screen.getByText('Hours Recorded')).toBeInTheDocument();
     expect(screen.getByText('24h')).toBeInTheDocument();
 
-    expect(screen.getByText('Action Items Pending')).toBeInTheDocument();
+    expect(screen.getByText('Action Items')).toBeInTheDocument();
     expect(screen.getByText('5')).toBeInTheDocument();
 
     expect(screen.getByText('Completion Rate')).toBeInTheDocument();
@@ -53,8 +53,8 @@ describe('StatsCards', () => {
   it('should render in a 4-column grid on large screens', () => {
     render(<StatsCards stats={mockStats} />);
 
-    const grid = document.querySelector('.grid.gap-4');
-    expect(grid).toHaveClass('lg:grid-cols-4');
+    const grid = document.querySelector('.grid.gap-2');
+    expect(grid).toHaveClass('sm:gap-4', 'lg:grid-cols-4');
   });
 
   it('should render trend icons for upward trends', () => {

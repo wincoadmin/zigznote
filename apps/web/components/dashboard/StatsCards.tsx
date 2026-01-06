@@ -17,28 +17,28 @@ interface StatCardProps {
 function StatCard({ title, value, change, trend, icon, className }: StatCardProps) {
   return (
     <Card className={cn('hover:shadow-lg', className)}>
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-sm font-medium text-slate-500">{title}</p>
-            <p className="mt-2 font-heading text-3xl font-bold text-slate-900">
+      <CardContent className="p-3 sm:p-6">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-xs sm:text-sm font-medium text-slate-500 truncate">{title}</p>
+            <p className="mt-1 sm:mt-2 font-heading text-xl sm:text-3xl font-bold text-slate-900 truncate">
               {value}
             </p>
             {change && (
               <p
                 className={cn(
-                  'mt-1 flex items-center gap-1 text-sm font-medium',
+                  'mt-0.5 sm:mt-1 flex items-center gap-1 text-xs sm:text-sm font-medium',
                   trend === 'up' && 'text-green-600',
                   trend === 'down' && 'text-red-600',
                   trend === 'neutral' && 'text-slate-500'
                 )}
               >
-                {trend === 'up' && <TrendingUp className="h-4 w-4" />}
+                {trend === 'up' && <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />}
                 {change}
               </p>
             )}
           </div>
-          <div className="rounded-lg bg-primary-50 p-3 text-primary-600">
+          <div className="rounded-lg bg-primary-50 p-2 sm:p-3 text-primary-600 shrink-0">
             {icon}
           </div>
         </div>
@@ -60,17 +60,17 @@ interface StatsCardsProps {
 export function StatsCards({ stats, isLoading }: StatsCardsProps) {
   if (isLoading) {
     return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i}>
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-8 w-16" />
-                  <Skeleton className="h-4 w-20" />
+            <CardContent className="p-3 sm:p-6">
+              <div className="flex items-start justify-between gap-2">
+                <div className="space-y-1 sm:space-y-2 min-w-0">
+                  <Skeleton className="h-3 sm:h-4 w-16 sm:w-24" />
+                  <Skeleton className="h-6 sm:h-8 w-12 sm:w-16" />
+                  <Skeleton className="h-3 sm:h-4 w-14 sm:w-20" />
                 </div>
-                <Skeleton className="h-12 w-12 rounded-lg" />
+                <Skeleton className="h-8 w-8 sm:h-12 sm:w-12 rounded-lg shrink-0" />
               </div>
             </CardContent>
           </Card>
@@ -87,34 +87,34 @@ export function StatsCards({ stats, isLoading }: StatsCardsProps) {
   };
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
       <StatCard
         title="Meetings This Week"
         value={displayStats.meetingsThisWeek}
         change="+12% from last week"
         trend="up"
-        icon={<Video className="h-6 w-6" />}
+        icon={<Video className="h-5 w-5 sm:h-6 sm:w-6" />}
       />
       <StatCard
         title="Hours Recorded"
         value={`${displayStats.hoursRecorded}h`}
         change="+5% from last week"
         trend="up"
-        icon={<Clock className="h-6 w-6" />}
+        icon={<Clock className="h-5 w-5 sm:h-6 sm:w-6" />}
       />
       <StatCard
-        title="Action Items Pending"
+        title="Action Items"
         value={displayStats.actionItemsPending}
         change="3 due today"
         trend="neutral"
-        icon={<CheckSquare className="h-6 w-6" />}
+        icon={<CheckSquare className="h-5 w-5 sm:h-6 sm:w-6" />}
       />
       <StatCard
         title="Completion Rate"
         value={`${displayStats.completionRate}%`}
         change="+8% improvement"
         trend="up"
-        icon={<TrendingUp className="h-6 w-6" />}
+        icon={<TrendingUp className="h-5 w-5 sm:h-6 sm:w-6" />}
       />
     </div>
   );

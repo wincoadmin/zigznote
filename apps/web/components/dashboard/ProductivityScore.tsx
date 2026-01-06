@@ -21,13 +21,13 @@ export function ProductivityScore({
 }: ProductivityScoreProps) {
   if (isLoading) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm animate-pulse">
-        <div className="h-6 w-32 bg-slate-200 rounded mb-4" />
-        <div className="h-20 w-20 bg-slate-200 rounded-full mx-auto mb-4" />
-        <div className="space-y-3">
-          <div className="h-4 bg-slate-200 rounded w-full" />
-          <div className="h-4 bg-slate-200 rounded w-full" />
-          <div className="h-4 bg-slate-200 rounded w-full" />
+      <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-6 shadow-sm animate-pulse">
+        <div className="h-5 sm:h-6 w-24 sm:w-32 bg-slate-200 rounded mb-3 sm:mb-4" />
+        <div className="h-16 w-16 sm:h-20 sm:w-20 bg-slate-200 rounded-full mx-auto mb-3 sm:mb-4" />
+        <div className="space-y-2 sm:space-y-3">
+          <div className="h-3 sm:h-4 bg-slate-200 rounded w-full" />
+          <div className="h-3 sm:h-4 bg-slate-200 rounded w-full" />
+          <div className="h-3 sm:h-4 bg-slate-200 rounded w-full" />
         </div>
       </div>
     );
@@ -50,21 +50,21 @@ export function ProductivityScore({
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Zap className="h-5 w-5 text-primary-500" />
-          <h3 className="font-semibold text-slate-900">Productivity Score</h3>
+    <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-6 shadow-sm">
+      <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-primary-500" />
+          <h3 className="font-semibold text-sm sm:text-base text-slate-900">Productivity Score</h3>
         </div>
-        <div className={`flex items-center gap-1 text-sm ${trendColor}`}>
-          <TrendIcon className="h-4 w-4" />
+        <div className={`flex items-center gap-1 text-xs sm:text-sm ${trendColor}`}>
+          <TrendIcon className="h-3 w-3 sm:h-4 sm:w-4" />
           <span>{trendLabel}</span>
         </div>
       </div>
 
       {/* Score circle */}
-      <div className="flex justify-center mb-6">
-        <div className="relative w-24 h-24">
+      <div className="flex justify-center mb-4 sm:mb-6">
+        <div className="relative w-20 h-20 sm:w-24 sm:h-24">
           {/* Background circle */}
           <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
             <circle
@@ -90,7 +90,7 @@ export function ProductivityScore({
           </svg>
           {/* Score text */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className={`text-2xl font-bold ${getScoreColor(score)}`}>
+            <span className={`text-xl sm:text-2xl font-bold ${getScoreColor(score)}`}>
               {score}
             </span>
           </div>
@@ -98,7 +98,7 @@ export function ProductivityScore({
       </div>
 
       {/* Component breakdown */}
-      <div className="space-y-3">
+      <div className="space-y-2 sm:space-y-3">
         <ScoreBar
           label="Meeting Efficiency"
           value={components.meetingEfficiency}
@@ -125,11 +125,11 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
 
   return (
     <div>
-      <div className="flex justify-between text-sm mb-1">
-        <span className="text-slate-600">{label}</span>
-        <span className="font-medium text-slate-900">{value}%</span>
+      <div className="flex justify-between text-xs sm:text-sm mb-0.5 sm:mb-1">
+        <span className="text-slate-600 truncate">{label}</span>
+        <span className="font-medium text-slate-900 shrink-0 ml-2">{value}%</span>
       </div>
-      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+      <div className="h-1.5 sm:h-2 bg-slate-100 rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-300 ${getColor(value)}`}
           style={{ width: `${value}%` }}

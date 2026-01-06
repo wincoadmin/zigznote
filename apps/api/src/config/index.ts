@@ -202,6 +202,20 @@ export const config = {
   email: {
     from: process.env.EMAIL_FROM || 'zigznote <noreply@zigznote.com>',
   },
+
+  /**
+   * Alerting configuration
+   */
+  alerts: {
+    enabled: process.env.ALERTS_ENABLED === 'true',
+    checkIntervalMs: parseInt(process.env.ALERTS_CHECK_INTERVAL_MS || '30000', 10),
+    emailRecipients: process.env.ALERT_EMAIL_RECIPIENTS
+      ? process.env.ALERT_EMAIL_RECIPIENTS.split(',').map((e) => e.trim())
+      : [],
+    slackWebhookUrl: process.env.ALERT_SLACK_WEBHOOK_URL || '',
+    pagerDutyRoutingKey: process.env.ALERT_PAGERDUTY_ROUTING_KEY || '',
+    webhookUrl: process.env.ALERT_WEBHOOK_URL || '',
+  },
 };
 
 export type Config = typeof config;

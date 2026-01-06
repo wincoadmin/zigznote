@@ -93,7 +93,7 @@ export function MeetingPlayer({
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className={cn('rounded-lg bg-slate-900 p-4 text-white', className)}>
+    <div className={cn('rounded-lg bg-slate-900 p-2 sm:p-4 text-white', className)}>
       <audio
         ref={audioRef}
         src={audioUrl}
@@ -103,19 +103,19 @@ export function MeetingPlayer({
       />
 
       {/* Progress bar */}
-      <div className="mb-4">
+      <div className="mb-3 sm:mb-4">
         <input
           type="range"
           min={0}
           max={duration || 100}
           value={currentTime}
           onChange={handleSeek}
-          className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-700 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary-500"
+          className="h-1.5 sm:h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-700 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 sm:[&::-webkit-slider-thumb]:h-4 sm:[&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary-500"
           style={{
             background: `linear-gradient(to right, #10B981 ${progress}%, #334155 ${progress}%)`,
           }}
         />
-        <div className="mt-1 flex justify-between text-xs text-slate-400">
+        <div className="mt-1 flex justify-between text-[10px] sm:text-xs text-slate-400">
           <span>{formatTime(currentTime)}</span>
           <span>{formatTime(duration)}</span>
         </div>
@@ -123,28 +123,28 @@ export function MeetingPlayer({
 
       {/* Controls */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => handleSkip(-10)}
-            className="text-white hover:bg-slate-800"
+            className="h-8 w-8 sm:h-10 sm:w-10 text-white hover:bg-slate-800"
             aria-label="Skip back 10 seconds"
           >
-            <SkipBack className="h-5 w-5" />
+            <SkipBack className="h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
 
           <Button
             variant="ghost"
             size="icon"
             onClick={handlePlayPause}
-            className="h-12 w-12 rounded-full bg-primary-500 text-white hover:bg-primary-600"
+            className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-primary-500 text-white hover:bg-primary-600"
             aria-label={isPlaying ? 'Pause' : 'Play'}
           >
             {isPlaying ? (
-              <Pause className="h-6 w-6" />
+              <Pause className="h-5 w-5 sm:h-6 sm:w-6" />
             ) : (
-              <Play className="h-6 w-6 ml-0.5" />
+              <Play className="h-5 w-5 sm:h-6 sm:w-6 ml-0.5" />
             )}
           </Button>
 
@@ -152,19 +152,19 @@ export function MeetingPlayer({
             variant="ghost"
             size="icon"
             onClick={() => handleSkip(10)}
-            className="text-white hover:bg-slate-800"
+            className="h-8 w-8 sm:h-10 sm:w-10 text-white hover:bg-slate-800"
             aria-label="Skip forward 10 seconds"
           >
-            <SkipForward className="h-5 w-5" />
+            <SkipForward className="h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <Button
             variant="ghost"
             size="sm"
             onClick={handlePlaybackRateChange}
-            className="min-w-[3rem] text-white hover:bg-slate-800"
+            className="min-w-[2.5rem] sm:min-w-[3rem] text-xs sm:text-sm text-white hover:bg-slate-800 h-8 sm:h-9"
           >
             {playbackRate}x
           </Button>
@@ -173,13 +173,13 @@ export function MeetingPlayer({
             variant="ghost"
             size="icon"
             onClick={() => setIsMuted(!isMuted)}
-            className="text-white hover:bg-slate-800"
+            className="h-8 w-8 sm:h-10 sm:w-10 text-white hover:bg-slate-800"
             aria-label={isMuted ? 'Unmute' : 'Mute'}
           >
             {isMuted ? (
-              <VolumeX className="h-5 w-5" />
+              <VolumeX className="h-4 w-4 sm:h-5 sm:w-5" />
             ) : (
-              <Volume2 className="h-5 w-5" />
+              <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" />
             )}
           </Button>
         </div>

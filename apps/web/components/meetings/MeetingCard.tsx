@@ -30,29 +30,29 @@ export function MeetingCard({ meeting, participants = [], onDelete }: MeetingCar
         style={{ backgroundColor: status.color }}
       />
 
-      <div className="flex items-start gap-4 p-5 pl-6">
+      <div className="flex items-start gap-2 sm:gap-4 p-3 sm:p-5 pl-4 sm:pl-6">
         {/* Platform icon */}
         <div
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg"
+          className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-lg"
           style={{
             backgroundColor: platform ? `${platform.color}15` : '#f1f5f9',
             color: platform?.color || '#64748b',
           }}
         >
-          <Video className="h-6 w-6" />
+          <Video className="h-5 w-5 sm:h-6 sm:w-6" />
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div>
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-2">
+            <div className="min-w-0">
               <Link
                 href={`/meetings/${meeting.id}`}
-                className="font-medium text-slate-900 hover:text-primary-600 line-clamp-1"
+                className="font-medium text-sm sm:text-base text-slate-900 hover:text-primary-600 line-clamp-2 sm:line-clamp-1"
               >
                 {meeting.title}
               </Link>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-slate-500">
                 {meeting.startTime ? (
                   <>
                     {formatDate(meeting.startTime)} at {formatTime(meeting.startTime)}
@@ -66,14 +66,14 @@ export function MeetingCard({ meeting, participants = [], onDelete }: MeetingCar
               </p>
             </div>
 
-            <Badge className={`${status.bgColor} ${status.textColor} shrink-0`}>
+            <Badge className={`${status.bgColor} ${status.textColor} shrink-0 text-xs mt-1 sm:mt-0`}>
               {status.label}
             </Badge>
           </div>
 
           {/* Participants */}
           {participants.length > 0 && (
-            <div className="mt-3 flex items-center gap-2">
+            <div className="mt-2 sm:mt-3 flex items-center gap-2">
               <AvatarGroup max={3}>
                 {participants.map((p) => (
                   <Avatar key={p.id} name={p.name} size="sm" />

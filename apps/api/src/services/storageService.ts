@@ -192,6 +192,51 @@ class StorageService {
   }
 
   /**
+   * Upload a buffer with a specific key (for backups and other internal uploads)
+   */
+  async uploadFileBuffer(
+    prefix: string,
+    fileName: string,
+    mimeType: string,
+    body: Buffer
+  ): Promise<string> {
+    if (!this.client) {
+      throw new BadRequestError('Storage is not configured');
+    }
+
+    const key = `${prefix}/${fileName}`;
+
+    await this.client.send(new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      Body: body,
+      ContentType: mimeType,
+    }));
+
+    return key;
+  }
+
+  /**
+   * Get a readable stream for a file (for backups)
+   */
+  async getFileStream(key: string): Promise<NodeJS.ReadableStream> {
+    if (!this.client) {
+      throw new BadRequestError('Storage is not configured');
+    }
+
+    const response = await this.client.send(new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+    }));
+
+    if (!response.Body) {
+      throw new Error('File not found');
+    }
+
+    return response.Body as NodeJS.ReadableStream;
+  }
+
+  /**
    * Get public URL for a file
    */
   private getPublicUrl(key: string): string {

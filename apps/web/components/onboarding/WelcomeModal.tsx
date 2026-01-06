@@ -130,26 +130,26 @@ export function WelcomeModal({
       />
 
       {/* Modal */}
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <DialogPanel className="relative w-full max-w-lg">
+      <div className="fixed inset-0 flex items-center justify-center p-3 sm:p-4">
+        <DialogPanel className="relative w-full max-w-[calc(100vw-1.5rem)] sm:max-w-lg">
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', duration: 0.5 }}
-            className="rounded-2xl bg-white p-8 shadow-2xl dark:bg-gray-900"
+            className="rounded-xl sm:rounded-2xl bg-white p-4 sm:p-8 shadow-2xl dark:bg-gray-900"
           >
           {/* Close button */}
           <button
             onClick={handleSkip}
-            className="absolute right-4 top-4 rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
+            className="absolute right-3 top-3 sm:right-4 sm:top-4 rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
             aria-label="Skip onboarding"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
 
           {/* Step content */}
-          <div className="relative min-h-[280px] overflow-hidden">
+          <div className="relative min-h-[220px] sm:min-h-[280px] overflow-hidden">
             <AnimatePresence initial={false} custom={direction} mode="wait">
               <motion.div
                 key={step.id}
@@ -169,18 +169,18 @@ export function WelcomeModal({
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.2, type: 'spring' }}
-                  className="mb-6 rounded-full bg-gray-50 p-6 dark:bg-gray-800"
+                  className="mb-4 sm:mb-6 rounded-full bg-gray-50 p-4 sm:p-6 dark:bg-gray-800 [&>svg]:h-8 [&>svg]:w-8 sm:[&>svg]:h-12 sm:[&>svg]:w-12"
                 >
                   {step.icon}
                 </motion.div>
 
                 {/* Title */}
-                <DialogTitle className="mb-3 text-2xl font-bold text-gray-900 dark:text-white">
+                <DialogTitle className="mb-1.5 sm:mb-3 text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
                   {title}
                 </DialogTitle>
 
                 {/* Description */}
-                <p className="mb-8 max-w-sm text-gray-600 dark:text-gray-400">
+                <p className="mb-4 sm:mb-8 text-xs sm:text-base max-w-sm text-gray-600 dark:text-gray-400">
                   {step.description}
                 </p>
 
@@ -188,7 +188,7 @@ export function WelcomeModal({
                 {step.action && (
                   <button
                     onClick={step.action.onClick}
-                    className="mb-4 rounded-lg bg-amber-100 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400"
+                    className="mb-3 sm:mb-4 rounded-lg bg-amber-100 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400"
                   >
                     {step.action.label}
                   </button>
@@ -198,15 +198,15 @@ export function WelcomeModal({
           </div>
 
           {/* Progress dots */}
-          <div className="mb-6 flex justify-center gap-2">
+          <div className="mb-4 sm:mb-6 flex justify-center gap-1.5 sm:gap-2">
             {ONBOARDING_STEPS.map((s, index) => (
               <motion.button
                 key={s.id}
                 onClick={() => setStep([index, index > currentStep ? 1 : -1])}
-                className={`h-2 rounded-full transition-all ${
+                className={`h-1.5 sm:h-2 rounded-full transition-all ${
                   index === currentStep
-                    ? 'w-6 bg-amber-500'
-                    : 'w-2 bg-gray-300 hover:bg-gray-400 dark:bg-gray-700'
+                    ? 'w-4 sm:w-6 bg-amber-500'
+                    : 'w-1.5 sm:w-2 bg-gray-300 hover:bg-gray-400 dark:bg-gray-700'
                 }`}
                 whileHover={{ scale: 1.2 }}
                 aria-label={`Go to step ${index + 1}`}
@@ -215,37 +215,37 @@ export function WelcomeModal({
           </div>
 
           {/* Navigation buttons */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <button
               onClick={handlePrev}
               disabled={isFirstStep}
-              className={`flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-1 rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-colors ${
                 isFirstStep
                   ? 'invisible'
                   : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
               }`}
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Back
             </button>
 
             <button
               onClick={handleSkip}
-              className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+              className="text-xs sm:text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
             >
-              Skip tour
+              Skip
             </button>
 
             <button
               onClick={handleNext}
-              className="flex items-center gap-1 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-amber-500/25 transition-all hover:bg-amber-600 hover:shadow-amber-500/40"
+              className="flex items-center gap-1 rounded-lg bg-amber-500 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white shadow-lg shadow-amber-500/25 transition-all hover:bg-amber-600 hover:shadow-amber-500/40"
             >
               {isLastStep ? (
                 "Let's Go!"
               ) : (
                 <>
                   Next
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </>
               )}
             </button>

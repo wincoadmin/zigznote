@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
+import { CookieConsent } from '@/components/legal';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -89,6 +90,7 @@ export default function RootLayout({
     >
       <body className="min-h-screen bg-slate-50 font-sans antialiased dark:bg-slate-900">
         <Providers>{children}</Providers>
+        <CookieConsent />
       </body>
     </html>
   );

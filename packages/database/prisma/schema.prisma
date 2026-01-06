@@ -1289,3 +1289,46 @@ model ProcessedWebhook {
   @@index([processedAt])
   @@map("processed_webhooks")
 }
+
+// ============================================
+// Backup & Recovery (Phase 11.1)
+// ============================================
+
+enum BackupType {
+  FULL
+  INCREMENTAL
+  SCHEDULED
+  MANUAL
+  PRE_MIGRATION
+}
+
+enum BackupStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  EXPIRED
+  DELETED
+}
+
+model DatabaseBackup {
+  id            String       @id @default(uuid())
+  filename      String       @unique
+  size          BigInt       // Size in bytes
+  type          BackupType
+  status        BackupStatus @default(PENDING)
+  storageUrl    String?      @map("storage_url")
+  checksum      String?      // SHA-256 hash
+  metadata      Json?
+  startedAt     DateTime     @default(now()) @map("started_at")
+  completedAt   DateTime?    @map("completed_at")
+  expiresAt     DateTime?    @map("expires_at")
+  createdById   String?      @map("created_by_id")
+  errorMessage  String?      @map("error_message")
+
+  @@index([status])
+  @@index([type])
+  @@index([createdById])
+  @@index([expiresAt])
+  @@map("database_backups")
+}

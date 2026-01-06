@@ -29,9 +29,9 @@ export function MeetingTrendsChart({
 }: MeetingTrendsChartProps) {
   if (isLoading) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm animate-pulse">
-        <div className="h-6 w-32 bg-slate-200 rounded mb-4" />
-        <div className="h-48 bg-slate-100 rounded" />
+      <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-6 shadow-sm animate-pulse">
+        <div className="h-5 sm:h-6 w-24 sm:w-32 bg-slate-200 rounded mb-3 sm:mb-4" />
+        <div className="h-36 sm:h-48 bg-slate-100 rounded" />
       </div>
     );
   }
@@ -50,13 +50,13 @@ export function MeetingTrendsChart({
   const average = data.length > 0 ? Math.round(total / data.length * 10) / 10 : 0;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <BarChart3 className="h-5 w-5 text-primary-500" />
-          <h3 className="font-semibold text-slate-900">{title}</h3>
+    <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-6 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 sm:mb-4">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-primary-500" />
+          <h3 className="font-semibold text-sm sm:text-base text-slate-900">{title}</h3>
         </div>
-        <div className="flex gap-4 text-sm">
+        <div className="flex gap-3 sm:gap-4 text-xs sm:text-sm">
           <div>
             <span className="text-slate-500">Total: </span>
             <span className="font-semibold text-slate-900">{total}</span>
@@ -68,7 +68,7 @@ export function MeetingTrendsChart({
         </div>
       </div>
 
-      <div className="h-48">
+      <div className="h-36 sm:h-48">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={formattedData}>
             <defs>

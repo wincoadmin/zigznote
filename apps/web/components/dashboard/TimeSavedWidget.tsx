@@ -52,26 +52,26 @@ export function TimeSavedWidget({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 p-6 dark:from-amber-900/20 dark:to-orange-900/20 ${className}`}
+      className={`rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 p-3 sm:p-6 dark:from-amber-900/20 dark:to-orange-900/20 ${className}`}
     >
       {/* Header */}
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="rounded-lg bg-amber-100 p-2 dark:bg-amber-800/40">
-            <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+      <div className="mb-3 sm:mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="rounded-lg bg-amber-100 p-1.5 sm:p-2 dark:bg-amber-800/40">
+            <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 dark:text-amber-400" />
           </div>
-          <span className="font-medium text-gray-900 dark:text-white">
+          <span className="font-medium text-sm sm:text-base text-gray-900 dark:text-white">
             Time Saved
           </span>
         </div>
         {trend !== 'stable' && (
           <div
-            className={`flex items-center gap-1 text-sm ${
+            className={`flex items-center gap-1 text-xs sm:text-sm ${
               trend === 'up' ? 'text-green-600' : 'text-red-600'
             }`}
           >
             <TrendingUp
-              className={`h-4 w-4 ${trend === 'down' ? 'rotate-180' : ''}`}
+              className={`h-3 w-3 sm:h-4 sm:w-4 ${trend === 'down' ? 'rotate-180' : ''}`}
             />
             <span>{trendPercentage}%</span>
           </div>
@@ -79,37 +79,37 @@ export function TimeSavedWidget({
       </div>
 
       {/* Main stat */}
-      <div className="mb-6">
-        <div className="flex items-baseline gap-2">
-          <span className="text-4xl font-bold text-amber-600 dark:text-amber-400">
+      <div className="mb-4 sm:mb-6">
+        <div className="flex items-baseline gap-1 sm:gap-2">
+          <span className="text-2xl sm:text-4xl font-bold text-amber-600 dark:text-amber-400">
             <AnimatedNumber value={hours} />
           </span>
-          <span className="text-lg text-gray-600 dark:text-gray-400">hours</span>
-          <span className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+          <span className="text-sm sm:text-lg text-gray-600 dark:text-gray-400">hours</span>
+          <span className="text-lg sm:text-2xl font-bold text-amber-600 dark:text-amber-400">
             <AnimatedNumber value={minutes} />
           </span>
-          <span className="text-lg text-gray-600 dark:text-gray-400">min</span>
+          <span className="text-sm sm:text-lg text-gray-600 dark:text-gray-400">min</span>
         </div>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
           Estimated time saved this month
         </p>
       </div>
 
       {/* Fun equivalents */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4">
         <motion.div
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
-          className="rounded-lg bg-white/60 p-3 dark:bg-gray-800/40"
+          className="rounded-lg bg-white/60 p-2 sm:p-3 dark:bg-gray-800/40"
         >
-          <div className="flex items-center gap-2">
-            <span className="text-lg">☕</span>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <span className="text-base sm:text-lg">☕</span>
             <div>
-              <div className="font-semibold text-gray-900 dark:text-white">
+              <div className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">
                 {coffeeBreaks}
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">
+              <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
                 Coffee breaks
               </div>
             </div>
@@ -120,15 +120,15 @@ export function TimeSavedWidget({
           initial={{ opacity: 0, x: 10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3 }}
-          className="rounded-lg bg-white/60 p-3 dark:bg-gray-800/40"
+          className="rounded-lg bg-white/60 p-2 sm:p-3 dark:bg-gray-800/40"
         >
-          <div className="flex items-center gap-2">
-            <span className="text-lg">🎯</span>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <span className="text-base sm:text-lg">🎯</span>
             <div>
-              <div className="font-semibold text-gray-900 dark:text-white">
+              <div className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">
                 {focusSessions}
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">
+              <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
                 Focus sessions
               </div>
             </div>
@@ -141,9 +141,9 @@ export function TimeSavedWidget({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.4 }}
-        className="mt-4 flex items-center gap-2 text-sm text-amber-700 dark:text-amber-300"
+        className="mt-3 sm:mt-4 flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-amber-700 dark:text-amber-300"
       >
-        <Sparkles className="h-4 w-4" />
+        <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
         <span>Keep it up! You&apos;re doing great.</span>
       </motion.div>
     </motion.div>

@@ -60,16 +60,16 @@ function QuotaItem({ icon: Icon, label, metric, unit, compact }: QuotaItemProps)
 
   if (compact) {
     return (
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         <Icon className={cn(
-          'h-4 w-4 shrink-0',
+          'h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0',
           isOverLimit ? 'text-red-500' : isWarning ? 'text-amber-500' : 'text-slate-400'
         )} />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-600">{label}</span>
+          <div className="flex items-center justify-between text-xs sm:text-sm">
+            <span className="text-slate-600 truncate">{label}</span>
             <span className={cn(
-              'font-medium',
+              'font-medium shrink-0 ml-2',
               isOverLimit ? 'text-red-600' : isWarning ? 'text-amber-600' : 'text-slate-900'
             )}>
               {displayCurrent} / {displayLimit}
@@ -92,20 +92,20 @@ function QuotaItem({ icon: Icon, label, metric, unit, compact }: QuotaItemProps)
   }
 
   return (
-    <div className="rounded-lg border border-slate-100 p-4">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
+    <div className="rounded-lg border border-slate-100 p-3 sm:p-4">
+      <div className="flex items-start justify-between mb-2 sm:mb-3">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <div className={cn(
-            'rounded-lg p-2',
+            'rounded-lg p-1.5 sm:p-2',
             isOverLimit ? 'bg-red-50' : isWarning ? 'bg-amber-50' : 'bg-slate-50'
           )}>
             <Icon className={cn(
-              'h-5 w-5',
+              'h-4 w-4 sm:h-5 sm:w-5',
               isOverLimit ? 'text-red-500' : isWarning ? 'text-amber-500' : 'text-slate-500'
             )} />
           </div>
-          <div>
-            <p className="text-sm font-medium text-slate-900">{label}</p>
+          <div className="min-w-0">
+            <p className="text-xs sm:text-sm font-medium text-slate-900 truncate">{label}</p>
             {!isUnlimited && (
               <p className={cn(
                 'text-xs',
@@ -141,7 +141,7 @@ function QuotaItem({ icon: Icon, label, metric, unit, compact }: QuotaItemProps)
         />
       )}
 
-      <div className="flex items-center justify-between text-sm">
+      <div className="flex items-center justify-between text-xs sm:text-sm">
         <span className="text-slate-500">Used</span>
         <span className={cn(
           'font-medium',
@@ -150,7 +150,7 @@ function QuotaItem({ icon: Icon, label, metric, unit, compact }: QuotaItemProps)
           {displayCurrent}
         </span>
       </div>
-      <div className="flex items-center justify-between text-sm">
+      <div className="flex items-center justify-between text-xs sm:text-sm">
         <span className="text-slate-500">Limit</span>
         <span className="font-medium text-slate-900">{displayLimit}</span>
       </div>

@@ -4,6 +4,7 @@ import { config } from './config';
 import { logger } from './utils/logger';
 import { validateEnvironment, getCurrentPhase } from '@zigznote/shared';
 import { initWebSocketServer, closeWebSocketServer } from './websocket';
+import { startBackupWorker, stopBackupWorker } from './jobs/backupWorker';
 
 // Validate environment variables before starting
 validateEnvironment(getCurrentPhase());
@@ -20,10 +21,16 @@ const server = httpServer.listen(config.port, () => {
   logger.info(`Server running on port ${config.port}`);
   logger.info(`Environment: ${config.nodeEnv}`);
   logger.info('WebSocket server initialized');
+
+  // Start backup worker in production (not in test)
+  if (config.nodeEnv !== 'test') {
+    startBackupWorker();
+  }
 });
 
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM received, shutting down gracefully');
+  stopBackupWorker();
   await closeWebSocketServer();
   server.close(() => {
     logger.info('Server closed');
@@ -33,6 +40,7 @@ process.on('SIGTERM', async () => {
 
 process.on('SIGINT', async () => {
   logger.info('SIGINT received, shutting down gracefully');
+  stopBackupWorker();
   await closeWebSocketServer();
   server.close(() => {
     logger.info('Server closed');

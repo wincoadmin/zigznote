@@ -97,13 +97,13 @@ describe('TranscriptViewer', () => {
 
   it('should render search input', () => {
     render(<TranscriptViewer segments={mockSegments} />);
-    expect(screen.getByPlaceholderText('Search transcript...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Search...')).toBeInTheDocument();
   });
 
   it('should filter segments based on search query', () => {
     render(<TranscriptViewer segments={mockSegments} />);
 
-    const searchInput = screen.getByPlaceholderText('Search transcript...');
+    const searchInput = screen.getByPlaceholderText('Search...');
     fireEvent.change(searchInput, { target: { value: 'updates' } });
 
     // Only Jane's segment should be visible (text is split by <mark> for highlighting)
@@ -116,7 +116,7 @@ describe('TranscriptViewer', () => {
   it('should highlight search matches', () => {
     const { container } = render(<TranscriptViewer segments={mockSegments} />);
 
-    const searchInput = screen.getByPlaceholderText('Search transcript...');
+    const searchInput = screen.getByPlaceholderText('Search...');
     fireEvent.change(searchInput, { target: { value: 'updates' } });
 
     // Should have a highlighted mark element
@@ -133,9 +133,9 @@ describe('TranscriptViewer', () => {
     // All three segments should be rendered
     expect(segments.length).toBe(3);
 
-    // Each segment should have the expected base classes
+    // Each segment should have the expected base classes (responsive classes)
     segments.forEach((segment) => {
-      expect(segment).toHaveClass('cursor-pointer', 'rounded-lg', 'border-l-4', 'p-3');
+      expect(segment).toHaveClass('cursor-pointer', 'rounded-lg', 'border-l-2', 'sm:border-l-4', 'p-2', 'sm:p-3');
     });
   });
 

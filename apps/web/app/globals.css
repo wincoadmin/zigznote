@@ -132,6 +132,20 @@
 }
 
 @layer utilities {
+  /* Safe area padding for mobile notches */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+  .pl-safe {
+    padding-left: env(safe-area-inset-left, 0);
+  }
+  .pr-safe {
+    padding-right: env(safe-area-inset-right, 0);
+  }
+
   /* Gradient backgrounds */
   .gradient-primary {
     background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 50%, #6ee7b7 100%);

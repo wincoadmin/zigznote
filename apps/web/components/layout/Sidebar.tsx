@@ -36,8 +36,8 @@ export function Sidebar({ className }: SidebarProps) {
   return (
     <aside
       className={cn(
-        'flex h-screen flex-col border-r border-slate-200 bg-white transition-all duration-300',
-        collapsed ? 'w-16' : 'w-64',
+        'flex h-screen flex-col border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 transition-all duration-300',
+        collapsed ? 'w-14 sm:w-16' : 'w-56 sm:w-64',
         className
       )}
     >
@@ -84,7 +84,7 @@ export function Sidebar({ className }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-3">
+      <nav className="flex-1 space-y-0.5 sm:space-y-1 px-2 sm:px-3 py-2 sm:py-3">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -94,7 +94,7 @@ export function Sidebar({ className }: SidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                'flex items-center gap-2 sm:gap-3 rounded-lg px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-colors',
                 isActive
                   ? 'bg-primary-50 text-primary-700'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
@@ -102,7 +102,7 @@ export function Sidebar({ className }: SidebarProps) {
               )}
               title={collapsed ? item.label : undefined}
             >
-              <Icon className="h-5 w-5 shrink-0" strokeWidth={1.5} />
+              <Icon className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" strokeWidth={1.5} />
               {!collapsed && <span>{item.label}</span>}
             </Link>
           );
@@ -110,20 +110,20 @@ export function Sidebar({ className }: SidebarProps) {
       </nav>
 
       {/* User section at bottom */}
-      <div className="border-t border-slate-200 p-3">
+      <div className="border-t border-slate-200 dark:border-slate-700 p-2 sm:p-3">
         <div
           className={cn(
-            'flex items-center gap-3 rounded-lg px-3 py-2',
+            'flex items-center gap-2 sm:gap-3 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2',
             collapsed && 'justify-center'
           )}
         >
-          <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center text-sm font-medium text-primary-700">
+          <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-primary-100 flex items-center justify-center text-xs sm:text-sm font-medium text-primary-700 shrink-0">
             U
           </div>
           {!collapsed && (
-            <div className="flex-1 truncate">
-              <p className="text-sm font-medium text-slate-900 truncate">User Name</p>
-              <p className="text-xs text-slate-500 truncate">user@example.com</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-slate-900 truncate">User Name</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 truncate">user@example.com</p>
             </div>
           )}
         </div>

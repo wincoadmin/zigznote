@@ -56,8 +56,42 @@ async function checkRedis(): Promise<'ok' | 'error'> {
 }
 
 /**
- * Health check endpoint
- * Used by load balancers and monitoring systems
+ * @openapi
+ * /health:
+ *   get:
+ *     summary: Health check
+ *     description: Comprehensive health check including database and Redis status
+ *     tags: [Health]
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: API is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   enum: [ok, degraded, unhealthy]
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                 version:
+ *                   type: string
+ *                 uptime:
+ *                   type: number
+ *                 checks:
+ *                   type: object
+ *                   properties:
+ *                     database:
+ *                       type: string
+ *                       enum: [ok, error]
+ *                     redis:
+ *                       type: string
+ *                       enum: [ok, error]
+ *       503:
+ *         description: API is unhealthy
  */
 healthRouter.get('/', async (_req: Request, res: Response<HealthResponse>) => {
   const [databaseStatus, redisStatus] = await Promise.all([
@@ -100,14 +134,60 @@ healthRouter.get('/', async (_req: Request, res: Response<HealthResponse>) => {
 });
 
 /**
- * Liveness probe - just confirms the server is running
+ * @openapi
+ * /health/live:
+ *   get:
+ *     summary: Liveness probe
+ *     description: Simple check that confirms the server is running
+ *     tags: [Health]
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: Server is alive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ok
  */
 healthRouter.get('/live', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'ok' });
 });
 
 /**
- * Readiness probe - confirms the server can handle requests
+ * @openapi
+ * /health/ready:
+ *   get:
+ *     summary: Readiness probe
+ *     description: Confirms the server can handle requests (database and Redis available)
+ *     tags: [Health]
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: Server is ready to accept requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ok
+ *       503:
+ *         description: Server is not ready
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: not ready
+ *                 reason:
+ *                   type: string
  */
 healthRouter.get('/ready', async (_req: Request, res: Response) => {
   const [databaseStatus, redisStatus] = await Promise.all([

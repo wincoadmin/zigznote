@@ -117,52 +117,52 @@ export default function SearchPage() {
   ];
 
   return (
-    <div className="container max-w-4xl mx-auto px-4 py-8">
+    <div className="container max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
       {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="font-heading text-3xl font-bold text-slate-900 mb-2">
+      <div className="text-center mb-4 sm:mb-8">
+        <h1 className="font-heading text-xl sm:text-3xl font-bold text-slate-900 mb-1 sm:mb-2">
           Search Your Meetings
         </h1>
-        <p className="text-slate-500">
-          Find anything across all your meetings, transcripts, and summaries
+        <p className="text-sm sm:text-base text-slate-500">
+          Find anything across meetings and transcripts
         </p>
       </div>
 
       {/* Search Bar */}
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6">
         <SearchBar
           onSearch={handleSearch}
           onSuggestionsRequest={handleSuggestions}
-          placeholder="Search meetings, transcripts, summaries..."
+          placeholder="Search meetings..."
           autoFocus
           className="max-w-2xl mx-auto"
         />
       </div>
 
       {/* Filters */}
-      <div className="mb-6">
-        <div className="flex items-center justify-center gap-4 mb-4">
+      <div className="mb-4 sm:mb-6">
+        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 mb-3 sm:mb-4">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowFilters(!showFilters)}
-            className="gap-2"
+            className="gap-1.5 sm:gap-2 text-xs sm:text-sm h-8 sm:h-9"
           >
-            <Filter className="w-4 h-4" />
+            <Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             Filters
           </Button>
 
           {/* Quick type filters */}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
             {typeButtons.map(({ type, icon: Icon, label }) => (
               <Button
                 key={type}
                 variant={filters.types.includes(type) ? 'primary' : 'outline'}
                 size="sm"
                 onClick={() => toggleType(type)}
-                className="gap-1.5"
+                className="gap-1 sm:gap-1.5 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 <span className="hidden sm:inline">{label}</span>
               </Button>
             ))}
@@ -233,37 +233,37 @@ export default function SearchPage() {
         />
       ) : (
         /* Initial state with tips */
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Sparkles className="w-8 h-8 text-primary-600" />
+        <div className="text-center py-8 sm:py-12">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+            <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-primary-600" />
           </div>
-          <h3 className="text-lg font-medium text-slate-900 mb-4">
+          <h3 className="text-base sm:text-lg font-medium text-slate-900 mb-3 sm:mb-4">
             Search Tips
           </h3>
-          <div className="max-w-md mx-auto text-left space-y-3 text-sm text-slate-600">
+          <div className="max-w-md mx-auto text-left space-y-2 sm:space-y-3 text-xs sm:text-sm text-slate-600 px-2">
             <p>
-              <Badge variant="outline" className="mr-2">
+              <Badge variant="outline" className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs">
                 Keywords
               </Badge>
-              Search for specific topics like "budget review" or "Q4 planning"
+              Search for specific topics like "budget review"
             </p>
             <p>
-              <Badge variant="outline" className="mr-2">
+              <Badge variant="outline" className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs">
                 Names
               </Badge>
               Find mentions of people like "John mentioned"
             </p>
             <p>
-              <Badge variant="outline" className="mr-2">
+              <Badge variant="outline" className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs">
                 Actions
               </Badge>
-              Look for action items like "follow up" or "send email"
+              Look for action items like "follow up"
             </p>
             <p>
-              <Badge variant="outline" className="mr-2">
+              <Badge variant="outline" className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs">
                 Decisions
               </Badge>
-              Find decisions like "we decided" or "agreed to"
+              Find decisions like "we decided"
             </p>
           </div>
         </div>

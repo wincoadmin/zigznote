@@ -102,7 +102,7 @@ export function SearchBar({
     <div ref={containerRef} className={`relative ${className}`}>
       <form onSubmit={handleSubmit} className="relative">
         <div className="relative flex items-center">
-          <Search className="absolute left-3 w-5 h-5 text-slate-400 pointer-events-none" />
+          <Search className="absolute left-2.5 sm:left-3 w-4 h-4 sm:w-5 sm:h-5 text-slate-400 pointer-events-none" />
           <input
             ref={inputRef}
             type="text"
@@ -112,17 +112,17 @@ export function SearchBar({
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             autoFocus={autoFocus}
-            className="w-full pl-10 pr-10 py-2.5 text-slate-900 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="w-full pl-8 sm:pl-10 pr-8 sm:pr-10 py-2 sm:py-2.5 text-sm sm:text-base text-slate-900 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           />
           {isLoading ? (
-            <Loader2 className="absolute right-3 w-5 h-5 text-slate-400 animate-spin" />
+            <Loader2 className="absolute right-2.5 sm:right-3 w-4 h-4 sm:w-5 sm:h-5 text-slate-400 animate-spin" />
           ) : query ? (
             <button
               type="button"
               onClick={handleClear}
-              className="absolute right-3 p-0.5 text-slate-400 hover:text-slate-600"
+              className="absolute right-2.5 sm:right-3 p-0.5 text-slate-400 hover:text-slate-600"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
           ) : null}
         </div>
@@ -135,9 +135,9 @@ export function SearchBar({
             <button
               key={index}
               onClick={() => handleSuggestionClick(suggestion)}
-              className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+              className="w-full px-3 sm:px-4 py-1.5 sm:py-2 text-left text-sm sm:text-base text-slate-700 hover:bg-slate-50 flex items-center gap-2"
             >
-              <Search className="w-4 h-4 text-slate-400" />
+              <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" />
               <span>{suggestion}</span>
             </button>
           ))}

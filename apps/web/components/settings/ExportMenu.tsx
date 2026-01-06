@@ -160,10 +160,10 @@ export function ExportMenu({
       </Button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-72 rounded-lg border border-slate-200 bg-white shadow-lg z-50">
+        <div className="absolute right-0 top-full mt-2 w-64 sm:w-72 rounded-lg border border-slate-200 bg-white shadow-lg z-50">
           {!showOptions ? (
             <div className="p-2">
-              <p className="px-3 py-2 text-xs font-medium text-slate-500 uppercase tracking-wide">
+              <p className="px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wide">
                 Export Format
               </p>
               {availableFormats.map((format) => {
@@ -176,34 +176,34 @@ export function ExportMenu({
                       setShowOptions(true);
                     }}
                     disabled={isExporting}
-                    className="flex w-full items-start gap-3 rounded-md px-3 py-2.5 text-left hover:bg-slate-50 transition-colors disabled:opacity-50"
+                    className="flex w-full items-start gap-2 sm:gap-3 rounded-md px-2 sm:px-3 py-2 sm:py-2.5 text-left hover:bg-slate-50 transition-colors disabled:opacity-50"
                   >
-                    <Icon className="h-5 w-5 text-slate-400 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-slate-900">
+                    <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-slate-400 mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-slate-900 truncate">
                         {format.label}
                       </p>
-                      <p className="text-xs text-slate-500">{format.description}</p>
+                      <p className="text-[10px] sm:text-xs text-slate-500 truncate">{format.description}</p>
                     </div>
                   </button>
                 );
               })}
             </div>
           ) : (
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-4">
+            <div className="p-3 sm:p-4">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
                 <button
                   onClick={() => setShowOptions(false)}
-                  className="text-sm text-slate-500 hover:text-slate-700"
+                  className="text-xs sm:text-sm text-slate-500 hover:text-slate-700"
                 >
                   ← Back
                 </button>
-                <span className="text-sm font-medium text-slate-900">
+                <span className="text-xs sm:text-sm font-medium text-slate-900 truncate ml-2">
                   {FORMAT_OPTIONS.find((f) => f.value === selectedFormat)?.label}
                 </span>
               </div>
 
-              <div className="space-y-3 mb-4">
+              <div className="space-y-2 sm:space-y-3 mb-3 sm:mb-4">
                 {selectedFormat !== 'srt' && selectedFormat !== 'txt' && (
                   <>
                     {hasSummary && (

@@ -16,6 +16,10 @@ import { apiRouter } from './routes/api';
 import { adminRouter } from './routes/admin';
 import clerkWebhookRouter from './routes/webhooks/clerk';
 import recallWebhookRouter from './routes/webhooks/recall';
+import { metricsCollector } from './middleware/metricsCollector';
+import { initializeAlertService } from './monitoring/alertService';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './docs/openapi';
 
 /**
  * Creates and configures the Express application
@@ -57,6 +61,31 @@ export function createApp(): Express {
   if (config.nodeEnv !== 'test') {
     app.use(morgan('combined'));
   }
+
+  // Metrics collection (before routes, after logging)
+  if (config.nodeEnv !== 'test') {
+    app.use(metricsCollector);
+
+    // Initialize alerting service
+    if (config.alerts?.enabled) {
+      initializeAlertService(config.alerts.checkIntervalMs);
+    }
+  }
+
+  // Swagger UI documentation
+  app.use(
+    '/api/docs',
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerSpec, {
+      customCss: '.swagger-ui .topbar { display: none }',
+      customSiteTitle: 'zigznote API Documentation',
+    })
+  );
+
+  // OpenAPI spec as JSON
+  app.get('/api/docs/openapi.json', (_req, res) => {
+    res.json(swaggerSpec);
+  });
 
   // Public routes (before auth middleware)
   app.use('/health', healthRouter);

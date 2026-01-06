@@ -192,19 +192,19 @@ export function InlineRecorder({ onRecordingComplete, onCancel }: InlineRecorder
   }
 
   return (
-    <div className="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+    <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
       {/* Recording indicator */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2">
         <div
-          className={`w-3 h-3 rounded-full ${isPaused ? 'bg-yellow-500' : 'bg-red-500 animate-pulse'}`}
+          className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${isPaused ? 'bg-yellow-500' : 'bg-red-500 animate-pulse'}`}
         />
-        <span className="text-sm font-medium text-red-700 dark:text-red-400">
+        <span className="text-xs sm:text-sm font-medium text-red-700 dark:text-red-400">
           {isPaused ? 'Paused' : 'Recording'}
         </span>
       </div>
 
       {/* Audio level visualization */}
-      <div className="flex-1 h-6 bg-red-100 dark:bg-red-900/50 rounded overflow-hidden">
+      <div className="flex-1 h-4 sm:h-6 bg-red-100 dark:bg-red-900/50 rounded overflow-hidden">
         <div
           className="h-full bg-red-400 dark:bg-red-500 transition-all duration-100"
           style={{ width: `${audioLevel * 100}%` }}
@@ -212,34 +212,34 @@ export function InlineRecorder({ onRecordingComplete, onCancel }: InlineRecorder
       </div>
 
       {/* Duration */}
-      <span className="text-sm font-mono text-red-700 dark:text-red-400 min-w-[50px]">
+      <span className="text-xs sm:text-sm font-mono text-red-700 dark:text-red-400 min-w-[40px] sm:min-w-[50px]">
         {formatTime(duration)}
       </span>
 
       {/* Controls */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5 sm:gap-1">
         <button
           onClick={togglePause}
-          className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 rounded"
+          className="p-1.5 sm:p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 rounded"
           title={isPaused ? 'Resume' : 'Pause'}
         >
-          {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+          {isPaused ? <Play className="w-3 h-3 sm:w-4 sm:h-4" /> : <Pause className="w-3 h-3 sm:w-4 sm:h-4" />}
         </button>
 
         <button
           onClick={stopRecording}
-          className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 rounded"
+          className="p-1.5 sm:p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 rounded"
           title="Stop recording"
         >
-          <Square className="w-4 h-4" />
+          <Square className="w-3 h-3 sm:w-4 sm:h-4" />
         </button>
 
         <button
           onClick={handleCancel}
-          className="p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+          className="p-1.5 sm:p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
           title="Cancel"
         >
-          <X className="w-4 h-4" />
+          <X className="w-3 h-3 sm:w-4 sm:h-4" />
         </button>
       </div>
     </div>

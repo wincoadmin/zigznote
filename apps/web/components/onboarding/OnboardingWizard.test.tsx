@@ -103,8 +103,8 @@ describe('OnboardingWizard', () => {
   it('should display progress indicators', () => {
     render(<OnboardingWizard />);
 
-    // Should have 5 progress dots (one for each step)
-    const progressBars = document.querySelectorAll('.w-8.h-1.rounded-full');
+    // Should have 5 progress dots (one for each step) - responsive classes
+    const progressBars = document.querySelectorAll('.w-6.h-1.rounded-full');
     expect(progressBars).toHaveLength(5);
   });
 
@@ -124,8 +124,8 @@ describe('OnboardingWizard', () => {
   it('should render step icons', () => {
     render(<OnboardingWizard />);
 
-    // First step should have the Rocket icon container
-    const iconContainer = document.querySelector('.w-16.h-16');
+    // First step should have the Rocket icon container - responsive classes
+    const iconContainer = document.querySelector('.w-12.h-12');
     expect(iconContainer).toBeInTheDocument();
   });
 });

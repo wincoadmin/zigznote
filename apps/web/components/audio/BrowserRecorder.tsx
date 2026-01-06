@@ -153,10 +153,10 @@ export function BrowserRecorder({ onRecordingComplete }: BrowserRecorderProps) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+      <CardHeader className="p-3 sm:p-6">
+        <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base">
           <svg
-            className="h-5 w-5 text-red-500"
+            className="h-4 w-4 sm:h-5 sm:w-5 text-red-500"
             fill="currentColor"
             viewBox="0 0 24 24"
           >
@@ -165,10 +165,10 @@ export function BrowserRecorder({ onRecordingComplete }: BrowserRecorderProps) {
           Record In-Person Meeting
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-6 pt-0 sm:pt-0">
         {/* Title input */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
+          <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1">
             Meeting Title
           </label>
           <Input
@@ -180,32 +180,32 @@ export function BrowserRecorder({ onRecordingComplete }: BrowserRecorderProps) {
         </div>
 
         {/* Recording UI */}
-        <div className="flex flex-col items-center py-6 space-y-4">
+        <div className="flex flex-col items-center py-4 sm:py-6 space-y-3 sm:space-y-4">
           {/* Duration display */}
-          <div className="text-4xl font-mono font-bold text-slate-900">
+          <div className="text-3xl sm:text-4xl font-mono font-bold text-slate-900">
             {formatDuration(duration)}
           </div>
 
           {/* Recording indicator */}
           {(state === 'recording' || state === 'paused') && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <span
-                className={`h-3 w-3 rounded-full ${
+                className={`h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full ${
                   state === 'recording'
                     ? 'bg-red-500 animate-pulse'
                     : 'bg-yellow-500'
                 }`}
               />
-              <span className="text-sm text-slate-600">
+              <span className="text-xs sm:text-sm text-slate-600">
                 {state === 'recording' ? 'Recording...' : 'Paused'}
               </span>
             </div>
           )}
 
           {/* Controls */}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-center gap-2">
             {state === 'idle' && (
-              <Button onClick={startRecording} size="lg">
+              <Button onClick={startRecording} className="h-10 sm:h-12 px-4 sm:px-6">
                 <svg
                   className="h-5 w-5 mr-2"
                   fill="currentColor"
@@ -218,17 +218,17 @@ export function BrowserRecorder({ onRecordingComplete }: BrowserRecorderProps) {
             )}
 
             {state === 'requesting' && (
-              <Button disabled size="lg">
-                Requesting microphone...
+              <Button disabled className="h-10 sm:h-12 px-4 sm:px-6">
+                Requesting mic...
               </Button>
             )}
 
             {state === 'recording' && (
               <>
-                <Button onClick={pauseRecording} variant="outline">
+                <Button onClick={pauseRecording} variant="outline" className="h-10 sm:h-12 px-4 sm:px-6">
                   Pause
                 </Button>
-                <Button onClick={stopRecording} variant="destructive">
+                <Button onClick={stopRecording} variant="destructive" className="h-10 sm:h-12 px-4 sm:px-6">
                   Stop & Save
                 </Button>
               </>
@@ -236,16 +236,16 @@ export function BrowserRecorder({ onRecordingComplete }: BrowserRecorderProps) {
 
             {state === 'paused' && (
               <>
-                <Button onClick={resumeRecording}>Resume</Button>
-                <Button onClick={stopRecording} variant="destructive">
+                <Button onClick={resumeRecording} className="h-10 sm:h-12 px-4 sm:px-6">Resume</Button>
+                <Button onClick={stopRecording} variant="destructive" className="h-10 sm:h-12 px-4 sm:px-6">
                   Stop & Save
                 </Button>
               </>
             )}
 
             {state === 'uploading' && (
-              <Button disabled size="lg">
-                Saving recording...
+              <Button disabled className="h-10 sm:h-12 px-4 sm:px-6">
+                Saving...
               </Button>
             )}
 
@@ -257,11 +257,10 @@ export function BrowserRecorder({ onRecordingComplete }: BrowserRecorderProps) {
           </div>
         </div>
 
-        {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+        {error && <p className="text-xs sm:text-sm text-red-600 text-center">{error}</p>}
 
-        <p className="text-xs text-slate-400 text-center">
-          Recording uses your browser&apos;s microphone. Works best in a quiet
-          environment.
+        <p className="text-[10px] sm:text-xs text-slate-400 text-center px-2">
+          Recording uses your browser&apos;s microphone. Works best in a quiet environment.
         </p>
       </CardContent>
     </Card>

@@ -127,11 +127,11 @@ export function AudioUploader({ onUploadComplete }: AudioUploaderProps) {
 
   return (
     <Card>
-      <CardContent className="p-6">
+      <CardContent className="p-3 sm:p-6">
         <div
           {...getRootProps()}
           className={`
-            border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
+            border-2 border-dashed rounded-lg p-4 sm:p-8 text-center cursor-pointer
             transition-colors duration-200
             ${isDragActive ? 'border-indigo-500 bg-indigo-50' : 'border-slate-300 hover:border-indigo-400'}
             ${file ? 'border-green-500 bg-green-50' : ''}
@@ -140,9 +140,9 @@ export function AudioUploader({ onUploadComplete }: AudioUploaderProps) {
           <input {...getInputProps()} />
 
           {file ? (
-            <div className="space-y-2">
+            <div className="space-y-1.5 sm:space-y-2">
               <svg
-                className="mx-auto h-12 w-12 text-green-500"
+                className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-green-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -154,15 +154,15 @@ export function AudioUploader({ onUploadComplete }: AudioUploaderProps) {
                   d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              <p className="text-sm font-medium text-slate-900">{file.name}</p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs sm:text-sm font-medium text-slate-900 truncate px-2">{file.name}</p>
+              <p className="text-[10px] sm:text-xs text-slate-500">
                 {(file.size / 1024 / 1024).toFixed(1)} MB
               </p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1.5 sm:space-y-2">
               <svg
-                className="mx-auto h-12 w-12 text-slate-400"
+                className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-slate-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -174,22 +174,22 @@ export function AudioUploader({ onUploadComplete }: AudioUploaderProps) {
                   d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
                 />
               </svg>
-              <p className="text-sm text-slate-600">
+              <p className="text-xs sm:text-sm text-slate-600">
                 {isDragActive
                   ? 'Drop the audio file here'
-                  : 'Drag & drop an audio file, or click to select'}
+                  : 'Drag & drop an audio file, or tap to select'}
               </p>
-              <p className="text-xs text-slate-400">
-                Supports MP3, WAV, M4A, WebM, OGG, AAC (up to 500MB)
+              <p className="text-[10px] sm:text-xs text-slate-400">
+                MP3, WAV, M4A, WebM, OGG, AAC (up to 500MB)
               </p>
             </div>
           )}
         </div>
 
         {file && (
-          <div className="mt-4 space-y-4">
+          <div className="mt-3 sm:mt-4 space-y-3 sm:space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1">
                 Meeting Title
               </label>
               <Input
@@ -200,9 +200,9 @@ export function AudioUploader({ onUploadComplete }: AudioUploaderProps) {
             </div>
 
             {uploading && (
-              <div className="space-y-2">
+              <div className="space-y-1.5 sm:space-y-2">
                 <Progress value={progress} />
-                <p className="text-xs text-slate-500 text-center">
+                <p className="text-[10px] sm:text-xs text-slate-500 text-center">
                   {progress < 10
                     ? 'Preparing...'
                     : progress < 80
@@ -214,9 +214,9 @@ export function AudioUploader({ onUploadComplete }: AudioUploaderProps) {
               </div>
             )}
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-xs sm:text-sm text-red-600">{error}</p>}
 
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 variant="outline"
                 onClick={() => {

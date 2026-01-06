@@ -120,16 +120,16 @@ export function OnboardingWizard({
   }, [step, router]);
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-lg animate-scale-in">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+      <Card className="w-full max-w-[calc(100vw-1.5rem)] sm:max-w-lg animate-scale-in">
         {/* Header with skip */}
-        <div className="flex justify-between items-center p-4 border-b border-slate-100">
-          <div className="flex gap-1">
+        <div className="flex justify-between items-center p-3 sm:p-4 border-b border-slate-100">
+          <div className="flex gap-0.5 sm:gap-1">
             {steps.map((_, index) => (
               <div
                 key={index}
                 className={cn(
-                  'w-8 h-1 rounded-full transition-colors',
+                  'w-6 sm:w-8 h-1 rounded-full transition-colors',
                   index === currentStep
                     ? 'bg-primary-500'
                     : index < currentStep
@@ -147,25 +147,25 @@ export function OnboardingWizard({
           </button>
         </div>
 
-        <CardContent className="p-8">
+        <CardContent className="p-4 sm:p-8">
           {/* Icon */}
-          <div className="w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center text-primary-600 mx-auto mb-6">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary-100 rounded-xl sm:rounded-2xl flex items-center justify-center text-primary-600 mx-auto mb-4 sm:mb-6 [&>svg]:w-6 [&>svg]:h-6 sm:[&>svg]:w-8 sm:[&>svg]:h-8">
             {step.icon}
           </div>
 
           {/* Content */}
-          <div className="text-center mb-8">
-            <h2 className="font-heading text-2xl font-bold text-slate-900 mb-3">
+          <div className="text-center mb-4 sm:mb-8">
+            <h2 className="font-heading text-lg sm:text-2xl font-bold text-slate-900 mb-1.5 sm:mb-3">
               {step.title}
             </h2>
-            <p className="text-slate-500 max-w-sm mx-auto">
+            <p className="text-xs sm:text-base text-slate-500 max-w-sm mx-auto">
               {step.description}
             </p>
           </div>
 
           {/* Action button */}
           {step.action && (
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6">
               <Button
                 variant="outline"
                 className="w-full"
@@ -178,17 +178,17 @@ export function OnboardingWizard({
           )}
 
           {/* Navigation */}
-          <div className="flex justify-between">
+          <div className="flex justify-between gap-2">
             <Button
               variant="ghost"
               onClick={handleBack}
               disabled={isFirstStep}
-              className={isFirstStep ? 'invisible' : ''}
+              className={cn('flex-1 sm:flex-none', isFirstStep ? 'invisible' : '')}
             >
               Back
             </Button>
 
-            <Button onClick={handleNext}>
+            <Button onClick={handleNext} className="flex-1 sm:flex-none">
               {isLastStep ? (
                 <>
                   Get Started
@@ -205,7 +205,7 @@ export function OnboardingWizard({
         </CardContent>
 
         {/* Step indicator text */}
-        <div className="px-4 pb-4 text-center text-sm text-slate-400">
+        <div className="px-3 sm:px-4 pb-3 sm:pb-4 text-center text-xs sm:text-sm text-slate-400">
           Step {currentStep + 1} of {steps.length}
         </div>
       </Card>

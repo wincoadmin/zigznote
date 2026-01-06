@@ -57,12 +57,12 @@ describe('Sidebar', () => {
     render(<Sidebar />);
 
     const sidebar = screen.getByRole('complementary');
-    expect(sidebar).toHaveClass('w-64');
+    expect(sidebar).toHaveClass('w-56', 'sm:w-64');
 
     const toggleButton = screen.getByRole('button', { name: /collapse sidebar/i });
     fireEvent.click(toggleButton);
 
-    expect(sidebar).toHaveClass('w-16');
+    expect(sidebar).toHaveClass('w-14', 'sm:w-16');
   });
 
   it('should expand when clicking toggle in collapsed state', () => {
@@ -75,7 +75,7 @@ describe('Sidebar', () => {
     fireEvent.click(screen.getByRole('button', { name: /expand sidebar/i }));
 
     const sidebar = screen.getByRole('complementary');
-    expect(sidebar).toHaveClass('w-64');
+    expect(sidebar).toHaveClass('w-56', 'sm:w-64');
   });
 
   it('should hide labels when collapsed', () => {

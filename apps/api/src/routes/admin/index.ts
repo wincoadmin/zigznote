@@ -14,6 +14,7 @@ import { featureFlagsRouter } from './featureFlags';
 import { systemConfigRouter } from './systemConfig';
 import { analyticsRouter } from './analytics';
 import { operationsRouter } from './operations';
+import backupsRouter from './backups';
 import { checkIpAllowlist } from '../../middleware/adminAuth';
 
 export const adminRouter: IRouter = Router();
@@ -33,3 +34,4 @@ adminRouter.use('/feature-flags', featureFlagsRouter);
 adminRouter.use('/system-config', systemConfigRouter);
 adminRouter.use('/analytics', analyticsRouter);
 adminRouter.use('/operations', operationsRouter);
+adminRouter.use('/backups', backupsRouter);
