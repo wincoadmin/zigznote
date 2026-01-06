@@ -5,6 +5,7 @@ import { Bell, Search, Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { UserButton } from '@/components/auth/UserButton';
 
 interface HeaderProps {
   title?: string;
@@ -90,6 +91,9 @@ export function Header({ title, onMenuClick, showMobileMenu, className }: Header
           {/* Notification badge */}
           <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-primary-500" />
         </Button>
+
+        {/* User Menu */}
+        <UserButton />
       </div>
     </header>
   );

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { signOut, useSession } from 'next-auth/react';
 import {
   Home,
   Calendar,
@@ -12,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   HelpCircle,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -32,6 +34,17 @@ interface SidebarProps {
 export function Sidebar({ className }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  const { data: session } = useSession();
+
+  const user = session?.user;
+  const displayName = user?.name || user?.email || 'User';
+  const initials = user?.name
+    ? user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+    : user?.email?.slice(0, 2).toUpperCase() || 'U';
+
+  const handleSignOut = () => {
+    signOut({ callbackUrl: '/sign-in' });
+  };
 
   return (
     <aside
@@ -117,16 +130,38 @@ export function Sidebar({ className }: SidebarProps) {
             collapsed && 'justify-center'
           )}
         >
-          <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-primary-100 flex items-center justify-center text-xs sm:text-sm font-medium text-primary-700 shrink-0">
-            U
-          </div>
+          {user?.avatarUrl ? (
+            <img
+              src={user.avatarUrl}
+              alt={displayName}
+              className="h-7 w-7 sm:h-8 sm:w-8 rounded-full object-cover shrink-0"
+            />
+          ) : (
+            <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-primary-100 flex items-center justify-center text-xs sm:text-sm font-medium text-primary-700 shrink-0">
+              {initials}
+            </div>
+          )}
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-xs sm:text-sm font-medium text-slate-900 truncate">User Name</p>
-              <p className="text-[10px] sm:text-xs text-slate-500 truncate">user@example.com</p>
+              <p className="text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{displayName}</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 truncate">{user?.email}</p>
             </div>
           )}
         </div>
+
+        {/* Sign Out Button */}
+        <button
+          onClick={handleSignOut}
+          className={cn(
+            'flex items-center gap-2 sm:gap-3 rounded-lg px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-colors w-full mt-2',
+            'text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20',
+            collapsed && 'justify-center'
+          )}
+          title={collapsed ? 'Sign out' : undefined}
+        >
+          <LogOut className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" strokeWidth={1.5} />
+          {!collapsed && <span>Sign out</span>}
+        </button>
       </div>
     </aside>
   );

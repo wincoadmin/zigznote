@@ -3,9 +3,14 @@
  */
 
 import { PrismaClient, Organization } from '@prisma/client';
+import bcrypt from 'bcrypt';
 import { randomString, randomPersonName, randomElement } from './utils';
 
 const roles = ['admin', 'member'];
+
+// Default test password for all seeded users
+export const TEST_PASSWORD = 'TestPassword123!';
+const BCRYPT_ROUNDS = 12;
 
 export interface SeedUser {
   id: string;
@@ -21,6 +26,10 @@ export async function seedUsers(
   usersPerOrg: number
 ): Promise<SeedUser[]> {
   console.info('Creating users...');
+  console.info(`  ℹ All users will have password: ${TEST_PASSWORD}`);
+
+  // Pre-hash the password once for all users
+  const passwordHash = await bcrypt.hash(TEST_PASSWORD, BCRYPT_ROUNDS);
 
   const allUsers: SeedUser[] = [];
 
@@ -34,6 +43,8 @@ export async function seedUsers(
           clerkId: `clerk_${randomString(24)}`,
           email: isFirst && isDemo ? 'admin@zigznote.com' : `user${u}_${randomString(6)}@example.com`,
           name: isFirst && isDemo ? 'Admin User' : randomPersonName(),
+          password: passwordHash,
+          emailVerified: new Date(), // Auto-verify for test users
           organizationId: org.id,
           role: isFirst ? 'admin' : randomElement(roles),
           avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${randomString(8)}`,
@@ -55,6 +66,8 @@ export async function seedUsersBatch(
   organizationId: string,
   count: number
 ): Promise<SeedUser[]> {
+  // Pre-hash the password once for all users
+  const passwordHash = await bcrypt.hash(TEST_PASSWORD, BCRYPT_ROUNDS);
   const usersData = [];
 
   for (let u = 0; u < count; u++) {
@@ -62,6 +75,8 @@ export async function seedUsersBatch(
       clerkId: `clerk_${randomString(24)}`,
       email: `user${u}_${randomString(8)}@${randomString(6)}.com`,
       name: randomPersonName(),
+      password: passwordHash,
+      emailVerified: new Date(),
       organizationId,
       role: u === 0 ? 'admin' : randomElement(roles),
     });

@@ -10,6 +10,8 @@ interface SettingsLayoutProps {
 }
 
 const settingsNav = [
+  { name: 'Profile', href: '/settings/profile' },
+  { name: 'Security', href: '/settings/security' },
   { name: 'General', href: '/settings' },
   { name: 'Notifications', href: '/settings/notifications' },
   { name: 'API Keys', href: '/settings/api-keys' },
@@ -46,7 +48,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                 const isActive =
                   item.href === '/settings'
                     ? pathname === '/settings'
-                    : pathname.startsWith(item.href);
+                    : pathname === item.href || pathname.startsWith(item.href + '/');
 
                 return (
                   <li key={item.href}>

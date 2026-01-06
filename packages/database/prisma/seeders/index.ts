@@ -7,3 +7,6 @@ export * from './organizations';
 export * from './users';
 export * from './meetings';
 export * from './achievements';
+
+// Re-export test password for documentation
+export { TEST_PASSWORD } from './users';

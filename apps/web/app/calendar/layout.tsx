@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Sidebar, Header, MobileNav } from '@/components/layout';
 import { cn } from '@/lib/utils';
 
-export default function DashboardLayout({
+export default function CalendarLayout({
   children,
 }: {
   children: React.ReactNode;

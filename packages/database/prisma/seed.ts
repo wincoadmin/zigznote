@@ -11,6 +11,7 @@
  * @last-reviewed 2026-01-04
  */
 
+import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import {
   seedOrganizations,
@@ -45,7 +46,7 @@ async function clearDatabase(): Promise<void> {
   await prisma.transcript.deleteMany();
   await prisma.meetingParticipant.deleteMany();
   await prisma.meeting.deleteMany();
-  await prisma.webhookLog.deleteMany();
+  await prisma.webhookDelivery.deleteMany();
   await prisma.webhook.deleteMany();
   await prisma.automationRule.deleteMany();
   await prisma.integrationConnection.deleteMany();
