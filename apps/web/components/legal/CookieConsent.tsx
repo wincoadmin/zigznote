@@ -40,8 +40,8 @@ export function CookieConsent() {
     setShowPreferences(false);
 
     if (newPreferences.analytics && typeof window !== 'undefined') {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).gtag?.('consent', 'update', { analytics_storage: 'granted' });
+      const win = window as unknown as { gtag?: (command: string, action: string, params: Record<string, string>) => void };
+      win.gtag?.('consent', 'update', { analytics_storage: 'granted' });
     }
   };
 

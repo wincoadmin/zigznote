@@ -14,10 +14,10 @@ import {
 import type { Meeting, Transcript, Summary, ActionItem } from '@zigznote/database';
 import { recallService } from './recallService';
 import { Queue } from 'bullmq';
-import Redis from 'ioredis';
 import { QUEUE_NAMES } from '@zigznote/shared';
 import { logger } from '../utils/logger';
 import { errors } from '../utils/errors';
+import { getBullMQConnection } from '../jobs/queues';
 
 /**
  * Meeting data returned from API
@@ -91,24 +91,13 @@ export interface ListMeetingsResult {
   };
 }
 
-// Redis connection for job queue
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
-let redisConnection: Redis | null = null;
+// Summarization queue instance
 let summarizationQueue: Queue | null = null;
-
-function getRedisConnection(): Redis {
-  if (!redisConnection) {
-    redisConnection = new Redis(REDIS_URL, {
-      maxRetriesPerRequest: null,
-    });
-  }
-  return redisConnection;
-}
 
 function getSummarizationQueue(): Queue {
   if (!summarizationQueue) {
     summarizationQueue = new Queue(QUEUE_NAMES.SUMMARIZATION, {
-      connection: getRedisConnection(),
+      connection: getBullMQConnection(),
     });
   }
   return summarizationQueue;

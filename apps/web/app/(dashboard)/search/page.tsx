@@ -245,25 +245,25 @@ export default function SearchPage() {
               <Badge variant="outline" className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs">
                 Keywords
               </Badge>
-              Search for specific topics like "budget review"
+              Search for specific topics like &quot;budget review&quot;
             </p>
             <p>
               <Badge variant="outline" className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs">
                 Names
               </Badge>
-              Find mentions of people like "John mentioned"
+              Find mentions of people like &quot;John mentioned&quot;
             </p>
             <p>
               <Badge variant="outline" className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs">
                 Actions
               </Badge>
-              Look for action items like "follow up"
+              Look for action items like &quot;follow up&quot;
             </p>
             <p>
               <Badge variant="outline" className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs">
                 Decisions
               </Badge>
-              Find decisions like "we decided"
+              Find decisions like &quot;we decided&quot;
             </p>
           </div>
         </div>

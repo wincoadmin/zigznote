@@ -4,7 +4,7 @@
  */
 
 import { Worker, Job } from 'bullmq';
-import { getRedisConnection, getCalendarSyncQueue } from './queues';
+import { getBullMQConnection, getCalendarSyncQueue } from './queues';
 import { googleCalendarService } from '../services/googleCalendarService';
 import { calendarRepository } from '@zigznote/database';
 import { logger } from '../utils/logger';
@@ -122,7 +122,7 @@ export function createCalendarSyncWorker(): Worker<CalendarSyncJobData> {
     QUEUE_NAMES.CALENDAR_SYNC,
     processCalendarSyncJob,
     {
-      connection: getRedisConnection(),
+      connection: getBullMQConnection(),
       concurrency: 5,
       limiter: {
         max: 10,

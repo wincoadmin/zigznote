@@ -7,7 +7,7 @@ import { Worker, Job } from 'bullmq';
 import { Resend } from 'resend';
 import { config } from '../config';
 import { logger } from '../utils/logger';
-import { getRedisConnection, type EmailJobData } from './queues';
+import { getBullMQConnection, type EmailJobData } from './queues';
 
 let resend: Resend | null = null;
 let emailWorker: Worker<EmailJobData> | null = null;
@@ -86,7 +86,7 @@ export function startEmailWorker(): Worker<EmailJobData> | null {
     'email',
     processEmailJob,
     {
-      connection: getRedisConnection(),
+      connection: getBullMQConnection(),
       concurrency: 5, // Process up to 5 emails concurrently
     }
   );

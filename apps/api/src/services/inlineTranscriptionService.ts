@@ -77,7 +77,7 @@ class InlineTranscriptionService {
           Authorization: `Token ${this.apiKey}`,
           'Content-Type': mimeType,
         },
-        body: buffer,
+        body: new Uint8Array(buffer),
       });
 
       if (!response.ok) {

@@ -110,7 +110,8 @@ export class AlertService extends EventEmitter {
    */
   incrementMetric(metric: string, amount = 1): void {
     const dataPoints = this.metrics.get(metric) || [];
-    const lastValue = dataPoints.length > 0 ? dataPoints[dataPoints.length - 1].value : 0;
+    const lastDataPoint = dataPoints[dataPoints.length - 1];
+    const lastValue = dataPoints.length > 0 && lastDataPoint ? lastDataPoint.value : 0;
     this.recordMetric(metric, lastValue + amount);
   }
 

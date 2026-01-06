@@ -5,7 +5,11 @@
     "rootDir": "src",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@zigznote/database": ["../../packages/database/dist"],
+      "@zigznote/database/*": ["../../packages/database/dist/*"],
+      "@zigznote/shared": ["../../packages/shared/dist"],
+      "@zigznote/shared/*": ["../../packages/shared/dist/*"]
     }
   },
   "include": ["src/**/*"],

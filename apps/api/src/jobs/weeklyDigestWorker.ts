@@ -4,7 +4,7 @@
  */
 
 import { Worker, Job, Queue } from 'bullmq';
-import { getRedisConnection } from './queues';
+import { getBullMQConnection } from './queues';
 import { analyticsService } from '../services';
 import { logger } from '../utils/logger';
 import {
@@ -22,11 +22,11 @@ let queue: Queue<WeeklyDigestJobData> | null = null;
 export function getWeeklyDigestQueue(): Queue<WeeklyDigestJobData> {
   if (!queue) {
     queue = new Queue<WeeklyDigestJobData>(QUEUE_NAMES.WEEKLY_DIGEST, {
-      connection: getRedisConnection(),
+      connection: getBullMQConnection(),
       defaultJobOptions: DEFAULT_JOB_OPTIONS,
-    });
+    }) as Queue<WeeklyDigestJobData>;
   }
-  return queue;
+  return queue!;
 }
 
 /**
@@ -255,7 +255,7 @@ export function startWeeklyDigestWorker(): Worker<WeeklyDigestJobData> {
     QUEUE_NAMES.WEEKLY_DIGEST,
     processDigestJob,
     {
-      connection: getRedisConnection(),
+      connection: getBullMQConnection(),
       concurrency: 1, // Process one at a time to avoid rate limits
     }
   );

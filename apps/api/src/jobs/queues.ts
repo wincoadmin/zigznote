@@ -2,7 +2,7 @@
  * BullMQ queue instances
  */
 
-import { Queue, Job } from 'bullmq';
+import { Queue, Job, ConnectionOptions } from 'bullmq';
 import IORedis from 'ioredis';
 import { config } from '../config';
 import { logger } from '../utils/logger';
@@ -54,6 +54,14 @@ export function getRedisConnection(): IORedis {
 }
 
 /**
+ * Gets the connection as BullMQ ConnectionOptions (cast for type compatibility)
+ * This is needed because bullmq bundles its own ioredis version with incompatible types
+ */
+export function getBullMQConnection(): ConnectionOptions {
+  return getRedisConnection() as unknown as ConnectionOptions;
+}
+
+/**
  * Queue instances
  */
 let transcriptionQueue: Queue<TranscriptionJobData> | null = null;
@@ -70,12 +78,12 @@ export function getTranscriptionQueue(): Queue<TranscriptionJobData> {
     transcriptionQueue = new Queue<TranscriptionJobData>(
       QUEUE_NAMES.TRANSCRIPTION,
       {
-        connection: getRedisConnection(),
+        connection: getBullMQConnection(),
         defaultJobOptions: DEFAULT_JOB_OPTIONS,
       }
-    );
+    ) as Queue<TranscriptionJobData>;
   }
-  return transcriptionQueue;
+  return transcriptionQueue!;
 }
 
 /**
@@ -86,12 +94,12 @@ export function getSummarizationQueue(): Queue<SummarizationJobData> {
     summarizationQueue = new Queue<SummarizationJobData>(
       QUEUE_NAMES.SUMMARIZATION,
       {
-        connection: getRedisConnection(),
+        connection: getBullMQConnection(),
         defaultJobOptions: DEFAULT_JOB_OPTIONS,
       }
-    );
+    ) as Queue<SummarizationJobData>;
   }
-  return summarizationQueue;
+  return summarizationQueue!;
 }
 
 /**
@@ -100,14 +108,14 @@ export function getSummarizationQueue(): Queue<SummarizationJobData> {
 export function getWebhookQueue(): Queue<WebhookJobData> {
   if (!webhookQueue) {
     webhookQueue = new Queue<WebhookJobData>(QUEUE_NAMES.WEBHOOK, {
-      connection: getRedisConnection(),
+      connection: getBullMQConnection(),
       defaultJobOptions: {
         ...DEFAULT_JOB_OPTIONS,
         attempts: 5, // More retries for webhooks
       },
-    });
+    }) as Queue<WebhookJobData>;
   }
-  return webhookQueue;
+  return webhookQueue!;
 }
 
 /**
@@ -118,12 +126,12 @@ export function getCalendarSyncQueue(): Queue<CalendarSyncJobData> {
     calendarSyncQueue = new Queue<CalendarSyncJobData>(
       QUEUE_NAMES.CALENDAR_SYNC,
       {
-        connection: getRedisConnection(),
+        connection: getBullMQConnection(),
         defaultJobOptions: DEFAULT_JOB_OPTIONS,
       }
-    );
+    ) as Queue<CalendarSyncJobData>;
   }
-  return calendarSyncQueue;
+  return calendarSyncQueue!;
 }
 
 /**
@@ -132,14 +140,14 @@ export function getCalendarSyncQueue(): Queue<CalendarSyncJobData> {
 export function getEmailQueue(): Queue<EmailJobData> {
   if (!emailQueue) {
     emailQueue = new Queue<EmailJobData>('email', {
-      connection: getRedisConnection(),
+      connection: getBullMQConnection(),
       defaultJobOptions: {
         ...DEFAULT_JOB_OPTIONS,
         attempts: 5, // More retries for emails
       },
-    });
+    }) as Queue<EmailJobData>;
   }
-  return emailQueue;
+  return emailQueue!;
 }
 
 /**
