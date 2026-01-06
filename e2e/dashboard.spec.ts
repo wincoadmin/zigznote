@@ -12,22 +12,22 @@ test.describe('Dashboard', () => {
   test('should display stats cards', async ({ page }) => {
     await page.goto('/dashboard');
 
-    // Stats cards should be visible (even if loading)
-    await expect(page.locator('[data-testid="stats-cards"]').or(page.getByText(/meetings this week/i))).toBeVisible();
+    // Stats cards should be visible - check for "Meetings this week" text
+    await expect(page.getByText(/meetings this week/i)).toBeVisible();
   });
 
-  test('should display recent meetings section', async ({ page }) => {
+  test('should display meetings section', async ({ page }) => {
     await page.goto('/dashboard');
 
-    // Recent meetings section should exist
-    await expect(page.getByText(/recent meetings/i)).toBeVisible();
+    // The /dashboard page shows "Upcoming Meetings" section
+    await expect(page.getByText(/upcoming meetings/i)).toBeVisible();
   });
 
-  test('should display quick actions', async ({ page }) => {
+  test('should display activity section', async ({ page }) => {
     await page.goto('/dashboard');
 
-    // Quick actions should be visible
-    await expect(page.getByText(/quick actions/i)).toBeVisible();
+    // The /dashboard page shows "Recent Activity" section
+    await expect(page.getByText(/recent activity/i)).toBeVisible();
   });
 
   test('should show onboarding for new users', async ({ page }) => {

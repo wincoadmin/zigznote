@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -83,9 +84,11 @@ export default function MeetingsPage() {
             View and manage all your recorded meetings
           </p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          New Meeting
+        <Button asChild>
+          <Link href="/meetings/new">
+            <Plus className="mr-2 h-4 w-4" />
+            New Meeting
+          </Link>
         </Button>
       </div>
 
