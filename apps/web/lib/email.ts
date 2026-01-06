@@ -1,25 +1,35 @@
 /**
- * Email service using Resend
+ * Email service with AWS SES (primary) and Resend (fallback)
  * Handles all transactional emails for authentication
  */
 
-import { Resend } from 'resend';
+import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 
-// Lazy initialization to avoid build errors when RESEND_API_KEY is not set
-let _resend: Resend | null = null;
+// Lazy initialization for AWS SES
+let _sesClient: SESClient | null = null;
 
-function getResend(): Resend {
-  if (!_resend) {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-      throw new Error('RESEND_API_KEY environment variable is not set');
+function getSESClient(): SESClient {
+  if (!_sesClient) {
+    const region = process.env.AWS_SES_REGION || process.env.AWS_REGION || 'us-east-1';
+    const accessKeyId = process.env.AWS_SES_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
+    const secretAccessKey = process.env.AWS_SES_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
+
+    if (!accessKeyId || !secretAccessKey) {
+      throw new Error('AWS SES credentials not configured. Set AWS_SES_ACCESS_KEY_ID and AWS_SES_SECRET_ACCESS_KEY');
     }
-    _resend = new Resend(apiKey);
+
+    _sesClient = new SESClient({
+      region,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+    });
   }
-  return _resend;
+  return _sesClient;
 }
 
-const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@zigznote.com';
+const FROM_EMAIL = process.env.AWS_SES_FROM_EMAIL || process.env.FROM_EMAIL || 'noreply@zigznote.com';
 const APP_NAME = 'zigznote';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
@@ -32,6 +42,28 @@ const THEME = {
   textMuted: '#6b7280',
   border: '#e5e7eb',
 };
+
+/**
+ * Send email via AWS SES
+ */
+async function sendEmailViaSES(to: string, subject: string, html: string): Promise<void> {
+  const client = getSESClient();
+
+  const command = new SendEmailCommand({
+    Source: FROM_EMAIL,
+    Destination: {
+      ToAddresses: [to],
+    },
+    Message: {
+      Subject: { Data: subject, Charset: 'UTF-8' },
+      Body: {
+        Html: { Data: html, Charset: 'UTF-8' },
+      },
+    },
+  });
+
+  await client.send(command);
+}
 
 /**
  * Base email template with zigznote branding
@@ -129,12 +161,7 @@ export async function sendWelcomeEmail(email: string, name: string): Promise<voi
     </p>
   `;
 
-  await getResend().emails.send({
-    from: FROM_EMAIL,
-    to: email,
-    subject: `Welcome to ${APP_NAME}!`,
-    html: baseTemplate(content),
-  });
+  await sendEmailViaSES(email, `Welcome to ${APP_NAME}!`, baseTemplate(content));
 }
 
 /**
@@ -171,12 +198,7 @@ export async function sendVerificationEmail(
     </p>
   `;
 
-  await getResend().emails.send({
-    from: FROM_EMAIL,
-    to: email,
-    subject: `Verify your ${APP_NAME} account`,
-    html: baseTemplate(content),
-  });
+  await sendEmailViaSES(email, `Verify your ${APP_NAME} account`, baseTemplate(content));
 }
 
 /**
@@ -213,12 +235,7 @@ export async function sendPasswordResetEmail(
     </p>
   `;
 
-  await getResend().emails.send({
-    from: FROM_EMAIL,
-    to: email,
-    subject: `Reset your ${APP_NAME} password`,
-    html: baseTemplate(content),
-  });
+  await sendEmailViaSES(email, `Reset your ${APP_NAME} password`, baseTemplate(content));
 }
 
 /**
@@ -244,12 +261,7 @@ export async function sendPasswordChangedEmail(
     </p>
   `;
 
-  await getResend().emails.send({
-    from: FROM_EMAIL,
-    to: email,
-    subject: `Your ${APP_NAME} password was changed`,
-    html: baseTemplate(content),
-  });
+  await sendEmailViaSES(email, `Your ${APP_NAME} password was changed`, baseTemplate(content));
 }
 
 /**
@@ -300,12 +312,7 @@ export async function sendNewLoginEmail(
     </p>
   `;
 
-  await getResend().emails.send({
-    from: FROM_EMAIL,
-    to: email,
-    subject: `New sign-in to your ${APP_NAME} account`,
-    html: baseTemplate(content),
-  });
+  await sendEmailViaSES(email, `New sign-in to your ${APP_NAME} account`, baseTemplate(content));
 }
 
 /**
@@ -331,12 +338,7 @@ export async function send2FAEnabledEmail(
     </p>
   `;
 
-  await getResend().emails.send({
-    from: FROM_EMAIL,
-    to: email,
-    subject: `Two-factor authentication enabled on ${APP_NAME}`,
-    html: baseTemplate(content),
-  });
+  await sendEmailViaSES(email, `Two-factor authentication enabled on ${APP_NAME}`, baseTemplate(content));
 }
 
 /**
@@ -362,10 +364,5 @@ export async function send2FADisabledEmail(
     </p>
   `;
 
-  await getResend().emails.send({
-    from: FROM_EMAIL,
-    to: email,
-    subject: `Two-factor authentication disabled on ${APP_NAME}`,
-    html: baseTemplate(content),
-  });
+  await sendEmailViaSES(email, `Two-factor authentication disabled on ${APP_NAME}`, baseTemplate(content));
 }

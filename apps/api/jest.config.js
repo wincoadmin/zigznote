@@ -11,7 +11,13 @@ module.exports = {
         useESM: true,
       },
     ],
+    // Transform ESM-only modules (jose)
+    '^.+\\.m?js$': 'babel-jest',
   },
+  // Transform ESM-only modules
+  transformIgnorePatterns: [
+    'node_modules/(?!(jose)/)',
+  ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@zigznote/database$': '<rootDir>/tests/__mocks__/@zigznote/database.ts',

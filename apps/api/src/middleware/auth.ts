@@ -6,10 +6,10 @@
  * @last-reviewed 2026-01-06
  */
 
-import { Request, Response, NextFunction, RequestHandler } from 'express';
-import { jwtVerify, createSecretKey, JWTPayload } from 'jose';
+import { Request, Response, NextFunction } from 'express';
+import { jwtVerify, JWTPayload } from 'jose';
 import { UnauthorizedError, ForbiddenError } from '@zigznote/shared';
-import { userRepository, organizationRepository, prisma } from '@zigznote/database';
+import { prisma } from '@zigznote/database';
 import { logger } from '../utils/logger';
 
 /**

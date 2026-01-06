@@ -5,11 +5,29 @@
  * @single-responsibility YES — all file storage operations
  */
 
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+  CreateBucketCommand,
+  HeadBucketCommand,
+  ListObjectsV2Command,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 import { config } from '../config';
 import { BadRequestError } from '@zigznote/shared';
+
+// Buckets for different content types
+const BUCKETS = {
+  AUDIO: 'zigznote-audio',
+  EXPORTS: 'zigznote-exports',
+  AVATARS: 'zigznote-avatars',
+  BACKUPS: 'zigznote-backups',
+} as const;
+
+export type BucketType = keyof typeof BUCKETS;
 
 // Supported audio formats
 const ALLOWED_MIME_TYPES = [
@@ -70,6 +88,77 @@ class StorageService {
    */
   isConfigured(): boolean {
     return this.client !== null;
+  }
+
+  /**
+   * Initialize all required buckets
+   * Should be called on application startup
+   */
+  async initializeBuckets(): Promise<void> {
+    if (!this.client) {
+      console.log('Storage not configured, skipping bucket initialization');
+      return;
+    }
+
+    console.log('Initializing storage buckets...');
+
+    for (const [, bucket] of Object.entries(BUCKETS)) {
+      try {
+        // Check if bucket exists
+        await this.client.send(new HeadBucketCommand({ Bucket: bucket }));
+        console.log(`  ✓ Bucket ${bucket} exists`);
+      } catch (error: unknown) {
+        const err = error as { name?: string };
+        if (err.name === 'NotFound' || err.name === 'NoSuchBucket') {
+          // Create bucket if it doesn't exist
+          try {
+            await this.client.send(new CreateBucketCommand({ Bucket: bucket }));
+            console.log(`  ✓ Created bucket ${bucket}`);
+          } catch (createError) {
+            console.error(`  ✗ Failed to create bucket ${bucket}:`, createError);
+          }
+        } else {
+          console.error(`  ✗ Error checking bucket ${bucket}:`, error);
+        }
+      }
+    }
+
+    console.log('Storage bucket initialization complete');
+  }
+
+  /**
+   * Get bucket name by type
+   */
+  getBucket(type: BucketType = 'AUDIO'): string {
+    return BUCKETS[type];
+  }
+
+  /**
+   * List files in a bucket with optional prefix
+   */
+  async listFiles(
+    prefix?: string,
+    bucketType: BucketType = 'AUDIO',
+    maxKeys = 1000
+  ): Promise<{ key: string; size: number; lastModified: Date }[]> {
+    if (!this.client) {
+      throw new BadRequestError('Storage is not configured');
+    }
+
+    const bucket = this.getBucket(bucketType);
+    const response = await this.client.send(
+      new ListObjectsV2Command({
+        Bucket: bucket,
+        Prefix: prefix,
+        MaxKeys: maxKeys,
+      })
+    );
+
+    return (response.Contents || []).map((obj) => ({
+      key: obj.Key || '',
+      size: obj.Size || 0,
+      lastModified: obj.LastModified || new Date(),
+    }));
   }
 
   /**

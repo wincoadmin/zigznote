@@ -5,6 +5,7 @@ import { logger } from './utils/logger';
 import { validateEnvironment, getCurrentPhase } from '@zigznote/shared';
 import { initWebSocketServer, closeWebSocketServer } from './websocket';
 import { startBackupWorker, stopBackupWorker } from './jobs/backupWorker';
+import { storageService } from './services/storageService';
 
 // Validate environment variables before starting
 validateEnvironment(getCurrentPhase());
@@ -17,10 +18,20 @@ const httpServer = createServer(app);
 // Initialize WebSocket server
 initWebSocketServer(httpServer);
 
-const server = httpServer.listen(config.port, () => {
+const server = httpServer.listen(config.port, async () => {
   logger.info(`Server running on port ${config.port}`);
   logger.info(`Environment: ${config.nodeEnv}`);
   logger.info('WebSocket server initialized');
+
+  // Initialize storage buckets (MinIO/S3)
+  if (config.nodeEnv !== 'test') {
+    try {
+      await storageService.initializeBuckets();
+      logger.info('Storage buckets initialized');
+    } catch (error) {
+      logger.warn({ error }, 'Storage initialization failed (storage may be unavailable)');
+    }
+  }
 
   // Start backup worker in production (not in test)
   if (config.nodeEnv !== 'test') {
