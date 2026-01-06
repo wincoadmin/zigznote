@@ -1029,6 +1029,64 @@
 
 ---
 
+## Security Audit
+
+**Status:** ✅ Complete
+**Date:** 2026-01-06
+
+### Scope
+- API route authorization audit (IDOR prevention)
+- Dependency vulnerability scan
+- Security test suite creation
+
+### Key Findings & Fixes
+
+| Severity | Issue | Location | Status |
+|----------|-------|----------|--------|
+| 🔴 CRITICAL | Missing org check on meeting speakers | `voiceProfiles.ts:261-276` | ✅ Fixed |
+| 🔴 CRITICAL | Missing org check on speaker reprocess | `voiceProfiles.ts:283-305` | ✅ Fixed |
+| 🔴 CRITICAL | Missing org check on chat suggestions | `chat.ts:221-238` | ✅ Fixed |
+| ✅ CLEAN | Dependency vulnerabilities | `pnpm audit` | No issues |
+
+### Routes Verified Secure
+All 25+ route files audited and confirmed secure:
+- meetings.ts, conversations.ts, search.ts, sharing.ts
+- voiceProfiles.ts (after fix), chat.ts (after fix)
+- dataExport.ts, documents.ts, meetingExport.ts
+- calendar.ts, speakers.ts, vocabulary.ts, apiKeys.ts
+- settings.ts, analytics.ts, insights.ts
+- webhooks/routes.ts, hubspot/routes.ts, slack/routes.ts
+
+### Security Test Suite Created
+
+| Test File | Tests | Coverage |
+|-----------|-------|----------|
+| `idor.test.ts` | 22 | Cross-org data isolation |
+| `auth.test.ts` | 33 | Authentication boundaries |
+| `index.test.ts` | 1 | Suite index |
+| **Total** | **56** | IDOR + Auth |
+
+### Test Commands
+```bash
+# Run all security tests
+pnpm --filter @zigznote/api test -- --testPathPattern=security
+
+# Run specific test
+pnpm --filter @zigznote/api test -- --testPathPattern=idor
+```
+
+### Documentation Created
+- `SECURITY_AUDIT_REPORT.md` - Full audit findings
+- `SECURITY_AUDIT_PROMPT.md` - Reusable audit prompt with test templates
+
+### Final Test Count
+- Unit Tests (API): 449 ✅
+- Unit Tests (Web): 247 ✅
+- E2E Tests: 302 ✅
+- **Total: 998 tests passing**
+
+---
+
 ## Summary Table
 
 | Phase | Name | Status | Est. Time |
@@ -1056,9 +1114,10 @@
 | 9 | AI File Generation | ✅ | 2-3 hrs |
 | 9.5 | Smart Chat Input & Attachments | ✅ | 2-3 hrs |
 | 10 | Pre-Launch Polish & Infrastructure | ✅ | 2-3 hrs |
+| — | Security Audit | ✅ | 45-60 min |
 
-**Total Estimated Time:** 22-33 hours
-**Status:** All phases complete!
+**Total Estimated Time:** 23-34 hours
+**Status:** All phases complete + Security Audit passed!
 
 ---
 
@@ -1091,6 +1150,7 @@
 | 2026-01-06 | Phase 9.5 | Smart Chat Input - large paste handling, audio attachments, inline recording |
 | 2026-01-06 | Phase 8.95.1 | Critical Gap Fixes - idempotency integration, transactions, dunning emails, 589 tests |
 | 2026-01-06 | Phase 10 | Pre-Launch Polish - backup system, legal pages, mobile responsive, alerting, OpenAPI docs, Docker production, 640 tests |
+| 2026-01-06 | Security Audit | Fixed 3 IDOR vulnerabilities, created 56 security tests, audited 25+ route files, 998 total tests passing |
 
 ---
 
