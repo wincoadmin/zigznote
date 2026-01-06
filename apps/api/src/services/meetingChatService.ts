@@ -1,7 +1,9 @@
 /**
- * @module MeetingChatService
- * @description AI-powered chat with meeting transcripts
+ * @ownership
  * @domain Meeting AI Chat
+ * @description RAG-powered chat service for Q&A over meeting transcripts
+ * @single-responsibility YES — handles all AI chat operations
+ * @last-reviewed 2026-01-06
  */
 
 // Use dynamic imports for optional AI SDK dependencies

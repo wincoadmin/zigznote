@@ -1,6 +1,9 @@
 /**
- * Settings API Routes
- * Handles notification preferences and organization settings
+ * @ownership
+ * @domain User & Organization Settings
+ * @description API routes for notification preferences and organization configuration
+ * @single-responsibility YES — handles all user and org settings operations
+ * @last-reviewed 2026-01-06
  */
 
 import { Router } from 'express';

@@ -1,8 +1,11 @@
 'use client';
 
 /**
- * InlineRecorder Component
- * Record audio directly in the chat input
+ * @ownership
+ * @domain Audio Recording
+ * @description Inline audio recorder component for chat input with visualization
+ * @single-responsibility YES — handles all inline audio recording operations
+ * @last-reviewed 2026-01-06
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';

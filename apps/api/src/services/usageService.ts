@@ -1,6 +1,9 @@
 /**
- * Usage Quota Service
- * Tracks and enforces usage limits per organization
+ * @ownership
+ * @domain Usage & Quotas
+ * @description Tracks and enforces usage limits per organization
+ * @single-responsibility YES — handles all usage quota operations
+ * @last-reviewed 2026-01-06
  */
 
 import { prisma } from '@zigznote/database';

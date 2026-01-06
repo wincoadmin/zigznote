@@ -1,6 +1,9 @@
 /**
- * GDPR Data Export API Routes
- * Allows users to export all their data for GDPR compliance
+ * @ownership
+ * @domain GDPR Data Export
+ * @description API routes for user data export requests for GDPR compliance
+ * @single-responsibility YES — handles all GDPR data export operations
+ * @last-reviewed 2026-01-06
  */
 
 import { Router } from 'express';

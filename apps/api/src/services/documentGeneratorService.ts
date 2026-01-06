@@ -1,6 +1,9 @@
 /**
- * Document Generator Service
- * Generates PDF, DOCX, Markdown, and CSV documents from meeting content
+ * @ownership
+ * @domain Document Generation
+ * @description Generates PDF, DOCX, Markdown, and CSV documents from meeting content
+ * @single-responsibility YES — handles all document generation operations
+ * @last-reviewed 2026-01-06
  */
 
 import PDFDocument from 'pdfkit';

@@ -1,6 +1,9 @@
 /**
- * Meeting Chat API Routes
- * AI-powered chat with meeting transcripts
+ * @ownership
+ * @domain Meeting AI Chat
+ * @description API routes for AI-powered chat with meeting transcripts
+ * @single-responsibility YES — handles all meeting chat API operations
+ * @last-reviewed 2026-01-06
  */
 
 import { Router, Request, Response, NextFunction } from 'express';

@@ -1,8 +1,11 @@
 'use client';
 
 /**
- * ChatInput Component
- * Smart chat input with attachment support, paste detection, and drag-and-drop
+ * @ownership
+ * @domain Chat UI Input
+ * @description Smart chat input with attachments, paste detection, and drag-and-drop
+ * @single-responsibility YES — handles all chat input interactions
+ * @last-reviewed 2026-01-06
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';

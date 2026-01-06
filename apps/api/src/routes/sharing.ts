@@ -1,6 +1,9 @@
 /**
- * Meeting Sharing API Routes
- * Allows users to share meetings with external recipients
+ * @ownership
+ * @domain Meeting Sharing
+ * @description API routes for sharing meetings with external recipients
+ * @single-responsibility YES — handles all meeting sharing operations
+ * @last-reviewed 2026-01-06
  */
 
 import { Router } from 'express';

@@ -1,11 +1,9 @@
 /**
- * Cleanup Worker - Phase 8.95
- *
- * Handles cleanup of:
- * - Orphaned bots (stuck in joining/recording state > 2 hours)
- * - Old webhook records (> 7 days)
- * - Storage for soft-deleted meetings (> 30 days)
- * - Expired grace periods
+ * @ownership
+ * @domain System Cleanup
+ * @description Scheduled worker for orphaned bots, webhook records, storage, and grace periods
+ * @single-responsibility YES — handles all system cleanup operations
+ * @last-reviewed 2026-01-06
  */
 
 import cron from 'node-cron';
