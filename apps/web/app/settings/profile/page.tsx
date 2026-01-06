@@ -1,17 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Camera, Loader2, Trash2 } from 'lucide-react';
 
 export default function ProfilePage() {
   const { data: session, update } = useSession();
   const user = session?.user;
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
 
@@ -39,10 +42,10 @@ export default function ProfilePage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        // Refresh session to get updated user data
         await update();
         setMessage('Profile updated successfully!');
         setIsError(false);
+        setTimeout(() => setMessage(''), 3000);
       } else {
         setMessage(data.error || 'Failed to update profile');
         setIsError(true);
@@ -53,10 +56,98 @@ export default function ProfilePage() {
       setIsError(true);
     } finally {
       setSaving(false);
-      // Clear success message after 3 seconds
-      if (!isError) {
+    }
+  };
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setMessage('Invalid file type. Please upload JPEG, PNG, GIF, or WebP.');
+      setIsError(true);
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage('File too large. Maximum size is 5MB.');
+      setIsError(true);
+      return;
+    }
+
+    setUploadingAvatar(true);
+    setMessage('');
+    setIsError(false);
+
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      const res = await fetch('/api/user/avatar', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        await update();
+        setMessage('Avatar updated successfully!');
+        setIsError(false);
         setTimeout(() => setMessage(''), 3000);
+      } else {
+        setMessage(data.error || 'Failed to upload avatar');
+        setIsError(true);
       }
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      setMessage('An error occurred while uploading avatar');
+      setIsError(true);
+    } finally {
+      setUploadingAvatar(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!confirm('Are you sure you want to remove your avatar?')) return;
+
+    setUploadingAvatar(true);
+    setMessage('');
+    setIsError(false);
+
+    try {
+      const res = await fetch('/api/user/avatar', {
+        method: 'DELETE',
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        await update();
+        setMessage('Avatar removed successfully!');
+        setIsError(false);
+        setTimeout(() => setMessage(''), 3000);
+      } else {
+        setMessage(data.error || 'Failed to remove avatar');
+        setIsError(true);
+      }
+    } catch (error) {
+      console.error('Error removing avatar:', error);
+      setMessage('An error occurred while removing avatar');
+      setIsError(true);
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
@@ -71,20 +162,81 @@ export default function ProfilePage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Avatar */}
           <div className="flex items-center gap-4">
-            {user?.avatarUrl ? (
-              <img
-                src={user.avatarUrl}
-                alt="Avatar"
-                className="w-20 h-20 rounded-full object-cover"
+            <div className="relative group">
+              {user?.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt="Avatar"
+                  className="w-20 h-20 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-primary-100 flex items-center justify-center text-2xl font-medium text-primary-700">
+                  {user?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                </div>
+              )}
+
+              {/* Upload overlay */}
+              <button
+                type="button"
+                onClick={handleAvatarClick}
+                disabled={uploadingAvatar}
+                className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+              >
+                {uploadingAvatar ? (
+                  <Loader2 className="w-6 h-6 text-white animate-spin" />
+                ) : (
+                  <Camera className="w-6 h-6 text-white" />
+                )}
+              </button>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                onChange={handleAvatarChange}
+                className="hidden"
               />
-            ) : (
-              <div className="w-20 h-20 rounded-full bg-primary-100 flex items-center justify-center text-2xl font-medium text-primary-700">
-                {user?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
-              </div>
-            )}
-            <div>
+            </div>
+
+            <div className="flex-1">
               <p className="text-sm font-medium text-slate-900">Profile Photo</p>
-              <p className="text-xs text-slate-500">Avatar is generated automatically</p>
+              <p className="text-xs text-slate-500 mb-2">
+                Click on the image to upload a new photo
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAvatarClick}
+                  disabled={uploadingAvatar}
+                >
+                  {uploadingAvatar ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="w-4 h-4 mr-1" />
+                      Upload
+                    </>
+                  )}
+                </Button>
+                {user?.avatarUrl && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRemoveAvatar}
+                    disabled={uploadingAvatar}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Remove
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -149,7 +301,14 @@ export default function ProfilePage() {
 
           <div className="flex justify-end">
             <Button type="submit" disabled={saving}>
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
             </Button>
           </div>
         </form>
