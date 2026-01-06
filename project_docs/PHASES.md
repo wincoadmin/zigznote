@@ -758,6 +758,233 @@
 
 ---
 
+## Phase 8.8: Meeting AI Chat
+
+**Status:** ✅ Complete
+**Estimated Time:** 60-90 minutes
+
+### Planned Deliverables
+- AI-powered chat with meeting transcripts using RAG
+- Single-meeting and cross-meeting conversation support
+- Suggested questions per meeting
+- Citation tracking with source references
+- Chat session management
+
+### Key Features
+| Feature | Purpose |
+|---------|---------|
+| RAG Architecture | Query → Embed → Find chunks → Generate response |
+| Cross-Meeting Search | Semantic search across all meetings |
+| Citation Tracking | Every response includes source references |
+| Dual AI Provider | Claude primary with GPT fallback |
+
+### Key Decisions Made
+- 5-segment chunks with overlap for context continuity
+- Nullable meetingId enables cross-meeting conversations
+- Chat sessions persisted in database
+- Suggested questions cached per meeting
+
+### Actual Changes from Plan
+- Created MeetingChat, ChatMessage, SuggestedQuestion models
+- ChatInterface and CrossMeetingSearch components
+- 10 chat route tests, 9 service tests, 11 embedding tests
+- Total: 505 tests passing
+
+### Handoff File
+`PHASE_8_8_COMPLETE.md`
+
+---
+
+## Phase 8.9: Production Readiness
+
+**Status:** ✅ Complete
+**Estimated Time:** 90-120 minutes
+
+### Planned Deliverables
+- Email notification system (Resend)
+- Consent management for recordings
+- GDPR data export functionality
+- Usage quotas and enforcement
+- Meeting export (PDF, DOCX, SRT, TXT, JSON)
+- Meeting sharing with access controls
+
+### Key Features
+| Feature | Purpose |
+|---------|---------|
+| Email Templates | 8 templates for notifications |
+| Usage Quotas | Plan-based limits with soft enforcement |
+| Data Export | GDPR-compliant user data export |
+| Meeting Sharing | External sharing with password protection |
+
+### Key Decisions Made
+- Soft limits with warnings before hard blocks
+- Complimentary accounts bypass quotas
+- Share tokens are 32-byte secure random
+- Email service mockable for testing
+
+### Plan Limits
+| Plan | Meetings/mo | Minutes/mo | Storage | API/day |
+|------|-------------|------------|---------|---------|
+| Free | 10 | 300 | 1 GB | 100 |
+| Pro | 100 | 3000 | 10 GB | 1000 |
+| Enterprise | Unlimited | Unlimited | Unlimited | Unlimited |
+
+### Actual Changes from Plan
+- Created NotificationPreferences, OrganizationSettings, DataExport, MeetingShare, UsageRecord models
+- 51 new frontend tests for settings components
+- Total: 247 web tests passing
+
+### Handoff File
+`PHASE_8_9_COMPLETE.md`
+
+---
+
+## Phase 8.95: Critical Infrastructure Fixes
+
+**Status:** ✅ Complete
+**Estimated Time:** 60-90 minutes
+
+### Planned Deliverables
+- Webhook idempotency to prevent duplicate processing
+- Duplicate bot prevention
+- Critical database transactions
+- Bot and storage cleanup worker
+- API key brute force protection
+- Payment grace period handling
+- Plan downgrade violation detection
+
+### Key Features
+| Feature | Purpose |
+|---------|---------|
+| Webhook Idempotency | ProcessedWebhook model with unique constraint |
+| Brute Force Protection | 10 attempts → 15-minute lockout |
+| Grace Period | 7 days before service cutoff on payment failure |
+| Cleanup Worker | Orphaned bots, storage, expired grace periods |
+
+### Key Decisions Made
+- Database unique constraint for race-safe webhook deduplication
+- In-memory brute force tracking (Redis for multi-instance)
+- Graduated violation actions based on type
+- Cleanup worker runs within API process via node-cron
+
+### Actual Changes from Plan
+- ProcessedWebhook model added to schema
+- Subscription model extended with grace period fields
+- Organization model extended with plan violation tracking
+- 8 critical fixes implemented
+
+### Handoff File
+`PHASE_8_95_COMPLETE.md`
+
+---
+
+## Phase 8.95.1: Critical Gap Fixes
+
+**Status:** ✅ Complete
+**Estimated Time:** 30-45 minutes
+
+### Planned Deliverables
+- Webhook idempotency integration (Recall, Clerk, Stripe, Flutterwave)
+- Database transactions for critical operations
+- Dunning email notifications for failed payments
+
+### Key Features
+| Feature | Purpose |
+|---------|---------|
+| Idempotency Integration | Actually call checkAndMarkProcessed() in webhooks |
+| Atomic Transactions | Wrap meeting+bot, user+org, subscription creation |
+| Dunning Emails | Payment failed templates (first, second, final) |
+
+### Key Decisions Made
+- Idempotency check added after signature verification
+- Transaction-based meeting creation with bot rollback
+- Email queue with Resend for delivery
+- 3-stage dunning email flow based on retry count
+
+### Actual Changes from Plan
+- All 4 webhook handlers updated with idempotency
+- 3 transactional methods added (meeting, user/org, subscription)
+- Email worker with Resend integration
+- Total: 589 tests passing (342 API + 247 Web)
+
+### Handoff File
+`PHASE_8_95_1_GAP_FIXES.md`
+
+---
+
+## Phase 9: AI-Powered Contextual File Generation
+
+**Status:** ✅ Complete
+**Estimated Time:** 2-3 hours
+
+### Planned Deliverables
+- AI chat file generation offers
+- Contextual download suggestions
+- Multiple format support (PDF, DOCX, MD, CSV)
+- Document generator service
+
+### Key Features
+| Feature | Purpose |
+|---------|---------|
+| File Offers | AI decides when to offer downloadable files |
+| Multiple Formats | PDF, DOCX, Markdown, CSV exports |
+| Content Types | Summary, action items, decisions, transcript excerpts |
+| Smart Detection | Explicit requests or structured data triggers |
+
+### Key Decisions Made
+- AI includes fileOffer in response when appropriate
+- Offer files when 3+ structured items in response
+- User explicitly requests document → always offer
+- Normal questions → no file offer
+
+### Actual Changes from Plan
+- Updated QA response interface with fileOffer field
+- Document generator service for content formatting
+- Frontend download buttons integrated in chat
+
+### Handoff File
+`PHASE_9_AI_FILE_GENERATION.md`
+
+---
+
+## Phase 9.5: Smart Chat Input & Attachments
+
+**Status:** ✅ Complete
+**Estimated Time:** 2-3 hours
+
+### Planned Deliverables
+- Large text paste detection and handling
+- Audio file drag-and-drop
+- Inline audio recording
+- Attachment preview chips
+- Multi-attachment support
+
+### Key Features
+| Feature | Purpose |
+|---------|---------|
+| Smart Paste | Detect 500+ char pastes, convert to attachment |
+| Audio Drop | Drag audio files into chat for transcription |
+| Inline Recording | Record audio directly in chat input |
+| Attachment Chips | Visual preview with remove/play options |
+
+### Key Decisions Made
+- 500 chars or 100 words threshold for smart paste
+- Deepgram Nova-2 for inline transcription (max 25MB)
+- Web Audio API for recording level visualization
+- Attachments prepended to message context
+
+### Actual Changes from Plan
+- Created ChatInput with useSmartPaste, useFileDropZone hooks
+- InlineRecorder with waveform visualization
+- AttachmentChip for preview display
+- inlineTranscriptionService for audio processing
+- Total: 589 tests passing (342 API + 247 Web)
+
+### Handoff File
+`PHASE_9_5_SMART_CHAT_INPUT.md`
+
+---
+
 ## Summary Table
 
 | Phase | Name | Status | Est. Time |
@@ -778,8 +1005,14 @@
 | 8.5 | Hardening & Stress Testing | ✅ | 60-90 min |
 | 8.6 | Analytics & Retention | ✅ | 45-60 min |
 | 8.7 | UI/UX Polish & Retention | ✅ | 45-60 min |
+| 8.8 | Meeting AI Chat | ✅ | 60-90 min |
+| 8.9 | Production Readiness | ✅ | 90-120 min |
+| 8.95 | Critical Infrastructure Fixes | ✅ | 60-90 min |
+| 8.95.1 | Critical Gap Fixes | ✅ | 30-45 min |
+| 9 | AI File Generation | ✅ | 2-3 hrs |
+| 9.5 | Smart Chat Input & Attachments | ✅ | 2-3 hrs |
 
-**Total Estimated Time:** 13-19 hours
+**Total Estimated Time:** 20-30 hours
 **Status:** All phases complete!
 
 ---
@@ -806,6 +1039,12 @@
 | 2026-01-05 | Phase 8.5 | Hardening & Stress Testing - 8 comprehensive test suites (security, load, chaos, a11y, etc.) |
 | 2026-01-05 | Phase 8.6 | Analytics & Retention - daily metrics, productivity score, achievements, weekly digest |
 | 2026-01-05 | Phase 8.7 | UI/UX Polish - WelcomeModal, CommandPalette, EmptyState, dark mode, animations, confetti celebrations |
+| 2026-01-05 | Phase 8.8 | Meeting AI Chat - RAG-based Q&A, cross-meeting search, citations, 505 tests |
+| 2026-01-05 | Phase 8.9 | Production Readiness - email notifications, GDPR export, usage quotas, meeting sharing |
+| 2026-01-05 | Phase 8.95 | Critical Infrastructure Fixes - webhook idempotency, brute force protection, grace periods |
+| 2026-01-06 | Phase 9 | AI File Generation - contextual file offers, document generator, multi-format export |
+| 2026-01-06 | Phase 9.5 | Smart Chat Input - large paste handling, audio attachments, inline recording |
+| 2026-01-06 | Phase 8.95.1 | Critical Gap Fixes - idempotency integration, transactions, dunning emails, 589 tests |
 
 ---
 
