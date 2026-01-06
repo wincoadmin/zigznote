@@ -131,7 +131,6 @@ export const optionalApiKeyAuth = async (
       // Set auth for downstream compatibility with existing middleware
       authReq.auth = {
         userId: validated.userId,
-        clerkUserId: '', // Not applicable for API key auth
         organizationId: validated.organizationId,
         email: '', // Not applicable for API key auth
         role: 'member', // API keys have member-level access
@@ -188,7 +187,6 @@ export const requireApiKeyAuth = async (
     authReq.authType = 'apiKey';
     authReq.auth = {
       userId: validated.userId,
-      clerkUserId: '',
       organizationId: validated.organizationId,
       email: '',
       role: 'member',

@@ -5,7 +5,6 @@ export { standardRateLimit, strictRateLimit, expensiveRateLimit } from './rateLi
 export { validateRequest, commonSchemas, type InferSchema } from './validateRequest';
 export { asyncHandler } from './asyncHandler';
 export {
-  clerkAuthMiddleware,
   requireAuth,
   optionalAuth,
   requireAdmin,

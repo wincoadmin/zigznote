@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode, useState, useEffect, useCallback } from 'react';
+import { SessionProvider } from 'next-auth/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ThemeProvider } from 'next-themes';
@@ -69,17 +70,19 @@ export function Providers({ children }: ProvidersProps) {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        <ToastProvider>
-          <OnboardingProvider>
-            <CommandPaletteProvider>
-              {children}
-            </CommandPaletteProvider>
-          </OnboardingProvider>
-        </ToastProvider>
-      </ThemeProvider>
-      <ReactQueryDevtools initialIsOpen={false} />
-    </QueryClientProvider>
+    <SessionProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <ToastProvider>
+            <OnboardingProvider>
+              <CommandPaletteProvider>
+                {children}
+              </CommandPaletteProvider>
+            </OnboardingProvider>
+          </ToastProvider>
+        </ThemeProvider>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
+    </SessionProvider>
   );
 }

@@ -10,11 +10,9 @@ import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFoundHandler';
 import { requestIdMiddleware } from './middleware/requestId';
 import { standardRateLimit } from './middleware/rateLimit';
-import { clerkAuthMiddleware } from './middleware/auth';
 import { healthRouter } from './routes/health';
 import { apiRouter } from './routes/api';
 import { adminRouter } from './routes/admin';
-import clerkWebhookRouter from './routes/webhooks/clerk';
 import recallWebhookRouter from './routes/webhooks/recall';
 import { metricsCollector } from './middleware/metricsCollector';
 import { initializeAlertService } from './monitoring/alertService';
@@ -91,19 +89,13 @@ export function createApp(): Express {
   app.use('/health', healthRouter);
 
   // Webhook routes (no auth required, signature verified internally)
-  app.use('/webhooks/clerk', clerkWebhookRouter);
   app.use('/webhooks/recall', recallWebhookRouter);
 
   // Admin panel routes (separate auth system)
   app.use('/api/admin', adminRouter);
 
-  // Clerk auth middleware (only for user API routes)
-  // Skip in test environment if no Clerk key is configured
-  if (config.clerk.secretKey || config.nodeEnv !== 'test') {
-    app.use('/api', clerkAuthMiddleware);
-  }
-
   // Rate limiting (applied to API routes only)
+  // Note: Authentication is handled per-route using requireAuth middleware
   app.use('/api', standardRateLimit);
 
   // Protected API routes

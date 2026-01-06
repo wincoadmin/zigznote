@@ -78,9 +78,36 @@ model User {
   organizationId String    @map("organization_id")
   email          String    @unique
   name           String?
-  clerkId        String?   @unique @map("clerk_id")
+  firstName      String?   @map("first_name")
+  lastName       String?   @map("last_name")
+  clerkId        String?   @unique @map("clerk_id") // Deprecated: kept for migration
   role           String    @default("member") // admin, member
   avatarUrl      String?   @map("avatar_url")
+
+  // NextAuth fields
+  emailVerified         DateTime? @map("email_verified")
+  emailVerificationToken String?  @map("email_verification_token")
+  password              String?   // Argon2/bcrypt hashed password (null for OAuth-only users)
+
+  // Two-Factor Authentication
+  twoFactorEnabled      Boolean   @default(false) @map("two_factor_enabled")
+  twoFactorSecret       String?   @map("two_factor_secret") // Encrypted TOTP secret
+  backupCodes           String[]  @map("backup_codes") // Encrypted backup codes
+
+  // Account Security
+  isActive              Boolean   @default(true) @map("is_active")
+  isLocked              Boolean   @default(false) @map("is_locked")
+  lockUntil             DateTime? @map("lock_until")
+  failedLoginAttempts   Int       @default(0) @map("failed_login_attempts")
+  lastFailedLogin       DateTime? @map("last_failed_login")
+  lastLoginAt           DateTime? @map("last_login_at")
+  lastLoginIp           String?   @map("last_login_ip")
+
+  // Password Reset
+  passwordResetToken    String?   @map("password_reset_token")
+  passwordResetExpires  DateTime? @map("password_reset_expires")
+  passwordChangedAt     DateTime? @map("password_changed_at")
+
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
   deletedAt      DateTime? @map("deleted_at")
@@ -93,6 +120,11 @@ model User {
   engagement          UserEngagement?
   meetingChats        MeetingChat[]
 
+  // NextAuth relations
+  accounts            Account[]
+  sessions            UserSession[]
+  loginHistory        LoginHistory[]
+
   // Phase 8.9: Production Readiness
   notificationPreferences NotificationPreferences?
   dataExports             DataExport[]
@@ -101,7 +133,79 @@ model User {
   @@index([organizationId])
   @@index([clerkId])
   @@index([deletedAt])
+  @@index([email])
   @@map("users")
+}
+
+// ============================================
+// NextAuth Models
+// ============================================
+
+// OAuth account connections (Google, GitHub, Microsoft)
+model Account {
+  id                String  @id @default(uuid())
+  userId            String  @map("user_id")
+  type              String  // "oauth" | "oidc" | "email" | "credentials"
+  provider          String  // "google" | "github" | "microsoft-entra-id" | "credentials"
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+// User sessions (database strategy)
+model UserSession {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  userAgent    String?  @map("user_agent")
+  ipAddress    String?  @map("ip_address")
+  isValid      Boolean  @default(true) @map("is_valid")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_sessions")
+}
+
+// Email verification and password reset tokens
+model VerificationToken {
+  identifier String   // Email address
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// Login history for security auditing
+model LoginHistory {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  ipAddress String   @map("ip_address")
+  userAgent String   @map("user_agent")
+  location  String?  // City, Country (from IP geolocation)
+  success   Boolean
+  reason    String?  // Failure reason if applicable
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("login_history")
 }
 
 // ============================================

@@ -1,16 +1,33 @@
 /**
  * @ownership
  * @domain Authentication
- * @description Clerk authentication middleware for protecting API routes
- * @single-responsibility YES — handles authentication and authorization
- * @last-reviewed 2026-01-04
+ * @description NextAuth JWT authentication middleware for protecting API routes
+ * @single-responsibility YES - handles authentication and authorization
+ * @last-reviewed 2026-01-06
  */
 
 import { Request, Response, NextFunction, RequestHandler } from 'express';
-import { clerkClient, getAuth, clerkMiddleware } from '@clerk/express';
+import { jwtVerify, createSecretKey, JWTPayload } from 'jose';
 import { UnauthorizedError, ForbiddenError } from '@zigznote/shared';
-import { userRepository, organizationRepository } from '@zigznote/database';
+import { userRepository, organizationRepository, prisma } from '@zigznote/database';
 import { logger } from '../utils/logger';
+
+/**
+ * NextAuth JWT payload structure
+ */
+interface NextAuthJWT extends JWTPayload {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  avatarUrl?: string;
+  role: string;
+  organizationId: string;
+  twoFactorEnabled: boolean;
+  twoFactorVerified?: boolean;
+  emailVerified?: Date | null;
+}
 
 /**
  * Extended request with auth info
@@ -18,7 +35,6 @@ import { logger } from '../utils/logger';
 export interface AuthenticatedRequest extends Request {
   auth?: {
     userId: string;
-    clerkUserId: string;
     organizationId: string;
     email: string;
     role: string;
@@ -26,12 +42,52 @@ export interface AuthenticatedRequest extends Request {
 }
 
 /**
- * Clerk middleware instance - call this once to initialize
+ * Get NextAuth secret for JWT verification
  */
-export const clerkAuthMiddleware: RequestHandler = clerkMiddleware();
+function getNextAuthSecret(): Uint8Array {
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    throw new Error('NEXTAUTH_SECRET environment variable is required');
+  }
+  return new TextEncoder().encode(secret);
+}
 
 /**
- * Requires authentication - will reject requests without valid Clerk session
+ * Extract JWT from Authorization header
+ * Format: Authorization: Bearer <token>
+ */
+function extractToken(req: Request): string | null {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return null;
+
+  const [type, token] = authHeader.split(' ');
+  if (type !== 'Bearer' || !token) return null;
+
+  // Skip API keys (handled by apiKeyAuth middleware)
+  if (token.startsWith('sk_live_')) return null;
+
+  return token;
+}
+
+/**
+ * Verify NextAuth JWT token
+ */
+async function verifyNextAuthToken(token: string): Promise<NextAuthJWT> {
+  try {
+    const secret = getNextAuthSecret();
+    const { payload } = await jwtVerify(token, secret, {
+      algorithms: ['HS256'],
+    });
+
+    return payload as NextAuthJWT;
+  } catch (error) {
+    logger.debug({ error }, 'JWT verification failed');
+    throw new UnauthorizedError('Invalid or expired token');
+  }
+}
+
+/**
+ * Requires authentication - will reject requests without valid NextAuth JWT
  */
 export const requireAuth = async (
   req: Request,
@@ -40,86 +96,57 @@ export const requireAuth = async (
 ): Promise<void> => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const auth = getAuth(req);
 
-    if (!auth?.userId) {
+    // Check if already authenticated (via API key middleware)
+    if (authReq.auth) {
+      return next();
+    }
+
+    const token = extractToken(req);
+
+    if (!token) {
       throw new UnauthorizedError('Authentication required');
     }
 
-    // Get user from database by Clerk ID
-    const user = await userRepository.findByClerkId(auth.userId);
+    // Verify the NextAuth JWT
+    const payload = await verifyNextAuthToken(token);
+
+    if (!payload.id || !payload.email) {
+      throw new UnauthorizedError('Invalid token payload');
+    }
+
+    // Check if 2FA was verified (if 2FA is enabled)
+    if (payload.twoFactorEnabled && !payload.twoFactorVerified) {
+      throw new UnauthorizedError('Two-factor authentication required');
+    }
+
+    // Get user from database to ensure they exist and are active
+    const user = await prisma.user.findUnique({
+      where: { id: payload.id },
+      select: {
+        id: true,
+        email: true,
+        organizationId: true,
+        role: true,
+        isActive: true,
+        deletedAt: true,
+      },
+    });
 
     if (!user) {
-      // User exists in Clerk but not in our DB - this happens before webhook sync
-      // Try to fetch from Clerk and create
-      const clerkUser = await clerkClient.users.getUser(auth.userId);
-
-      if (!clerkUser) {
-        throw new UnauthorizedError('User not found');
-      }
-
-      // For new users, we need an organization
-      // Check if they have org membership in Clerk
-      const orgMemberships = await clerkClient.users.getOrganizationMembershipList({
-        userId: auth.userId,
-      });
-
-      if (orgMemberships.data.length === 0) {
-        throw new ForbiddenError('User must belong to an organization');
-      }
-
-      // Use first org (for MVP - later allow switching)
-      const firstMembership = orgMemberships.data[0];
-      const clerkOrgId = firstMembership?.organization?.id;
-      const clerkOrgName = firstMembership?.organization?.name || 'Unnamed Organization';
-
-      if (!clerkOrgId) {
-        throw new ForbiddenError('Invalid organization membership');
-      }
-
-      // Find or create organization
-      let org = await organizationRepository.findByClerkId(clerkOrgId);
-      if (!org) {
-        org = await organizationRepository.create({
-          name: clerkOrgName,
-          clerkId: clerkOrgId,
-        });
-        logger.info({ orgId: org.id, clerkOrgId }, 'Created organization from Clerk');
-      }
-
-      // Create user
-      const fullName = `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim();
-      const newUser = await userRepository.create({
-        organizationId: org.id,
-        email: clerkUser.emailAddresses[0]?.emailAddress || '',
-        name: fullName || undefined,
-        clerkId: auth.userId,
-        avatarUrl: clerkUser.imageUrl || undefined,
-        role: 'member',
-      });
-
-      logger.info({ userId: newUser.id, clerkUserId: auth.userId }, 'Created user from Clerk');
-
-      authReq.auth = {
-        userId: newUser.id,
-        clerkUserId: auth.userId,
-        organizationId: org.id,
-        email: newUser.email,
-        role: newUser.role,
-      };
-    } else {
-      if (user.deletedAt) {
-        throw new UnauthorizedError('User account has been deactivated');
-      }
-
-      authReq.auth = {
-        userId: user.id,
-        clerkUserId: auth.userId,
-        organizationId: user.organizationId,
-        email: user.email,
-        role: user.role,
-      };
+      throw new UnauthorizedError('User not found');
     }
+
+    if (!user.isActive || user.deletedAt) {
+      throw new UnauthorizedError('User account has been deactivated');
+    }
+
+    authReq.auth = {
+      userId: user.id,
+      organizationId: user.organizationId,
+      email: user.email,
+      role: user.role,
+    };
 
     next();
   } catch (error) {
@@ -137,19 +164,43 @@ export const optionalAuth = async (
 ): Promise<void> => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const auth = getAuth(req);
 
-    if (auth?.userId) {
-      const user = await userRepository.findByClerkId(auth.userId);
+    // Check if already authenticated (via API key middleware)
+    if (authReq.auth) {
+      return next();
+    }
 
-      if (user && !user.deletedAt) {
-        authReq.auth = {
-          userId: user.id,
-          clerkUserId: auth.userId,
-          organizationId: user.organizationId,
-          email: user.email,
-          role: user.role,
-        };
+    const token = extractToken(req);
+
+    if (token) {
+      try {
+        const payload = await verifyNextAuthToken(token);
+
+        if (payload.id && payload.email) {
+          const user = await prisma.user.findUnique({
+            where: { id: payload.id },
+            select: {
+              id: true,
+              email: true,
+              organizationId: true,
+              role: true,
+              isActive: true,
+              deletedAt: true,
+            },
+          });
+
+          if (user && user.isActive && !user.deletedAt) {
+            authReq.auth = {
+              userId: user.id,
+              organizationId: user.organizationId,
+              email: user.email,
+              role: user.role,
+            };
+          }
+        }
+      } catch (error) {
+        // Don't fail on optional auth errors - just continue without auth
+        logger.debug({ error }, 'Optional auth failed, continuing without auth');
       }
     }
 
