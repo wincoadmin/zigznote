@@ -175,13 +175,16 @@ export default function SecurityPage() {
             <div>
               <p className="text-sm font-medium text-slate-900">Current Session</p>
               <p className="text-xs text-slate-500">
-                Last login: {user?.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : 'Unknown'}
+                Logged in as {user?.email}
               </p>
             </div>
             <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
               Active
             </span>
           </div>
+          <p className="text-xs text-slate-400">
+            Full login history coming soon
+          </p>
         </div>
       </div>
     </div>
