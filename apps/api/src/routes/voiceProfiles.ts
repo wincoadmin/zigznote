@@ -263,11 +263,27 @@ voiceProfilesRouter.get(
   requireScope('transcripts:read'),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const authReq = req as AuthenticatedRequest;
+      const auth = authReq.auth;
+      if (!auth) {
+        res.status(401).json({ success: false, error: 'Unauthorized' });
+        return;
+      }
       const meetingId = req.params.meetingId;
       if (!meetingId) {
         res.status(400).json({ success: false, error: 'Meeting ID is required' });
         return;
       }
+
+      // Verify meeting belongs to user's organization
+      const { prisma } = await import('@zigznote/database');
+      const meeting = await prisma.meeting.findFirst({
+        where: { id: meetingId, organizationId: auth.organizationId, deletedAt: null },
+      });
+      if (!meeting) {
+        throw new NotFoundError('Meeting not found');
+      }
+
       const speakers = await voiceProfileService.getMeetingSpeakers(meetingId);
       res.json({ success: true, data: speakers, total: speakers.length });
     } catch (error) {
@@ -285,11 +301,27 @@ voiceProfilesRouter.post(
   requireScope('transcripts:write'),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const authReq = req as AuthenticatedRequest;
+      const auth = authReq.auth;
+      if (!auth) {
+        res.status(401).json({ success: false, error: 'Unauthorized' });
+        return;
+      }
       const meetingId = req.params.meetingId;
       if (!meetingId) {
         res.status(400).json({ success: false, error: 'Meeting ID is required' });
         return;
       }
+
+      // Verify meeting belongs to user's organization
+      const { prisma } = await import('@zigznote/database');
+      const meeting = await prisma.meeting.findFirst({
+        where: { id: meetingId, organizationId: auth.organizationId, deletedAt: null },
+      });
+      if (!meeting) {
+        throw new NotFoundError('Meeting not found');
+      }
+
       const result = await speakerRecognitionService.reprocessMeeting(meetingId);
       res.json({
         success: true,

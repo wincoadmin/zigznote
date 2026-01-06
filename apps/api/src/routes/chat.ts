@@ -222,7 +222,22 @@ router.get(
   '/meetings/:meetingId/suggestions',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const meetingId = req.params.meetingId!;
+
+      // Verify meeting belongs to user's organization
+      const { prisma } = await import('@zigznote/database');
+      const meeting = await prisma.meeting.findFirst({
+        where: {
+          id: meetingId,
+          organizationId: authReq.auth!.organizationId,
+          deletedAt: null,
+        },
+      });
+      if (!meeting) {
+        res.status(404).json({ success: false, error: 'Meeting not found' });
+        return;
+      }
 
       const suggestions = await meetingChatService.getMeetingSuggestions(
         meetingId
