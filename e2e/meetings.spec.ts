@@ -4,8 +4,8 @@ test.describe('Meetings', () => {
   test('should display meetings list page', async ({ page }) => {
     await page.goto('/meetings');
 
-    // Check page title
-    await expect(page.getByRole('heading', { name: /meetings/i })).toBeVisible();
+    // Check page title - use exact match to avoid "No meetings found"
+    await expect(page.getByRole('heading', { name: 'Meetings', exact: true })).toBeVisible();
   });
 
   test('should have new meeting button', async ({ page }) => {
