@@ -134,7 +134,7 @@ export const meetingsApi = {
 
   getStats: () => api.get('/api/v1/meetings/stats'),
 
-  create: (data: { title: string; platform?: string; meetingUrl?: string }) =>
+  create: (data: { title: string; platform?: string; meetingUrl?: string; startTime?: string }) =>
     api.post('/api/v1/meetings', data),
 
   delete: (id: string) => api.delete(`/api/v1/meetings/${id}`),
@@ -158,10 +158,69 @@ export const meetingsApi = {
     api.delete(`/api/v1/meetings/${meetingId}/action-items/${actionItemId}`),
 };
 
+// Calendar types
+export interface CalendarConnection {
+  id: string;
+  provider: string;
+  email: string | null;
+  calendarId: string | null;
+  syncEnabled: boolean;
+  autoRecord: boolean;
+  lastSyncedAt: string | null;
+  createdAt: string;
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description?: string;
+  start: string;
+  end: string;
+  location?: string;
+  meetingLink?: string;
+  attendees: { email: string; name?: string; responseStatus?: string }[];
+  connectionId: string;
+  provider: string;
+  // Enriched with meeting info
+  meetingId?: string;
+  botStatus?: string;
+}
+
 // Calendar API methods
 export const calendarApi = {
-  getConnections: () => api.get('/api/v1/calendar/connections'),
+  // Get connection status
+  getStatus: () => api.get<{ connection: CalendarConnection | null }>('/api/v1/calendar/status'),
+
+  // Get all connections
+  getConnections: () => api.get<{ connections: CalendarConnection[] }>('/api/v1/calendar/connections'),
+
+  // Get calendar events
+  getEvents: (startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams();
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
+    const query = params.toString();
+    return api.get<{ events: CalendarEvent[] }>(`/api/v1/calendar/events${query ? `?${query}` : ''}`);
+  },
+
+  // Sync calendar
   sync: () => api.post('/api/v1/calendar/sync'),
+
+  // Update connection settings
+  updateConnection: (connectionId: string, data: { syncEnabled?: boolean; autoRecord?: boolean }) =>
+    api.patch<CalendarConnection>(`/api/v1/calendar/connections/${connectionId}`, data),
+
+  // Set auto-record for all connections
+  setAutoRecord: (enabled: boolean) =>
+    api.put<{ success: boolean; autoRecord: boolean }>('/api/v1/calendar/auto-record', { enabled }),
+
+  // Delete connection
+  deleteConnection: (connectionId: string) =>
+    api.delete(`/api/v1/calendar/connections/${connectionId}`),
+
+  // Get OAuth connect URL
+  getConnectUrl: (provider: 'google' | 'microsoft' = 'google') =>
+    api.get<{ authUrl: string }>(`/api/v1/calendar/${provider}/connect`),
 };
 
 // Insights API methods

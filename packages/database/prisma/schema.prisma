@@ -402,11 +402,13 @@ model CalendarConnection {
   id            String    @id @default(uuid())
   userId        String    @map("user_id")
   provider      String // google, microsoft
+  email         String?   // Calendar account email
   accessToken   String?   @map("access_token")
   refreshToken  String?   @map("refresh_token")
   tokenExpires  DateTime? @map("token_expires_at")
   calendarId    String?   @map("calendar_id")
   syncEnabled   Boolean   @default(true) @map("sync_enabled")
+  autoRecord    Boolean   @default(false) @map("auto_record") // Automatically record all meetings
   lastSyncedAt  DateTime? @map("last_synced_at")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -477,6 +479,7 @@ model Meeting {
   @@index([createdById])
   @@index([deletedAt])
   @@index([source])
+  @@index([calendarEventId])
   @@map("meetings")
 }
 

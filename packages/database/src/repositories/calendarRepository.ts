@@ -30,6 +30,7 @@ export interface UpdateCalendarConnectionInput {
   tokenExpires?: Date;
   calendarId?: string;
   syncEnabled?: boolean;
+  autoRecord?: boolean;
   lastSyncedAt?: Date;
 }
 
@@ -207,6 +208,25 @@ export class CalendarRepository {
   async countActive(): Promise<number> {
     return prisma.calendarConnection.count({
       where: { syncEnabled: true },
+    });
+  }
+
+  /**
+   * Finds all connections with auto-record enabled
+   */
+  async findAutoRecordConnections(): Promise<
+    Array<CalendarConnection & { user: { organizationId: string | null } }>
+  > {
+    return prisma.calendarConnection.findMany({
+      where: {
+        autoRecord: true,
+        syncEnabled: true,
+      },
+      include: {
+        user: {
+          select: { organizationId: true },
+        },
+      },
     });
   }
 }

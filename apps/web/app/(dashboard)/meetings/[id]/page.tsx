@@ -10,6 +10,9 @@ import {
   MessageSquare,
   Tag,
   Activity,
+  Video,
+  Send,
+  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -21,6 +24,7 @@ import {
   SummaryPanel,
   ActionItems,
   MeetingChat,
+  BotStatus,
 } from '@/components/meetings';
 import { ShareDialog, ExportMenu } from '@/components/settings';
 import {
@@ -51,6 +55,7 @@ export default function MeetingDetailPage() {
   const [currentTimeMs, setCurrentTimeMs] = useState(0);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<SidebarTab>('summary');
+  const [isSendingBot, setIsSendingBot] = useState(false);
 
   // Fetch meeting details
   const { data: meeting, isLoading: meetingLoading } = useQuery({
@@ -160,6 +165,36 @@ export default function MeetingDetailPage() {
     setCurrentTimeMs(startMs);
   };
 
+  const handleSendBot = async () => {
+    if (!meeting?.meetingUrl) return;
+
+    setIsSendingBot(true);
+    try {
+      const response = await fetch(`/api/meetings/${meeting.id}/bot`, {
+        method: 'POST',
+      });
+      if (response.ok) {
+        queryClient.invalidateQueries({ queryKey: ['meeting', meeting.id] });
+        addToast({
+          type: 'success',
+          title: 'Bot sent',
+          description: 'The bot is joining the meeting.',
+        });
+      } else {
+        const data = await response.json();
+        throw new Error(data.error?.message || 'Failed to send bot');
+      }
+    } catch (err) {
+      addToast({
+        type: 'error',
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Failed to send bot',
+      });
+    } finally {
+      setIsSendingBot(false);
+    }
+  };
+
   if (meetingLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -232,6 +267,31 @@ export default function MeetingDetailPage() {
           />
         </div>
       </div>
+
+      {/* Bot Status & Controls */}
+      {meeting.meetingUrl && (
+        <div className="mb-2">
+          {meeting.botId ? (
+            <BotStatus meetingId={meeting.id} />
+          ) : meeting.status === 'scheduled' ? (
+            <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+              <Video className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">Ready to record</p>
+                <p className="text-xs text-blue-700 dark:text-blue-300">Send a bot to record this meeting</p>
+              </div>
+              <Button onClick={handleSendBot} disabled={isSendingBot}>
+                {isSendingBot ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <Send className="w-4 h-4 mr-2" />
+                )}
+                Send Bot
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      )}
 
       {/* Main content - 3-panel layout on large screens */}
       <div className="grid gap-6 lg:grid-cols-3">

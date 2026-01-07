@@ -198,6 +198,46 @@ router.get(
 );
 
 /**
+ * GET /calendar/status
+ * Gets calendar connection status for the current user
+ */
+router.get(
+  '/status',
+  requireAuth,
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.auth!.userId;
+
+      const connections = await calendarRepository.findByUserId(userId);
+
+      // Return first connection (typically only one per provider)
+      const connection = connections[0];
+
+      if (!connection) {
+        res.json({ connection: null });
+        return;
+      }
+
+      res.json({
+        connection: {
+          id: connection.id,
+          provider: connection.provider,
+          email: connection.email,
+          calendarId: connection.calendarId,
+          syncEnabled: connection.syncEnabled,
+          autoRecord: connection.autoRecord,
+          lastSyncedAt: connection.lastSyncedAt,
+          createdAt: connection.createdAt,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
  * GET /calendar/connections
  * Lists calendar connections for the user
  */
@@ -215,8 +255,10 @@ router.get(
       const safeConnections = connections.map((c) => ({
         id: c.id,
         provider: c.provider,
+        email: c.email,
         calendarId: c.calendarId,
         syncEnabled: c.syncEnabled,
+        autoRecord: c.autoRecord,
         lastSyncedAt: c.lastSyncedAt,
         createdAt: c.createdAt,
       }));
@@ -276,6 +318,7 @@ router.patch(
     body: z.object({
       syncEnabled: z.boolean().optional(),
       calendarId: z.string().optional(),
+      autoRecord: z.boolean().optional(),
     }),
   }),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -283,7 +326,7 @@ router.patch(
       const authReq = req as AuthenticatedRequest;
       const userId = authReq.auth!.userId;
       const { id } = req.params;
-      const { syncEnabled, calendarId } = req.body;
+      const { syncEnabled, calendarId, autoRecord } = req.body;
 
       if (!id) {
         throw new BadRequestError('Connection ID is required');
@@ -303,15 +346,56 @@ router.patch(
       const updated = await calendarRepository.update(id, {
         syncEnabled,
         calendarId,
+        autoRecord,
       });
 
       res.json({
         id: updated.id,
         provider: updated.provider,
+        email: updated.email,
         calendarId: updated.calendarId,
         syncEnabled: updated.syncEnabled,
+        autoRecord: updated.autoRecord,
         lastSyncedAt: updated.lastSyncedAt,
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * PUT /calendar/auto-record
+ * Toggle auto-record for all calendar connections
+ */
+router.put(
+  '/auto-record',
+  requireAuth,
+  validateRequest({
+    body: z.object({
+      enabled: z.boolean(),
+    }),
+  }),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.auth!.userId;
+      const { enabled } = req.body;
+
+      const connections = await calendarRepository.findByUserId(userId);
+
+      if (connections.length === 0) {
+        throw new BadRequestError('No calendar connections found. Please connect a calendar first.');
+      }
+
+      // Update all connections
+      for (const connection of connections) {
+        await calendarRepository.update(connection.id, {
+          autoRecord: enabled,
+        });
+      }
+
+      res.json({ success: true, autoRecord: enabled });
     } catch (error) {
       next(error);
     }

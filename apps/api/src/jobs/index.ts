@@ -40,6 +40,12 @@ export {
   startCleanupWorker,
 } from './cleanupWorker';
 
+export {
+  getAutoRecordQueue,
+  createAutoRecordWorker,
+  scheduleAutoRecordChecks,
+} from './autoRecordWorker';
+
 // Re-export shared queue definitions
 export {
   QUEUE_NAMES,
