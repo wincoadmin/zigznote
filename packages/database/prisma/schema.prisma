@@ -67,10 +67,38 @@ model Organization {
   organizationSettings   OrganizationSettings?
   usageRecords           UsageRecord[]
 
+  // Team member management
+  invitations            Invitation[]
+
   @@index([clerkId])
   @@index([deletedAt])
   @@index([accountType])
   @@map("organizations")
+}
+
+// Team member invitations
+model Invitation {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  email          String
+  role           String   @default("member") // admin, member
+  token          String   @unique
+  expiresAt      DateTime @map("expires_at")
+  invitedById    String   @map("invited_by_id")
+
+  status         String   @default("pending") // pending, accepted, expired, cancelled
+
+  createdAt      DateTime @default(now()) @map("created_at")
+  acceptedAt     DateTime? @map("accepted_at")
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy      User         @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([email])
+  @@index([token])
+  @@index([status])
+  @@map("invitations")
 }
 
 model User {
@@ -130,6 +158,9 @@ model User {
   dataExports             DataExport[]
   meetingSharesReceived   MeetingShare[]   @relation("SharedWith")
   meetingSharesCreated    MeetingShare[]   @relation("SharedBy")
+
+  // Team member management
+  invitationsSent         Invitation[]
 
   // Phase 12: Team Collaboration
   comments              Comment[]

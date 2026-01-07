@@ -13,6 +13,7 @@ const settingsNav = [
   { name: 'Profile', href: '/settings/profile' },
   { name: 'Security', href: '/settings/security' },
   { name: 'General', href: '/settings' },
+  { name: 'Team Members', href: '/settings/team' },
   { name: 'Notifications', href: '/settings/notifications' },
   { name: 'API Keys', href: '/settings/api-keys' },
   { name: 'Integrations', href: '/settings/integrations' },
