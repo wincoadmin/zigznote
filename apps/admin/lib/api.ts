@@ -152,11 +152,16 @@ export const apiKeysApi = {
 
 // Feature flags endpoints
 export const featureFlagsApi = {
-  list: () => adminApi.get('/feature-flags'),
+  list: (params?: { page?: number; limit?: number; category?: string; enabled?: string; search?: string }) =>
+    adminApi.get(`/feature-flags?${new URLSearchParams(params as Record<string, string>).toString()}`),
 
   get: (id: string) => adminApi.get(`/feature-flags/${id}`),
 
-  create: (data: { key: string; name: string; enabled?: boolean }) =>
+  stats: () => adminApi.get('/feature-flags/stats'),
+
+  categories: () => adminApi.get('/feature-flags/categories'),
+
+  create: (data: { key: string; name: string; description?: string; enabled?: boolean; percentage?: number; category?: string }) =>
     adminApi.post('/feature-flags', data),
 
   update: (id: string, data: unknown) => adminApi.patch(`/feature-flags/${id}`, data),
@@ -207,10 +212,22 @@ export const analyticsApi = {
 export const operationsApi = {
   health: () => adminApi.get('/operations/health'),
 
-  queues: () => adminApi.get('/operations/queues'),
+  system: () => adminApi.get('/operations/system'),
 
-  jobs: (queueName: string) => adminApi.get(`/operations/queues/${queueName}/jobs`),
+  jobs: () => adminApi.get('/operations/jobs'),
 
-  retryJob: (queueName: string, jobId: string) =>
-    adminApi.post(`/operations/queues/${queueName}/jobs/${jobId}/retry`),
+  pauseQueue: (queueName: string) =>
+    adminApi.post(`/operations/jobs/${queueName}/pause`),
+
+  resumeQueue: (queueName: string) =>
+    adminApi.post(`/operations/jobs/${queueName}/resume`),
+
+  cleanQueue: (queueName: string, status?: string) =>
+    adminApi.post(`/operations/jobs/${queueName}/clean`, { status }),
+
+  clearCache: (pattern?: string) =>
+    adminApi.post('/operations/cache/clear', { pattern }),
+
+  maintenance: (tasks: string[]) =>
+    adminApi.post('/operations/maintenance', { tasks }),
 };
