@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
-import { Users, UserPlus, Shield, Mail, MoreVertical, Clock, Trash2, RefreshCw } from 'lucide-react';
+import { Users, UserPlus, Shield, Mail, MoreVertical, Clock, Trash2, RefreshCw, Check } from 'lucide-react';
 
 interface Member {
   id: string;
@@ -34,8 +35,14 @@ interface Invitation {
 }
 
 export default function TeamMembersPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const { addToast } = useToast();
+
+  // Check if user is admin
+  const isAdmin = (session?.user as any)?.role === 'admin';
+  const currentUserId = session?.user?.id;
+
   const [loading, setLoading] = useState(true);
   const [members, setMembers] = useState<Member[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
@@ -45,13 +52,30 @@ export default function TeamMembersPage() {
   const [inviting, setInviting] = useState(false);
   const [actionMemberId, setActionMemberId] = useState<string | null>(null);
 
-  // Check if user is admin
-  const isAdmin = (session?.user as any)?.role === 'admin';
-  const currentUserId = session?.user?.id;
+  // Create user state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    role: 'member' as 'member' | 'admin',
+    temporaryPassword: '',
+  });
+  const [creating, setCreating] = useState(false);
+  const [createdUser, setCreatedUser] = useState<{ email: string; temporaryPassword: string } | null>(null);
+
+  // Redirect non-admins to profile page
+  useEffect(() => {
+    if (status === 'authenticated' && !isAdmin) {
+      router.replace('/settings/profile');
+    }
+  }, [status, isAdmin, router]);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (isAdmin) {
+      fetchData();
+    }
+  }, [isAdmin]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -272,6 +296,74 @@ export default function TeamMembersPage() {
     });
   };
 
+  const generatePassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+    let password = '';
+    for (let i = 0; i < 16; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setCreateForm(prev => ({ ...prev, temporaryPassword: password }));
+  };
+
+  const handleCreateUser = async () => {
+    if (!createForm.firstName || !createForm.email) {
+      addToast({ type: 'error', title: 'Error', description: 'First name and email are required' });
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const response = await fetch('/api/members/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: createForm.email,
+          firstName: createForm.firstName,
+          lastName: createForm.lastName,
+          role: createForm.role,
+          temporaryPassword: createForm.temporaryPassword || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setCreatedUser({
+          email: data.data.email,
+          temporaryPassword: data.data.temporaryPassword,
+        });
+        setShowCreateModal(false);
+        setCreateForm({
+          firstName: '',
+          lastName: '',
+          email: '',
+          role: 'member',
+          temporaryPassword: '',
+        });
+        fetchData();
+      } else {
+        throw new Error(data.error || 'Failed to create user');
+      }
+    } catch (error) {
+      addToast({
+        type: 'error',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to create user',
+      });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  // Show loading while checking auth
+  if (status === 'loading' || (status === 'authenticated' && !isAdmin)) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -302,10 +394,16 @@ export default function TeamMembersPage() {
           </p>
         </div>
         {isAdmin && (
-          <Button onClick={() => setShowInviteModal(true)}>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Invite Member
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowInviteModal(true)}>
+              <Mail className="h-4 w-4 mr-2" />
+              Send Invitation
+            </Button>
+            <Button onClick={() => setShowCreateModal(true)}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Create User
+            </Button>
+          </div>
         )}
       </div>
 
@@ -519,6 +617,142 @@ export default function TeamMembersPage() {
                 {inviting ? 'Sending...' : 'Send Invitation'}
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create User Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Create Team Member</h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      First Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={createForm.firstName}
+                      onChange={(e) => setCreateForm(prev => ({ ...prev, firstName: e.target.value }))}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="John"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      value={createForm.lastName}
+                      onChange={(e) => setCreateForm(prev => ({ ...prev, lastName: e.target.value }))}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="Doe"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Email Address *
+                  </label>
+                  <input
+                    type="email"
+                    value={createForm.email}
+                    onChange={(e) => setCreateForm(prev => ({ ...prev, email: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="john@company.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
+                  <select
+                    value={createForm.role}
+                    onChange={(e) => setCreateForm(prev => ({ ...prev, role: e.target.value as 'member' | 'admin' }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="member">Member</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Temporary Password
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={createForm.temporaryPassword}
+                      onChange={(e) => setCreateForm(prev => ({ ...prev, temporaryPassword: e.target.value }))}
+                      className="flex-1 px-3 py-2 border border-slate-300 rounded-md font-mono text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="Auto-generated if empty"
+                    />
+                    <Button type="button" variant="outline" onClick={generatePassword}>
+                      Generate
+                    </Button>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    User will be prompted to change password on first login.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-slate-50 rounded-b-lg flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setShowCreateModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateUser} disabled={creating}>
+                {creating ? 'Creating...' : 'Create User'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Show Created User Credentials */}
+      {createdUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Check className="h-6 w-6 text-green-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900">User Created Successfully</h3>
+              <p className="text-sm text-slate-500 mt-1">
+                Share these credentials with the new user securely.
+              </p>
+            </div>
+
+            <div className="mt-6 p-4 bg-slate-50 rounded-lg space-y-3">
+              <div>
+                <p className="text-xs text-slate-500">Email</p>
+                <p className="font-mono text-sm">{createdUser.email}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Temporary Password</p>
+                <p className="font-mono text-sm bg-white px-2 py-1 rounded border">
+                  {createdUser.temporaryPassword}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-sm text-amber-800">
+                This password will only be shown once. Make sure to copy it now.
+              </p>
+            </div>
+
+            <Button
+              className="w-full mt-6"
+              onClick={() => setCreatedUser(null)}
+            >
+              Done
+            </Button>
           </div>
         </div>
       )}

@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { Key, Copy, Trash2, Plus, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +25,11 @@ const AVAILABLE_SCOPES = [
 ];
 
 export default function ApiKeysPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const isAdmin = (session?.user as any)?.role === 'admin';
+
+  // All hooks must be declared before any early returns
   const [keys, setKeys] = useState<ApiKey[]>([
     {
       id: '1',
@@ -40,6 +47,22 @@ export default function ApiKeysPage() {
   const [selectedScopes, setSelectedScopes] = useState<string[]>([]);
   const [newKey, setNewKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Redirect non-admins to profile page
+  useEffect(() => {
+    if (status === 'authenticated' && !isAdmin) {
+      router.replace('/settings/profile');
+    }
+  }, [status, isAdmin, router]);
+
+  // Show loading while checking auth
+  if (status === 'loading' || (status === 'authenticated' && !isAdmin)) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+      </div>
+    );
+  }
 
   const toggleScope = (scope: string) => {
     setSelectedScopes(prev =>

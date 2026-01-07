@@ -48,6 +48,13 @@ model Organization {
   planViolations    Json?     @map("plan_violations")      // Array of PlanViolation objects
   planViolationsAt  DateTime? @map("plan_violations_at")   // When violations were detected
 
+  // Phase 14: Organization branding and metadata
+  logo          String?   // S3/Storage URL for org logo
+  timezone      String    @default("UTC")
+  industry      String?   // e.g., "Technology", "Healthcare", "Finance"
+  companySize   String?   @map("company_size") // "1-10", "11-50", "51-200", "201-500", "500+"
+  website       String?   // Company website URL
+
   users                  User[]
   meetings               Meeting[]
   integrationConnections IntegrationConnection[]
