@@ -742,3 +742,337 @@ export const documentsApi = {
     contentType?: 'summary' | 'action_items' | 'decisions' | 'transcript_excerpt' | 'custom';
   }) => api.post<GeneratedDocument>('/api/v1/documents/generate', options),
 };
+
+// ============================================================
+// Phase 12: Team Collaboration API
+// ============================================================
+
+// Comment types
+export interface CommentUser {
+  id: string;
+  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+  avatarUrl: string | null;
+}
+
+export interface CommentMention {
+  userId: string;
+  user: {
+    id: string;
+    name: string | null;
+    email: string;
+  };
+}
+
+export interface CommentReaction {
+  emoji: string;
+  count: number;
+  users: Array<{ id: string; name: string | null }>;
+  hasReacted: boolean;
+}
+
+export interface Comment {
+  id: string;
+  meetingId: string;
+  userId: string;
+  content: string;
+  segmentId: string | null;
+  timestamp: number | null;
+  parentId: string | null;
+  isEdited: boolean;
+  isResolved: boolean;
+  resolvedById: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user: CommentUser;
+  mentions: CommentMention[];
+  reactions: CommentReaction[];
+  replyCount: number;
+}
+
+// Comments API methods
+export const commentsApi = {
+  /** Get comments for a meeting */
+  getComments: (meetingId: string, options?: { segmentId?: string; parentId?: string }) => {
+    const params = new URLSearchParams();
+    if (options?.segmentId) params.set('segmentId', options.segmentId);
+    if (options?.parentId) params.set('parentId', options.parentId);
+    const query = params.toString();
+    return api.get<Comment[]>(`/api/v1/meetings/${meetingId}/comments${query ? `?${query}` : ''}`);
+  },
+
+  /** Get a single comment */
+  getById: (commentId: string) => api.get<Comment>(`/api/v1/comments/${commentId}`),
+
+  /** Get replies to a comment */
+  getReplies: (commentId: string) => api.get<Comment[]>(`/api/v1/comments/${commentId}/replies`),
+
+  /** Create a new comment */
+  create: (
+    meetingId: string,
+    data: {
+      content: string;
+      segmentId?: string;
+      timestamp?: number;
+      parentId?: string;
+      mentionedUserIds?: string[];
+    }
+  ) => api.post<Comment>(`/api/v1/meetings/${meetingId}/comments`, data),
+
+  /** Update a comment */
+  update: (commentId: string, data: { content: string; mentionedUserIds?: string[] }) =>
+    api.patch<Comment>(`/api/v1/comments/${commentId}`, data),
+
+  /** Delete a comment */
+  delete: (commentId: string) => api.delete(`/api/v1/comments/${commentId}`),
+
+  /** Resolve a comment thread */
+  resolve: (commentId: string) => api.post<Comment>(`/api/v1/comments/${commentId}/resolve`),
+
+  /** Unresolve a comment thread */
+  unresolve: (commentId: string) => api.post<Comment>(`/api/v1/comments/${commentId}/unresolve`),
+
+  /** Add a reaction */
+  addReaction: (commentId: string, emoji: string) =>
+    api.post(`/api/v1/comments/${commentId}/reactions`, { emoji }),
+
+  /** Remove a reaction */
+  removeReaction: (commentId: string, emoji: string) =>
+    api.delete(`/api/v1/comments/${commentId}/reactions/${encodeURIComponent(emoji)}`),
+};
+
+// Annotation types
+export type AnnotationLabel =
+  | 'HIGHLIGHT'
+  | 'ACTION_ITEM'
+  | 'DECISION'
+  | 'QUESTION'
+  | 'IMPORTANT'
+  | 'FOLLOW_UP'
+  | 'BLOCKER'
+  | 'IDEA';
+
+export interface AnnotationUser {
+  id: string;
+  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+  avatarUrl: string | null;
+}
+
+export interface Annotation {
+  id: string;
+  meetingId: string;
+  userId: string;
+  startTime: number;
+  endTime: number;
+  segmentIds: string[];
+  text: string | null;
+  label: AnnotationLabel;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+  user: AnnotationUser;
+}
+
+export interface AnnotationLabelInfo {
+  value: AnnotationLabel;
+  label: string;
+  color: string;
+}
+
+// Annotations API methods
+export const annotationsApi = {
+  /** Get annotations for a meeting */
+  getAnnotations: (meetingId: string, options?: { label?: AnnotationLabel; userId?: string }) => {
+    const params = new URLSearchParams();
+    if (options?.label) params.set('label', options.label);
+    if (options?.userId) params.set('userId', options.userId);
+    const query = params.toString();
+    return api.get<Annotation[]>(`/api/v1/meetings/${meetingId}/annotations${query ? `?${query}` : ''}`);
+  },
+
+  /** Get annotations in a time range */
+  getInRange: (meetingId: string, startTime: number, endTime: number) =>
+    api.get<Annotation[]>(
+      `/api/v1/meetings/${meetingId}/annotations/range?startTime=${startTime}&endTime=${endTime}`
+    ),
+
+  /** Get annotation statistics */
+  getStats: (meetingId: string) =>
+    api.get<{
+      total: number;
+      byLabel: Record<AnnotationLabel, number>;
+      byUser: Array<{ userId: string; name: string | null; count: number }>;
+    }>(`/api/v1/meetings/${meetingId}/annotations/stats`),
+
+  /** Get available labels */
+  getLabels: () => api.get<AnnotationLabelInfo[]>('/api/v1/annotations/labels'),
+
+  /** Get a single annotation */
+  getById: (annotationId: string) => api.get<Annotation>(`/api/v1/annotations/${annotationId}`),
+
+  /** Create an annotation */
+  create: (
+    meetingId: string,
+    data: {
+      startTime: number;
+      endTime: number;
+      segmentIds: string[];
+      text?: string;
+      label?: AnnotationLabel;
+      color?: string;
+    }
+  ) => api.post<Annotation>(`/api/v1/meetings/${meetingId}/annotations`, data),
+
+  /** Update an annotation */
+  update: (
+    annotationId: string,
+    data: { text?: string; label?: AnnotationLabel; color?: string }
+  ) => api.patch<Annotation>(`/api/v1/annotations/${annotationId}`, data),
+
+  /** Delete an annotation */
+  delete: (annotationId: string) => api.delete(`/api/v1/annotations/${annotationId}`),
+};
+
+// Notification types
+export type NotificationType =
+  | 'MEETING_READY'
+  | 'MEETING_SHARED'
+  | 'MENTION'
+  | 'REPLY'
+  | 'COMMENT_ADDED'
+  | 'ANNOTATION_ADDED'
+  | 'ACTION_ITEM_DUE'
+  | 'PERMISSION_CHANGED'
+  | 'SYSTEM';
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  meetingId: string | null;
+  commentId: string | null;
+  read: boolean;
+  readAt: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+  meeting?: {
+    id: string;
+    title: string;
+  } | null;
+}
+
+// Notifications API methods
+export const notificationsApi = {
+  /** Get notifications */
+  getNotifications: (options?: { read?: boolean; type?: NotificationType; limit?: number; offset?: number }) => {
+    const params = new URLSearchParams();
+    if (options?.read !== undefined) params.set('read', String(options.read));
+    if (options?.type) params.set('type', options.type);
+    if (options?.limit) params.set('limit', String(options.limit));
+    if (options?.offset) params.set('offset', String(options.offset));
+    const query = params.toString();
+    return api.get<Notification[]>(`/api/v1/notifications${query ? `?${query}` : ''}`);
+  },
+
+  /** Get unread count */
+  getUnreadCount: () => api.get<{ count: number }>('/api/v1/notifications/unread-count'),
+
+  /** Mark as read */
+  markAsRead: (notificationId: string) =>
+    api.post<Notification>(`/api/v1/notifications/${notificationId}/read`),
+
+  /** Mark all as read */
+  markAllAsRead: () => api.post<{ markedCount: number }>('/api/v1/notifications/mark-all-read'),
+
+  /** Delete a notification */
+  delete: (notificationId: string) => api.delete(`/api/v1/notifications/${notificationId}`),
+
+  /** Delete all notifications */
+  deleteAll: () => api.delete<{ deletedCount: number }>('/api/v1/notifications'),
+};
+
+// Activity types
+export type ActivityAction =
+  | 'MEETING_CREATED'
+  | 'MEETING_UPDATED'
+  | 'MEETING_SHARED'
+  | 'MEETING_VIEWED'
+  | 'COMMENT_ADDED'
+  | 'COMMENT_REPLIED'
+  | 'COMMENT_RESOLVED'
+  | 'ANNOTATION_ADDED'
+  | 'ANNOTATION_UPDATED'
+  | 'MEMBER_JOINED'
+  | 'PERMISSION_CHANGED';
+
+export interface Activity {
+  id: string;
+  userId: string;
+  organizationId: string;
+  action: ActivityAction;
+  meetingId: string | null;
+  commentId: string | null;
+  annotationId: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+  user: {
+    id: string;
+    name: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    email: string;
+    avatarUrl: string | null;
+  };
+  meeting?: {
+    id: string;
+    title: string;
+  } | null;
+  formattedMessage?: string;
+}
+
+// Activity API methods
+export const activityApi = {
+  /** Get activity feed */
+  getFeed: (options?: {
+    meetingId?: string;
+    userId?: string;
+    action?: ActivityAction;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (options?.meetingId) params.set('meetingId', options.meetingId);
+    if (options?.userId) params.set('userId', options.userId);
+    if (options?.action) params.set('action', options.action);
+    if (options?.limit) params.set('limit', String(options.limit));
+    if (options?.offset) params.set('offset', String(options.offset));
+    const query = params.toString();
+    return api.get<Activity[]>(`/api/v1/activity${query ? `?${query}` : ''}`);
+  },
+
+  /** Get activity summary */
+  getSummary: (hours?: number) =>
+    api.get<{
+      total: number;
+      byAction: Record<ActivityAction, number>;
+      byUser: Array<{ userId: string; name: string | null; count: number }>;
+      recentMeetings: Array<{ meetingId: string; title: string; activityCount: number }>;
+    }>(`/api/v1/activity/summary${hours ? `?hours=${hours}` : ''}`),
+
+  /** Get meeting activity */
+  getMeetingActivity: (meetingId: string, options?: { limit?: number; offset?: number }) => {
+    const params = new URLSearchParams();
+    if (options?.limit) params.set('limit', String(options.limit));
+    if (options?.offset) params.set('offset', String(options.offset));
+    const query = params.toString();
+    return api.get<Activity[]>(`/api/v1/activity/meetings/${meetingId}${query ? `?${query}` : ''}`);
+  },
+};

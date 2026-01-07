@@ -128,7 +128,23 @@ model User {
   // Phase 8.9: Production Readiness
   notificationPreferences NotificationPreferences?
   dataExports             DataExport[]
-  meetingShares           MeetingShare[]
+  meetingSharesReceived   MeetingShare[]   @relation("SharedWith")
+  meetingSharesCreated    MeetingShare[]   @relation("SharedBy")
+
+  // Phase 12: Team Collaboration
+  comments              Comment[]
+  commentMentions       CommentMention[]
+  commentReactions      CommentReaction[]
+  resolvedComments      Comment[]          @relation("ResolvedComments")
+  annotations           Annotation[]
+  notifications         Notification[]
+  activities            Activity[]
+
+  // Notification preferences for collaboration
+  notifyOnMention       Boolean            @default(true) @map("notify_on_mention")
+  notifyOnReply         Boolean            @default(true) @map("notify_on_reply")
+  notifyOnShare         Boolean            @default(true) @map("notify_on_share")
+  notifyOnComment       Boolean            @default(false) @map("notify_on_comment") // Off by default
 
   @@index([organizationId])
   @@index([clerkId])
@@ -450,6 +466,10 @@ model Meeting {
 
   // Phase 8.9: Production Readiness
   shares                 MeetingShare[]
+
+  // Phase 12: Team Collaboration
+  comments               Comment[]
+  annotations            Annotation[]
 
   @@index([organizationId])
   @@index([status])
@@ -1234,28 +1254,30 @@ model DataExport {
   @@map("data_exports")
 }
 
-// Meeting sharing
+// Meeting sharing with permission levels
 model MeetingShare {
-  id             String    @id @default(uuid())
-  meetingId      String    @map("meeting_id")
-  sharedById     String    @map("shared_by_id")
+  id             String          @id @default(uuid())
+  meetingId      String          @map("meeting_id")
+  sharedById     String          @map("shared_by_id")
 
-  // Share type
-  shareType      String    @map("share_type") // "link" | "email" | "team"
-  accessLevel    String    @map("access_level") // "view" | "comment" | "edit"
+  // Share target (one of these)
+  userId         String?         @map("user_id")        // Share with specific user
+  user           User?           @relation("SharedWith", fields: [userId], references: [id], onDelete: Cascade)
+  recipientEmail String?         @map("recipient_email") // Share with email (for non-users)
+  teamId         String?         @map("team_id")        // Share with entire team (future)
 
-  // Recipient (for email shares)
-  recipientEmail String?   @map("recipient_email")
-  recipientName  String?   @map("recipient_name")
+  // Permission level
+  permission     SharePermission @default(VIEWER)
 
-  // Link sharing
-  shareToken     String?   @unique @map("share_token")
-  password       String?   // Optional password protection
+  // Share link settings
+  shareToken     String?         @unique @map("share_token")
+  linkEnabled    Boolean         @default(false) @map("link_enabled")
+  linkExpires    DateTime?       @map("link_expires")
+  password       String?         // Optional password protection
 
   // Access limits
-  expiresAt      DateTime? @map("expires_at")
-  maxViews       Int?      @map("max_views")
-  viewCount      Int       @default(0) @map("view_count")
+  maxViews       Int?            @map("max_views")
+  viewCount      Int             @default(0) @map("view_count")
 
   // Content permissions
   includeTranscript  Boolean @default(true) @map("include_transcript")
@@ -1268,16 +1290,27 @@ model MeetingShare {
 
   // Lifecycle
   createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
   lastAccessedAt DateTime? @map("last_accessed_at")
   revokedAt      DateTime? @map("revoked_at")
 
   meeting        Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  sharedBy       User      @relation(fields: [sharedById], references: [id])
+  sharedBy       User      @relation("SharedBy", fields: [sharedById], references: [id])
 
+  @@unique([meetingId, userId])
+  @@unique([meetingId, recipientEmail])
   @@index([meetingId])
   @@index([shareToken])
   @@index([sharedById])
+  @@index([userId])
   @@map("meeting_shares")
+}
+
+enum SharePermission {
+  VIEWER        // Can view transcript, summary
+  COMMENTER     // Can view + add comments
+  EDITOR        // Can edit, add annotations
+  ADMIN         // Can edit + manage sharing
 }
 
 // Usage tracking for quota enforcement
@@ -1392,6 +1425,204 @@ model ProcessedWebhook {
   @@unique([provider, eventId])
   @@index([processedAt])
   @@map("processed_webhooks")
+}
+
+// ============================================
+// Team Collaboration (Phase 12)
+// ============================================
+
+// Comments on meetings/transcripts
+model Comment {
+  id            String    @id @default(uuid())
+  content       String    @db.Text
+
+  // What it's attached to
+  meetingId     String    @map("meeting_id")
+  meeting       Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  // Transcript reference (optional - can be general meeting comment)
+  segmentId     String?   @map("segment_id") // Links to transcript segment
+  timestamp     Float?    // Seconds into meeting
+
+  // Author
+  userId        String    @map("user_id")
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Threading
+  parentId      String?   @map("parent_id")
+  parent        Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies       Comment[] @relation("CommentReplies")
+
+  // Status
+  isEdited      Boolean   @default(false) @map("is_edited")
+  isResolved    Boolean   @default(false) @map("is_resolved")
+  resolvedById  String?   @map("resolved_by_id")
+  resolvedBy    User?     @relation("ResolvedComments", fields: [resolvedById], references: [id])
+  resolvedAt    DateTime? @map("resolved_at")
+
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  mentions      CommentMention[]
+  reactions     CommentReaction[]
+
+  @@index([meetingId])
+  @@index([userId])
+  @@index([parentId])
+  @@index([segmentId])
+  @@map("comments")
+}
+
+model CommentMention {
+  id          String   @id @default(uuid())
+  commentId   String   @map("comment_id")
+  comment     Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notified    Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([commentId, userId])
+  @@index([userId])
+  @@map("comment_mentions")
+}
+
+model CommentReaction {
+  id          String   @id @default(uuid())
+  commentId   String   @map("comment_id")
+  comment     Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emoji       String   // 👍 ❤️ 🎉 etc.
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([commentId, userId, emoji])
+  @@index([commentId])
+  @@map("comment_reactions")
+}
+
+// Annotations on transcript segments
+model Annotation {
+  id            String           @id @default(uuid())
+
+  // What it's attached to
+  meetingId     String           @map("meeting_id")
+  meeting       Meeting          @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  // Transcript range
+  startTime     Float            @map("start_time") // Start timestamp in seconds
+  endTime       Float            @map("end_time")   // End timestamp in seconds
+  segmentIds    String[]         @map("segment_ids") // Array of segment IDs covered
+
+  // Content
+  text          String?          @db.Text  // Optional note
+  label         AnnotationLabel  @default(HIGHLIGHT)
+  color         String           @default("#FEF3C7") // Yellow default
+
+  // Author
+  userId        String           @map("user_id")
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  @@index([meetingId])
+  @@index([userId])
+  @@index([label])
+  @@map("annotations")
+}
+
+enum AnnotationLabel {
+  HIGHLIGHT      // General highlight
+  ACTION_ITEM    // Task to do
+  DECISION       // Decision made
+  QUESTION       // Question raised
+  IMPORTANT      // Important point
+  FOLLOW_UP      // Needs follow up
+  BLOCKER        // Blocker identified
+  IDEA           // Idea suggested
+}
+
+// In-app notifications
+model Notification {
+  id            String           @id @default(uuid())
+  userId        String           @map("user_id")
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type          NotificationType
+  title         String
+  message       String           @db.Text
+
+  // Reference to related entity
+  meetingId     String?          @map("meeting_id")
+  commentId     String?          @map("comment_id")
+
+  // Status
+  read          Boolean          @default(false)
+  readAt        DateTime?        @map("read_at")
+  emailSent     Boolean          @default(false) @map("email_sent")
+
+  // Metadata (JSON for flexibility)
+  metadata      Json?
+
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  MENTION              // @mentioned in comment
+  REPLY                // Reply to your comment
+  MEETING_SHARED       // Meeting shared with you
+  COMMENT_ADDED        // New comment on your meeting
+  ANNOTATION_ADDED     // New annotation on your meeting
+  PERMISSION_CHANGED   // Your access level changed
+  MEETING_UPDATED      // Meeting you have access to was updated
+}
+
+// Activity log for team feed
+model Activity {
+  id            String         @id @default(uuid())
+
+  // Who did it
+  userId        String         @map("user_id")
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // What they did
+  action        ActivityAction
+
+  // Context
+  organizationId String        @map("organization_id")
+  meetingId      String?       @map("meeting_id")
+  commentId      String?       @map("comment_id")
+  annotationId   String?       @map("annotation_id")
+
+  // Details
+  metadata       Json?
+
+  createdAt      DateTime       @default(now()) @map("created_at")
+
+  @@index([organizationId, createdAt])
+  @@index([meetingId, createdAt])
+  @@index([userId, createdAt])
+  @@map("activities")
+}
+
+enum ActivityAction {
+  MEETING_CREATED
+  MEETING_UPDATED
+  MEETING_SHARED
+  MEETING_VIEWED
+  COMMENT_ADDED
+  COMMENT_REPLIED
+  COMMENT_RESOLVED
+  ANNOTATION_ADDED
+  ANNOTATION_UPDATED
+  MEMBER_JOINED
+  PERMISSION_CHANGED
 }
 
 // ============================================

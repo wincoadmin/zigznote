@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Bell, Search, Menu, X } from 'lucide-react';
+import { Search, Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserButton } from '@/components/auth/UserButton';
+import { NotificationBell } from '@/components/collaboration';
 
 interface HeaderProps {
   title?: string;
@@ -81,16 +82,7 @@ export function Header({ title, onMenuClick, showMobileMenu, className }: Header
         </div>
 
         {/* Notifications */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative"
-          aria-label="Notifications"
-        >
-          <Bell className="h-5 w-5" />
-          {/* Notification badge */}
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-primary-500" />
-        </Button>
+        <NotificationBell />
 
         {/* User Menu */}
         <UserButton />

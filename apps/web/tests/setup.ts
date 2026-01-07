@@ -3,6 +3,24 @@ import '@testing-library/jest-dom';
 // MSW server is initialized in individual tests when needed
 // Tests that need API mocking should import and setup the server themselves
 
+// Mock next-auth/react
+jest.mock('next-auth/react', () => ({
+  useSession: () => ({
+    data: {
+      user: {
+        id: 'test-user-id',
+        email: 'user@example.com',
+        name: 'User Name',
+      },
+      expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    },
+    status: 'authenticated',
+  }),
+  signIn: jest.fn(),
+  signOut: jest.fn(),
+  SessionProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
 // Mock Next.js router
 jest.mock('next/navigation', () => ({
   useRouter: () => ({

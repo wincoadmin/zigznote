@@ -3,13 +3,13 @@
  * @domain Meeting Sharing
  * @description API routes for sharing meetings with external recipients
  * @single-responsibility YES — handles all meeting sharing operations
- * @last-reviewed 2026-01-06
+ * @last-reviewed 2026-01-07
  */
 
 import { Router } from 'express';
 import type { Request, Response, NextFunction, Router as RouterType } from 'express';
 import { z } from 'zod';
-import { prisma } from '@zigznote/database';
+import { prisma, SharePermission } from '@zigznote/database';
 import { AppError, emailService } from '@zigznote/shared';
 import { randomBytes } from 'crypto';
 
@@ -19,9 +19,8 @@ export const sharingRouter: RouterType = Router();
 const createShareSchema = z.object({
   meetingId: z.string().uuid(),
   shareType: z.enum(['link', 'email']),
-  accessLevel: z.enum(['view', 'comment']).default('view'),
+  permission: z.enum(['VIEWER', 'COMMENTER', 'EDITOR']).default('VIEWER'),
   recipientEmail: z.string().email().optional(),
-  recipientName: z.string().max(100).optional(),
   password: z.string().min(4).max(100).optional(),
   expiresInDays: z.number().min(1).max(30).optional(),
   maxViews: z.number().min(1).max(1000).optional(),
@@ -33,9 +32,9 @@ const createShareSchema = z.object({
 });
 
 const updateShareSchema = z.object({
-  accessLevel: z.enum(['view', 'comment']).optional(),
+  permission: z.enum(['VIEWER', 'COMMENTER', 'EDITOR']).optional(),
   password: z.string().min(4).max(100).nullable().optional(),
-  expiresAt: z.string().datetime().nullable().optional(),
+  linkExpires: z.string().datetime().nullable().optional(),
   maxViews: z.number().min(1).max(1000).nullable().optional(),
   includeTranscript: z.boolean().optional(),
   includeSummary: z.boolean().optional(),
@@ -104,15 +103,14 @@ sharingRouter.get(
         success: true,
         data: shares.map((share) => ({
           id: share.id,
-          shareType: share.shareType,
-          accessLevel: share.accessLevel,
+          shareType: share.linkEnabled ? 'link' : 'email',
+          permission: share.permission,
           recipientEmail: share.recipientEmail,
-          recipientName: share.recipientName,
           shareUrl: share.shareToken
             ? `${process.env.WEB_URL || 'https://app.zigznote.com'}/shared/${share.shareToken}`
             : null,
           hasPassword: !!share.password,
-          expiresAt: share.expiresAt,
+          linkExpires: share.linkExpires,
           maxViews: share.maxViews,
           viewCount: share.viewCount,
           includeTranscript: share.includeTranscript,
@@ -182,7 +180,7 @@ sharingRouter.post(
       const shareToken = data.shareType === 'link' ? generateShareToken() : null;
 
       // Calculate expiration date
-      const expiresAt = data.expiresInDays
+      const linkExpires = data.expiresInDays
         ? new Date(Date.now() + data.expiresInDays * 24 * 60 * 60 * 1000)
         : null;
 
@@ -191,13 +189,12 @@ sharingRouter.post(
         data: {
           meetingId: data.meetingId,
           sharedById: user.id,
-          shareType: data.shareType,
-          accessLevel: data.accessLevel,
+          linkEnabled: data.shareType === 'link',
+          permission: data.permission as SharePermission,
           recipientEmail: data.recipientEmail,
-          recipientName: data.recipientName,
           shareToken,
           password: data.password, // In production, this should be hashed
-          expiresAt,
+          linkExpires,
           maxViews: data.maxViews,
           includeTranscript: data.includeTranscript,
           includeSummary: data.includeSummary,
@@ -218,13 +215,12 @@ sharingRouter.post(
           subject: `${user.name || user.email} shared a meeting with you`,
           template: 'meeting-shared',
           data: {
-            recipientName: data.recipientName,
             senderName: user.name || user.email,
             meetingTitle: meeting.title,
             meetingDate: meeting.startTime?.toLocaleDateString() || 'Unknown date',
             message: data.message,
             shareUrl: shareUrl || '',
-            expiresAt: expiresAt?.toLocaleDateString(),
+            linkExpires: linkExpires?.toLocaleDateString(),
           },
         });
       }
@@ -233,12 +229,12 @@ sharingRouter.post(
         success: true,
         data: {
           id: share.id,
-          shareType: share.shareType,
-          accessLevel: share.accessLevel,
+          shareType: share.linkEnabled ? 'link' : 'email',
+          permission: share.permission,
           shareUrl,
           recipientEmail: share.recipientEmail,
           hasPassword: !!share.password,
-          expiresAt: share.expiresAt,
+          linkExpires: share.linkExpires,
           maxViews: share.maxViews,
           createdAt: share.createdAt,
         },
@@ -300,15 +296,15 @@ sharingRouter.patch(
 
       // Update the share
       const updateData: Record<string, unknown> = {};
-      if (validationResult.data.accessLevel !== undefined) {
-        updateData.accessLevel = validationResult.data.accessLevel;
+      if (validationResult.data.permission !== undefined) {
+        updateData.permission = validationResult.data.permission;
       }
       if (validationResult.data.password !== undefined) {
         updateData.password = validationResult.data.password;
       }
-      if (validationResult.data.expiresAt !== undefined) {
-        updateData.expiresAt = validationResult.data.expiresAt
-          ? new Date(validationResult.data.expiresAt)
+      if (validationResult.data.linkExpires !== undefined) {
+        updateData.linkExpires = validationResult.data.linkExpires
+          ? new Date(validationResult.data.linkExpires)
           : null;
       }
       if (validationResult.data.maxViews !== undefined) {
@@ -336,9 +332,9 @@ sharingRouter.patch(
         success: true,
         data: {
           id: updatedShare.id,
-          accessLevel: updatedShare.accessLevel,
+          permission: updatedShare.permission,
           hasPassword: !!updatedShare.password,
-          expiresAt: updatedShare.expiresAt,
+          linkExpires: updatedShare.linkExpires,
           maxViews: updatedShare.maxViews,
           includeTranscript: updatedShare.includeTranscript,
           includeSummary: updatedShare.includeSummary,
@@ -447,7 +443,7 @@ sharingRouter.get(
       }
 
       // Check expiration
-      if (share.expiresAt && new Date() > share.expiresAt) {
+      if (share.linkExpires && new Date() > share.linkExpires) {
         throw new AppError('This share link has expired', 410, 'SHARE_EXPIRED');
       }
 
@@ -486,7 +482,7 @@ sharingRouter.get(
         endTime: meeting.endTime,
         durationSeconds: meeting.durationSeconds,
         sharedBy: share.sharedBy.name || share.sharedBy.email,
-        accessLevel: share.accessLevel,
+        permission: share.permission,
       };
 
       if (share.includeTranscript && meeting.transcript) {

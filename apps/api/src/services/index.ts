@@ -48,3 +48,51 @@ export {
   type CreateChatOptions,
   type SendMessageOptions,
 } from './meetingChatService';
+
+// Phase 12: Team Collaboration
+export {
+  MeetingAccessService,
+  meetingAccessService,
+  PERMISSION_LEVELS,
+  type MeetingAccessResult,
+} from './meetingAccessService';
+
+export {
+  CommentService,
+  commentService,
+  type CommentWithDetails,
+  type CreateCommentData,
+  type UpdateCommentData,
+} from './commentService';
+
+export {
+  AnnotationService,
+  annotationService,
+  LABEL_COLORS,
+  type AnnotationWithUser,
+  type CreateAnnotationData,
+  type UpdateAnnotationData,
+} from './annotationService';
+
+export {
+  NotificationService,
+  notificationService,
+  type NotificationWithDetails,
+  type CreateNotificationData,
+  type NotificationFilters,
+} from './notificationService';
+
+export {
+  ActivityService,
+  activityService,
+  type ActivityWithDetails,
+  type LogActivityData,
+  type ActivityFilters,
+} from './activityService';
+
+export {
+  RealtimeService,
+  realtimeService,
+  type RealtimeEventType,
+  type RealtimeMessage,
+} from './realtimeService';

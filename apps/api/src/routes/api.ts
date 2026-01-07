@@ -18,6 +18,11 @@ import dataExportRouter from './dataExport';
 import sharingRouter from './sharing';
 import meetingExportRouter from './meetingExport';
 import { documentsRouter } from './documents';
+// Phase 12: Team Collaboration
+import { commentsRouter } from './comments';
+import { annotationsRouter } from './annotations';
+import { notificationsRouter } from './notifications';
+import { activityRouter } from './activity';
 
 export const apiRouter: IRouter = Router();
 
@@ -51,6 +56,11 @@ apiRouter.use('/v1/sharing', sharingRouter);
 apiRouter.use('/v1/meetings', meetingExportRouter);
 // Document Generation (from AI chat)
 apiRouter.use('/v1/documents', documentsRouter);
+// Phase 12: Team Collaboration
+apiRouter.use('/v1', commentsRouter); // Handles /meetings/:meetingId/comments and /comments/:commentId
+apiRouter.use('/v1', annotationsRouter); // Handles /meetings/:meetingId/annotations and /annotations/:annotationId
+apiRouter.use('/v1/notifications', notificationsRouter);
+apiRouter.use('/v1/activity', activityRouter);
 
 /**
  * API root - returns API information

@@ -9,6 +9,9 @@ const config = {
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   testMatch: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx'],
+  transformIgnorePatterns: [
+    '/node_modules/(?!(next-auth|@auth)/)',
+  ],
   moduleNameMapper: {
     // More specific patterns first
     '^@/tests/(.*)$': '<rootDir>/tests/$1',

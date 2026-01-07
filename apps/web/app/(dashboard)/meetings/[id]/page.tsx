@@ -1,9 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Share2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  Share2,
+  FileText,
+  MessageSquare,
+  Tag,
+  Activity,
+} from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,20 +23,34 @@ import {
   MeetingChat,
 } from '@/components/meetings';
 import { ShareDialog, ExportMenu } from '@/components/settings';
+import {
+  CommentsPanel,
+  AnnotationBar,
+  ActivityFeed,
+} from '@/components/collaboration';
 import { meetingsApi } from '@/lib/api';
-import { formatDate, formatTime, formatDuration } from '@/lib/utils';
+import { formatDate, formatTime, formatDuration, cn } from '@/lib/utils';
 import { meetingStatusConfig, type MeetingStatus } from '@/lib/design-tokens';
 import type { Meeting, Transcript, Summary, ActionItem } from '@/types';
 
+type SidebarTab = 'summary' | 'comments' | 'annotations' | 'activity';
+
+const SIDEBAR_TABS: { id: SidebarTab; label: string; icon: React.ReactNode }[] = [
+  { id: 'summary', label: 'Summary', icon: <FileText className="w-4 h-4" /> },
+  { id: 'comments', label: 'Comments', icon: <MessageSquare className="w-4 h-4" /> },
+  { id: 'annotations', label: 'Annotations', icon: <Tag className="w-4 h-4" /> },
+  { id: 'activity', label: 'Activity', icon: <Activity className="w-4 h-4" /> },
+];
+
 export default function MeetingDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const queryClient = useQueryClient();
   const { addToast } = useToast();
   const meetingId = params.id as string;
 
   const [currentTimeMs, setCurrentTimeMs] = useState(0);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<SidebarTab>('summary');
 
   // Fetch meeting details
   const { data: meeting, isLoading: meetingLoading } = useQuery({
@@ -175,14 +196,14 @@ export default function MeetingDetailPage() {
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-heading text-2xl font-bold text-slate-900">
+              <h1 className="font-heading text-2xl font-bold text-slate-900 dark:text-slate-100">
                 {meeting.title}
               </h1>
               <Badge className={`${status.bgColor} ${status.textColor}`}>
                 {status.label}
               </Badge>
             </div>
-            <p className="mt-1 text-slate-500">
+            <p className="mt-1 text-slate-500 dark:text-slate-400">
               {meeting.startTime ? (
                 <>
                   {formatDate(meeting.startTime)} at {formatTime(meeting.startTime)}
@@ -191,7 +212,7 @@ export default function MeetingDetailPage() {
                 'No date'
               )}
               {meeting.durationSeconds && (
-                <> • {formatDuration(meeting.durationSeconds)}</>
+                <> &bull; {formatDuration(meeting.durationSeconds)}</>
               )}
             </p>
           </div>
@@ -234,23 +255,65 @@ export default function MeetingDetailPage() {
           />
         </div>
 
-        {/* Right column - Summary + Action Items */}
+        {/* Right column - Tabbed sidebar */}
         <div className="space-y-4">
-          <SummaryPanel
-            summary={summary}
-            isLoading={summaryLoading}
-            onRegenerate={() => regenerateMutation.mutate()}
-            isRegenerating={regenerateMutation.isPending}
-          />
+          {/* Tab navigation */}
+          <div className="flex border-b border-slate-200 dark:border-slate-700">
+            {SIDEBAR_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+                  activeTab === tab.id
+                    ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
+                )}
+              >
+                {tab.icon}
+                <span className="hidden sm:inline">{tab.label}</span>
+              </button>
+            ))}
+          </div>
 
-          <ActionItems
-            actionItems={actionItems}
-            isLoading={actionItemsLoading}
-            onToggle={(id, completed) =>
-              toggleActionItemMutation.mutate({ id, completed })
-            }
-            onDelete={(id) => deleteActionItemMutation.mutate(id)}
-          />
+          {/* Tab content */}
+          <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
+            {activeTab === 'summary' && (
+              <div className="space-y-4 p-4">
+                <SummaryPanel
+                  summary={summary}
+                  isLoading={summaryLoading}
+                  onRegenerate={() => regenerateMutation.mutate()}
+                  isRegenerating={regenerateMutation.isPending}
+                  className="border-0 shadow-none p-0"
+                />
+
+                <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+                  <ActionItems
+                    actionItems={actionItems}
+                    isLoading={actionItemsLoading}
+                    onToggle={(id, completed) =>
+                      toggleActionItemMutation.mutate({ id, completed })
+                    }
+                    onDelete={(id) => deleteActionItemMutation.mutate(id)}
+                    className="border-0 shadow-none p-0"
+                  />
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'comments' && (
+              <CommentsPanel meetingId={meetingId} className="h-[600px]" />
+            )}
+
+            {activeTab === 'annotations' && (
+              <AnnotationBar meetingId={meetingId} className="h-[600px]" />
+            )}
+
+            {activeTab === 'activity' && (
+              <ActivityFeed meetingId={meetingId} limit={50} className="h-[600px]" />
+            )}
+          </div>
         </div>
       </div>
 
