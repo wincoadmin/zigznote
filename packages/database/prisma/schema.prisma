@@ -1226,6 +1226,11 @@ model OrganizationSettings {
   defaultBotName           String  @default("zigznote Notetaker") @map("default_bot_name")
   joinAnnouncementEnabled  Boolean @default(true) @map("join_announcement_enabled")
 
+  // Meeting defaults
+  autoJoinMeetings         Boolean @default(true) @map("auto_join_meetings")
+  autoGenerateSummaries    Boolean @default(true) @map("auto_generate_summaries")
+  extractActionItems       Boolean @default(true) @map("extract_action_items")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

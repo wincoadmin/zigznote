@@ -12,8 +12,12 @@ import { z } from 'zod';
 import { prisma } from '@zigznote/database';
 import { AppError } from '@zigznote/shared';
 import { usageService } from '../services/usageService';
+import { requireAuth, AuthenticatedRequest } from '../middleware/auth';
 
 export const settingsRouter: RouterType = Router();
+
+// All settings routes require authentication
+settingsRouter.use(requireAuth);
 
 // Validation schemas
 const updateNotificationPreferencesSchema = z.object({
@@ -31,6 +35,14 @@ const updateOrganizationSettingsSchema = z.object({
   requireExplicitConsent: z.boolean().optional(),
   defaultBotName: z.string().min(1).max(50).optional(),
   joinAnnouncementEnabled: z.boolean().optional(),
+  // Meeting defaults
+  autoJoinMeetings: z.boolean().optional(),
+  autoGenerateSummaries: z.boolean().optional(),
+  extractActionItems: z.boolean().optional(),
+});
+
+const updateOrganizationNameSchema = z.object({
+  name: z.string().min(1).max(100),
 });
 
 /**
@@ -41,14 +53,15 @@ settingsRouter.get(
   '/notifications',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).auth?.userId;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.auth?.userId;
       if (!userId) {
         throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
       }
 
       // Get user from database
       const user = await prisma.user.findFirst({
-        where: { clerkId: userId },
+        where: { id: userId },
       });
 
       if (!user) {
@@ -92,7 +105,8 @@ settingsRouter.patch(
   '/notifications',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).auth?.userId;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.auth?.userId;
       if (!userId) {
         throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
       }
@@ -104,7 +118,7 @@ settingsRouter.patch(
 
       // Get user from database
       const user = await prisma.user.findFirst({
-        where: { clerkId: userId },
+        where: { id: userId },
       });
 
       if (!user) {
@@ -146,14 +160,15 @@ settingsRouter.get(
   '/organization',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).auth?.userId;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.auth?.userId;
       if (!userId) {
         throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
       }
 
       // Get user with organization
       const user = await prisma.user.findFirst({
-        where: { clerkId: userId },
+        where: { id: userId },
         include: { organization: true },
       });
 
@@ -176,11 +191,19 @@ settingsRouter.get(
       res.json({
         success: true,
         data: {
+          // Organization info
+          organizationName: user.organization?.name || '',
+          // Recording consent
           recordingConsentEnabled: settings.recordingConsentEnabled,
           consentAnnouncementText: settings.consentAnnouncementText,
           requireExplicitConsent: settings.requireExplicitConsent,
+          // Bot settings
           defaultBotName: settings.defaultBotName,
           joinAnnouncementEnabled: settings.joinAnnouncementEnabled,
+          // Meeting defaults
+          autoJoinMeetings: (settings as any).autoJoinMeetings ?? true,
+          autoGenerateSummaries: (settings as any).autoGenerateSummaries ?? true,
+          extractActionItems: (settings as any).extractActionItems ?? true,
         },
       });
     } catch (error) {
@@ -197,7 +220,8 @@ settingsRouter.patch(
   '/organization',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).auth?.userId;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.auth?.userId;
       if (!userId) {
         throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
       }
@@ -209,7 +233,7 @@ settingsRouter.patch(
 
       // Get user with organization and check admin role
       const user = await prisma.user.findFirst({
-        where: { clerkId: userId },
+        where: { id: userId },
       });
 
       if (!user) {
@@ -238,6 +262,59 @@ settingsRouter.patch(
           requireExplicitConsent: settings.requireExplicitConsent,
           defaultBotName: settings.defaultBotName,
           joinAnnouncementEnabled: settings.joinAnnouncementEnabled,
+          autoJoinMeetings: (settings as any).autoJoinMeetings ?? true,
+          autoGenerateSummaries: (settings as any).autoGenerateSummaries ?? true,
+          extractActionItems: (settings as any).extractActionItems ?? true,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * PATCH /api/v1/settings/organization/name
+ * Update organization name (requires admin role)
+ */
+settingsRouter.patch(
+  '/organization/name',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.auth?.userId;
+      if (!userId) {
+        throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
+      }
+
+      const validationResult = updateOrganizationNameSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        throw new AppError('Invalid request body', 400, 'VALIDATION_ERROR', { errors: validationResult.error.errors });
+      }
+
+      // Get user and check admin role
+      const user = await prisma.user.findFirst({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+      }
+
+      if (user.role !== 'admin') {
+        throw new AppError('Admin role required to update organization name', 403, 'FORBIDDEN');
+      }
+
+      // Update organization name
+      const organization = await prisma.organization.update({
+        where: { id: user.organizationId },
+        data: { name: validationResult.data.name },
+      });
+
+      res.json({
+        success: true,
+        data: {
+          name: organization.name,
         },
       });
     } catch (error) {
@@ -254,14 +331,15 @@ settingsRouter.get(
   '/usage',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).auth?.userId;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.auth?.userId;
       if (!userId) {
         throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
       }
 
       // Get user from database
       const user = await prisma.user.findFirst({
-        where: { clerkId: userId },
+        where: { id: userId },
       });
 
       if (!user) {
