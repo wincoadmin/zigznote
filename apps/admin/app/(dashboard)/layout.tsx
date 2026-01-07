@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Flag,
   Database,
+  Plug,
 } from 'lucide-react';
 
 const navigation = [
@@ -40,6 +41,7 @@ const navigation = [
   },
   { name: 'Security', href: '/security', icon: Shield },
   { name: 'Support Tools', href: '/support', icon: Wrench },
+  { name: 'Integrations', href: '/integrations', icon: Plug },
   { name: 'Operations', href: '/operations', icon: Activity },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];

@@ -1672,6 +1672,42 @@ enum ActivityAction {
 }
 
 // ============================================
+// Platform-Level Integration Configuration (Phase 15)
+// ============================================
+
+model PlatformIntegration {
+  id                     String    @id @default(uuid())
+  provider               String    @unique // slack, zoom, hubspot, salesforce, microsoft, google
+
+  // OAuth Credentials (clientSecret is encrypted)
+  clientId               String    @map("client_id")
+  clientSecretEncrypted  String    @map("client_secret_encrypted")
+
+  // Provider-specific fields (stored as JSON)
+  additionalConfig       Json?     @map("additional_config") // e.g., { tenantId: "xxx" } for Microsoft
+
+  // OAuth URLs (auto-generated but can be overridden)
+  redirectUri            String?   @map("redirect_uri")
+
+  // Status
+  enabled                Boolean   @default(true)
+
+  // Audit
+  configuredById         String?   @map("configured_by_id") // Admin user ID
+  configuredAt           DateTime? @map("configured_at")
+  lastTestedAt           DateTime? @map("last_tested_at")
+  testStatus             String?   @map("test_status") // success, failed, pending
+  testError              String?   @map("test_error")
+
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  @@index([provider])
+  @@index([enabled])
+  @@map("platform_integrations")
+}
+
+// ============================================
 // Backup & Recovery (Phase 10.1)
 // ============================================
 

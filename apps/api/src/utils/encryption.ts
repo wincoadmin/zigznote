@@ -79,3 +79,47 @@ export function decrypt(encryptedValue: string, encryptionKey: string): string {
 export function generateEncryptionKey(): string {
   return crypto.randomBytes(32).toString('hex');
 }
+
+/**
+ * Get encryption key from environment
+ * Uses ENCRYPTION_KEY or PLATFORM_ENCRYPTION_KEY
+ */
+function getEncryptionKey(): string {
+  const key = process.env.ENCRYPTION_KEY || process.env.PLATFORM_ENCRYPTION_KEY;
+
+  if (!key) {
+    throw new Error('ENCRYPTION_KEY environment variable is required');
+  }
+
+  return key;
+}
+
+/**
+ * Encrypts a string using the environment encryption key
+ * @param value - Value to encrypt
+ * @returns Encrypted string
+ */
+export function encryptWithEnvKey(value: string): string {
+  return encrypt(value, getEncryptionKey());
+}
+
+/**
+ * Decrypts a string using the environment encryption key
+ * @param encryptedValue - Encrypted value
+ * @returns Decrypted string
+ */
+export function decryptWithEnvKey(encryptedValue: string): string {
+  return decrypt(encryptedValue, getEncryptionKey());
+}
+
+/**
+ * Check if encryption key is properly configured
+ */
+export function isEncryptionConfigured(): boolean {
+  try {
+    getEncryptionKey();
+    return true;
+  } catch {
+    return false;
+  }
+}
