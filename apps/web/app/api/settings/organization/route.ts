@@ -1,6 +1,6 @@
 /**
  * Organization Settings API
- * Direct database access (following Next.js API route pattern)
+ * Handles both Organization model fields and OrganizationSettings model fields
  */
 
 import { NextResponse } from 'next/server';
@@ -39,7 +39,13 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       data: {
+        // Organization model fields
         organizationName: user.organization?.name || '',
+        timezone: user.organization?.timezone || 'UTC',
+        industry: user.organization?.industry || '',
+        companySize: user.organization?.companySize || '',
+        website: user.organization?.website || '',
+        // OrganizationSettings model fields
         recordingConsentEnabled: settings.recordingConsentEnabled,
         consentAnnouncementText: settings.consentAnnouncementText,
         requireExplicitConsent: settings.requireExplicitConsent,
@@ -85,8 +91,26 @@ export async function PATCH(request: Request) {
 
     const body = await request.json();
 
-    // Filter only allowed fields
-    const allowedFields = [
+    // Fields for Organization model
+    const orgFields = ['name', 'timezone', 'industry', 'companySize', 'website'];
+    const orgUpdateData: Record<string, any> = {};
+
+    for (const field of orgFields) {
+      if (body[field] !== undefined) {
+        orgUpdateData[field] = body[field];
+      }
+    }
+
+    // Update Organization if there are org fields
+    if (Object.keys(orgUpdateData).length > 0) {
+      await prisma.organization.update({
+        where: { id: user.organizationId },
+        data: orgUpdateData,
+      });
+    }
+
+    // Fields for OrganizationSettings model
+    const settingsFields = [
       'recordingConsentEnabled',
       'consentAnnouncementText',
       'requireExplicitConsent',
@@ -97,34 +121,51 @@ export async function PATCH(request: Request) {
       'extractActionItems',
     ];
 
-    const updateData: Record<string, any> = {};
-    for (const field of allowedFields) {
+    const settingsUpdateData: Record<string, any> = {};
+    for (const field of settingsFields) {
       if (body[field] !== undefined) {
-        updateData[field] = body[field];
+        settingsUpdateData[field] = body[field];
       }
     }
 
-    // Upsert organization settings
-    const settings = await prisma.organizationSettings.upsert({
-      where: { organizationId: user.organizationId },
-      create: {
-        organizationId: user.organizationId,
-        ...updateData,
-      },
-      update: updateData,
+    // Upsert OrganizationSettings if there are settings fields
+    let settings;
+    if (Object.keys(settingsUpdateData).length > 0) {
+      settings = await prisma.organizationSettings.upsert({
+        where: { organizationId: user.organizationId },
+        create: {
+          organizationId: user.organizationId,
+          ...settingsUpdateData,
+        },
+        update: settingsUpdateData,
+      });
+    } else {
+      settings = await prisma.organizationSettings.findUnique({
+        where: { organizationId: user.organizationId },
+      });
+    }
+
+    // Fetch updated org for response
+    const updatedOrg = await prisma.organization.findUnique({
+      where: { id: user.organizationId },
     });
 
     return NextResponse.json({
       success: true,
       data: {
-        recordingConsentEnabled: settings.recordingConsentEnabled,
-        consentAnnouncementText: settings.consentAnnouncementText,
-        requireExplicitConsent: settings.requireExplicitConsent,
-        defaultBotName: settings.defaultBotName,
-        joinAnnouncementEnabled: settings.joinAnnouncementEnabled,
-        autoJoinMeetings: (settings as any).autoJoinMeetings ?? true,
-        autoGenerateSummaries: (settings as any).autoGenerateSummaries ?? true,
-        extractActionItems: (settings as any).extractActionItems ?? true,
+        organizationName: updatedOrg?.name || '',
+        timezone: updatedOrg?.timezone || 'UTC',
+        industry: updatedOrg?.industry || '',
+        companySize: updatedOrg?.companySize || '',
+        website: updatedOrg?.website || '',
+        recordingConsentEnabled: settings?.recordingConsentEnabled ?? true,
+        consentAnnouncementText: settings?.consentAnnouncementText,
+        requireExplicitConsent: settings?.requireExplicitConsent ?? false,
+        defaultBotName: settings?.defaultBotName,
+        joinAnnouncementEnabled: settings?.joinAnnouncementEnabled ?? true,
+        autoJoinMeetings: (settings as any)?.autoJoinMeetings ?? true,
+        autoGenerateSummaries: (settings as any)?.autoGenerateSummaries ?? true,
+        extractActionItems: (settings as any)?.extractActionItems ?? true,
       },
     });
   } catch (error) {

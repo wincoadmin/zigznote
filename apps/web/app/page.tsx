@@ -16,6 +16,9 @@ export default function HomePage() {
               </span>
             </div>
             <div className="flex items-center gap-4">
+              <Link href="/pricing" className="text-slate-600 hover:text-slate-900">
+                Pricing
+              </Link>
               <Link href="/sign-in" className="btn-ghost">
                 Sign in
               </Link>
