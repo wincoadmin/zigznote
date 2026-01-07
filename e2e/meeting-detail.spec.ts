@@ -98,6 +98,102 @@ test.describe('Meeting Detail Page', () => {
     });
   });
 
+  test.describe('Collaboration Tabs', () => {
+    test('should display all four collaboration tabs', async ({ page }) => {
+      await page.goto('/meetings');
+      const meetingLink = page.locator('a[href*="/meetings/"]').first();
+
+      if (await meetingLink.isVisible().catch(() => false)) {
+        await meetingLink.click();
+        await page.waitForURL(/\/meetings\/.+/);
+
+        // Check that all four tabs are visible
+        const summaryTab = page.locator('button').filter({ hasText: 'Summary' });
+        const commentsTab = page.locator('button').filter({ hasText: 'Comments' });
+        const annotationsTab = page.locator('button').filter({ hasText: 'Annotations' });
+        const activityTab = page.locator('button').filter({ hasText: 'Activity' });
+
+        await expect(summaryTab).toBeVisible({ timeout: 10000 });
+        await expect(commentsTab).toBeVisible();
+        await expect(annotationsTab).toBeVisible();
+        await expect(activityTab).toBeVisible();
+      }
+    });
+
+    test('should switch to Comments tab and show comments panel', async ({ page }) => {
+      await page.goto('/meetings');
+      const meetingLink = page.locator('a[href*="/meetings/"]').first();
+
+      if (await meetingLink.isVisible().catch(() => false)) {
+        await meetingLink.click();
+        await page.waitForURL(/\/meetings\/.+/);
+
+        // Click Comments tab
+        const commentsTab = page.locator('button').filter({ hasText: 'Comments' });
+        await commentsTab.click();
+
+        // Should show comments panel content (textarea for adding comment)
+        const commentsPanel = page.locator('textarea[placeholder*="comment" i], textarea[placeholder*="discussion" i], [data-testid="comments-panel"]').first();
+        await expect(commentsPanel.or(page.getByText(/no comments/i).first()).or(page.getByText(/add.*comment/i).first())).toBeVisible({ timeout: 5000 });
+      }
+    });
+
+    test('should switch to Annotations tab and show annotations panel', async ({ page }) => {
+      await page.goto('/meetings');
+      const meetingLink = page.locator('a[href*="/meetings/"]').first();
+
+      if (await meetingLink.isVisible().catch(() => false)) {
+        await meetingLink.click();
+        await page.waitForURL(/\/meetings\/.+/);
+
+        // Click Annotations tab
+        const annotationsTab = page.locator('button').filter({ hasText: 'Annotations' });
+        await annotationsTab.click();
+
+        // Should show annotations panel content
+        const annotationsContent = page.getByText(/annotation/i).first().or(page.getByText(/highlight/i).first()).or(page.getByText(/no annotations/i).first());
+        await expect(annotationsContent).toBeVisible({ timeout: 5000 });
+      }
+    });
+
+    test('should switch to Activity tab and show activity feed', async ({ page }) => {
+      await page.goto('/meetings');
+      const meetingLink = page.locator('a[href*="/meetings/"]').first();
+
+      if (await meetingLink.isVisible().catch(() => false)) {
+        await meetingLink.click();
+        await page.waitForURL(/\/meetings\/.+/);
+
+        // Click Activity tab
+        const activityTab = page.locator('button').filter({ hasText: 'Activity' });
+        await activityTab.click();
+
+        // Should show activity feed content
+        const activityContent = page.getByText(/activity/i).first().or(page.getByText(/no activity/i).first()).or(page.getByText(/recent/i).first());
+        await expect(activityContent).toBeVisible({ timeout: 5000 });
+      }
+    });
+
+    test('should highlight active tab with emerald color', async ({ page }) => {
+      await page.goto('/meetings');
+      const meetingLink = page.locator('a[href*="/meetings/"]').first();
+
+      if (await meetingLink.isVisible().catch(() => false)) {
+        await meetingLink.click();
+        await page.waitForURL(/\/meetings\/.+/);
+
+        // Summary tab should be active by default
+        const summaryTab = page.locator('button').filter({ hasText: 'Summary' });
+        await expect(summaryTab).toHaveClass(/emerald/);
+
+        // Click Comments tab
+        const commentsTab = page.locator('button').filter({ hasText: 'Comments' });
+        await commentsTab.click();
+        await expect(commentsTab).toHaveClass(/emerald/);
+      }
+    });
+  });
+
   test.describe('Meeting AI Chat', () => {
     test('should display chat interface', async ({ page }) => {
       await page.goto('/meetings');
