@@ -22,10 +22,17 @@ test.describe('Admin Dashboard', () => {
 
   test('should show welcome message on dashboard', async ({ page }) => {
     await page.goto(ADMIN_URL);
+    await page.waitForLoadState('domcontentloaded');
+
+    // Wait a moment for any redirects to complete
+    await page.waitForTimeout(1000);
 
     const url = page.url();
     if (!url.includes('login')) {
-      await expect(page.getByText(/welcome to the zigznote admin panel/i)).toBeVisible();
+      await expect(page.getByText(/welcome to the zigznote admin panel/i)).toBeVisible({ timeout: 10000 });
+    } else {
+      // On login page - verify login form is visible
+      await expect(page.getByRole('heading', { name: /admin portal/i })).toBeVisible();
     }
   });
 
