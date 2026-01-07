@@ -14,6 +14,15 @@ export { SlackIntegration, slackRoutes } from './slack';
 // HubSpot Integration
 export { HubSpotIntegration, hubspotRoutes } from './hubspot';
 
+// Zoom Integration
+export { ZoomIntegration, zoomRoutes } from './zoom';
+
+// Microsoft Teams/365 Integration
+export { MicrosoftIntegration, microsoftRoutes } from './microsoft';
+
+// Salesforce Integration
+export { SalesforceIntegration, salesforceRoutes } from './salesforce';
+
 // Webhooks
 export {
   WebhookService,

@@ -23,6 +23,14 @@ import { commentsRouter } from './comments';
 import { annotationsRouter } from './annotations';
 import { notificationsRouter } from './notifications';
 import { activityRouter } from './activity';
+// Integrations
+import {
+  slackRoutes,
+  hubspotRoutes,
+  zoomRoutes,
+  microsoftRoutes,
+  salesforceRoutes,
+} from '../integrations';
 
 export const apiRouter: IRouter = Router();
 
@@ -61,6 +69,12 @@ apiRouter.use('/v1', commentsRouter); // Handles /meetings/:meetingId/comments a
 apiRouter.use('/v1', annotationsRouter); // Handles /meetings/:meetingId/annotations and /annotations/:annotationId
 apiRouter.use('/v1/notifications', notificationsRouter);
 apiRouter.use('/v1/activity', activityRouter);
+// Integrations
+apiRouter.use('/v1/integrations/slack', slackRoutes);
+apiRouter.use('/v1/integrations/hubspot', hubspotRoutes);
+apiRouter.use('/v1/integrations/zoom', zoomRoutes);
+apiRouter.use('/v1/integrations/microsoft', microsoftRoutes);
+apiRouter.use('/v1/integrations/salesforce', salesforceRoutes);
 
 /**
  * API root - returns API information

@@ -60,19 +60,18 @@ const integrations: Integration[] = [
   {
     id: 'zoom',
     name: 'Zoom',
-    description: 'Automatically record and transcribe Zoom meetings',
+    description: 'Sync your Zoom meetings and enable automatic recording',
     category: 'video',
     icon: (
       <svg viewBox="0 0 24 24" className="w-8 h-8" fill="#2D8CFF">
         <path d="M4.585 7.5A2.585 2.585 0 0 0 2 10.085v3.83A2.585 2.585 0 0 0 4.585 16.5h7.83A2.585 2.585 0 0 0 15 13.915v-3.83A2.585 2.585 0 0 0 12.415 7.5h-7.83zM17 10.5l4.5-3v9l-4.5-3v-3z" />
       </svg>
     ),
-    comingSoon: true,
   },
   {
     id: 'microsoft-teams',
     name: 'Microsoft Teams',
-    description: 'Connect with Microsoft Teams for seamless meeting integration',
+    description: 'Connect Microsoft 365 calendar and Teams meetings',
     category: 'video',
     icon: (
       <svg viewBox="0 0 24 24" className="w-8 h-8" fill="#5059C9">
@@ -82,19 +81,17 @@ const integrations: Integration[] = [
         <circle cx="9" cy="3" r="2.25" />
       </svg>
     ),
-    comingSoon: true,
   },
   {
     id: 'salesforce',
     name: 'Salesforce',
-    description: 'Sync meeting notes and action items to Salesforce CRM',
+    description: 'Log meeting summaries and create tasks in Salesforce CRM',
     category: 'crm',
     icon: (
       <svg viewBox="0 0 24 24" className="w-8 h-8" fill="#00A1E0">
         <path d="M10.006 5.415a4.195 4.195 0 0 1 3.045-1.306c1.56 0 2.954.9 3.69 2.205.63-.3 1.35-.465 2.1-.465 2.73 0 4.95 2.235 4.95 4.995 0 2.76-2.22 4.995-4.95 4.995-.39 0-.78-.045-1.14-.135-.615 1.41-2.025 2.4-3.66 2.4-1.065 0-2.025-.42-2.745-1.095a4.463 4.463 0 0 1-3.39 1.545c-2.085 0-3.84-1.44-4.335-3.375A4.473 4.473 0 0 1 0 11.31c0-2.52 2.085-4.56 4.65-4.56.51 0 1.005.09 1.47.24a4.185 4.185 0 0 1 3.886-1.575z" />
       </svg>
     ),
-    comingSoon: true,
   },
 ];
 
@@ -141,6 +138,9 @@ export default function IntegrationsPage() {
     const slackConnected = searchParams.get('slack');
     const hubspotConnected = searchParams.get('hubspot');
     const googleConnected = searchParams.get('google-calendar');
+    const zoomConnected = searchParams.get('zoom');
+    const microsoftConnected = searchParams.get('microsoft-teams');
+    const salesforceConnected = searchParams.get('salesforce');
     const error = searchParams.get('error');
 
     if (slackConnected === 'connected') {
@@ -155,12 +155,24 @@ export default function IntegrationsPage() {
       setMessage({ type: 'success', text: 'Google Calendar connected successfully!' });
       checkStatus('google-calendar');
     }
+    if (zoomConnected === 'connected') {
+      setMessage({ type: 'success', text: 'Zoom connected successfully!' });
+      checkStatus('zoom');
+    }
+    if (microsoftConnected === 'connected') {
+      setMessage({ type: 'success', text: 'Microsoft Teams connected successfully!' });
+      checkStatus('microsoft-teams');
+    }
+    if (salesforceConnected === 'connected') {
+      setMessage({ type: 'success', text: 'Salesforce connected successfully!' });
+      checkStatus('salesforce');
+    }
     if (error) {
       setMessage({ type: 'error', text: decodeURIComponent(error) });
     }
 
     // Clear message after 5 seconds
-    if (slackConnected || hubspotConnected || googleConnected || error) {
+    if (slackConnected || hubspotConnected || googleConnected || zoomConnected || microsoftConnected || salesforceConnected || error) {
       setTimeout(() => setMessage(null), 5000);
     }
   }, [searchParams, checkStatus]);

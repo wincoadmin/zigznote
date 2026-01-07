@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@zigznote/database';
 
-const SUPPORTED_PROVIDERS = ['slack', 'hubspot', 'google-calendar', 'zoom', 'microsoft-teams'];
+const SUPPORTED_PROVIDERS = ['slack', 'hubspot', 'google-calendar', 'zoom', 'microsoft-teams', 'salesforce'];
 
 export async function DELETE(
   request: Request,

@@ -132,6 +132,34 @@ export const config = {
   },
 
   /**
+   * Zoom integration
+   */
+  zoom: {
+    clientId: process.env.ZOOM_CLIENT_ID || '',
+    clientSecret: process.env.ZOOM_CLIENT_SECRET || '',
+    redirectUri: process.env.ZOOM_REDIRECT_URI || `${baseConfig.apiUrl}/api/v1/integrations/zoom/callback`,
+  },
+
+  /**
+   * Microsoft Teams/365 integration
+   */
+  microsoft: {
+    clientId: process.env.MICROSOFT_CLIENT_ID || '',
+    clientSecret: process.env.MICROSOFT_CLIENT_SECRET || '',
+    tenantId: process.env.MICROSOFT_TENANT_ID || 'common',
+    redirectUri: process.env.MICROSOFT_REDIRECT_URI || `${baseConfig.apiUrl}/api/v1/integrations/microsoft/callback`,
+  },
+
+  /**
+   * Salesforce integration
+   */
+  salesforce: {
+    clientId: process.env.SALESFORCE_CLIENT_ID || '',
+    clientSecret: process.env.SALESFORCE_CLIENT_SECRET || '',
+    redirectUri: process.env.SALESFORCE_REDIRECT_URI || `${baseConfig.apiUrl}/api/v1/integrations/salesforce/callback`,
+  },
+
+  /**
    * Stripe payments
    */
   stripe: {

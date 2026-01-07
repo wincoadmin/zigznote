@@ -3,7 +3,7 @@
  * Shared types for all integrations
  */
 
-export type IntegrationProvider = 'slack' | 'hubspot' | 'salesforce' | 'notion' | 'linear';
+export type IntegrationProvider = 'slack' | 'hubspot' | 'salesforce' | 'notion' | 'linear' | 'zoom' | 'microsoft';
 
 export type IntegrationStatus = 'connected' | 'disconnected' | 'error' | 'expired';
 

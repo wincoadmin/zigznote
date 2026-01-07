@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 
-const SUPPORTED_PROVIDERS = ['slack', 'hubspot', 'google-calendar', 'zoom', 'microsoft-teams'];
+const SUPPORTED_PROVIDERS = ['slack', 'hubspot', 'google-calendar', 'zoom', 'microsoft-teams', 'salesforce'];
 
 // OAuth configuration - in production these would come from env vars
 const OAUTH_CONFIGS: Record<string, { clientId?: string; scopes: string[] }> = {
@@ -29,6 +29,10 @@ const OAUTH_CONFIGS: Record<string, { clientId?: string; scopes: string[] }> = {
   'microsoft-teams': {
     clientId: process.env.MICROSOFT_CLIENT_ID,
     scopes: ['Calendars.Read', 'OnlineMeetings.Read'],
+  },
+  salesforce: {
+    clientId: process.env.SALESFORCE_CLIENT_ID,
+    scopes: ['api', 'refresh_token'],
   },
 };
 
@@ -83,6 +87,9 @@ export async function GET(
         break;
       case 'microsoft-teams':
         authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${config.clientId}&scope=${config.scopes.join(' ')}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&response_type=code`;
+        break;
+      case 'salesforce':
+        authUrl = `https://login.salesforce.com/services/oauth2/authorize?client_id=${config.clientId}&scope=${config.scopes.join(' ')}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&response_type=code`;
         break;
       default:
         return NextResponse.json({ error: 'Provider not supported' }, { status: 400 });
