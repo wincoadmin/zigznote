@@ -13,6 +13,7 @@ import {
   Play,
   Loader2,
 } from 'lucide-react';
+import { integrationsApi } from '@/lib/api';
 
 interface Integration {
   provider: string;
@@ -245,16 +246,13 @@ export default function IntegrationsPage() {
 
   const fetchIntegrations = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/integrations', {
-        credentials: 'include',
-      });
-      const data = await res.json();
-      if (data.success) {
-        setIntegrations(data.data);
+      const response = await integrationsApi.list();
+      if (response.success && response.data) {
+        setIntegrations(response.data as Integration[]);
       } else {
-        setError(data.error);
+        setError(response.error?.message || 'Failed to fetch integrations');
       }
-    } catch (err) {
+    } catch {
       setError('Failed to fetch integrations');
     } finally {
       setLoading(false);
@@ -266,28 +264,16 @@ export default function IntegrationsPage() {
   }, [fetchIntegrations]);
 
   const handleSave = async (provider: string, configData: ConfigData) => {
-    const res = await fetch(`/api/admin/integrations/${provider}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(configData),
-    });
-    const data = await res.json();
-    if (!data.success) {
-      throw new Error(data.error);
+    const response = await integrationsApi.configure(provider, configData);
+    if (!response.success) {
+      throw new Error(response.error?.message || 'Failed to save configuration');
     }
     await fetchIntegrations();
   };
 
   const handleToggle = async (provider: string, enabled: boolean) => {
-    const res = await fetch(`/api/admin/integrations/${provider}/toggle`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ enabled }),
-    });
-    const data = await res.json();
-    if (data.success) {
+    const response = await integrationsApi.toggle(provider, enabled);
+    if (response.success) {
       await fetchIntegrations();
     }
   };
@@ -295,11 +281,7 @@ export default function IntegrationsPage() {
   const handleTest = async (provider: string) => {
     setTestingProvider(provider);
     try {
-      const res = await fetch(`/api/admin/integrations/${provider}/test`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-      await res.json();
+      await integrationsApi.test(provider);
       await fetchIntegrations();
     } finally {
       setTestingProvider(null);

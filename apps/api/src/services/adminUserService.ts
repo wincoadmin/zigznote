@@ -3,12 +3,15 @@
  * Handles user CRUD and impersonation for admin panel
  */
 
-import { userRepository } from '@zigznote/database';
+import { userRepository, prisma } from '@zigznote/database';
 import type { User } from '@zigznote/database';
 import type { PaginatedResult, UserFilterOptions } from '@zigznote/database';
 import { auditService, AuditActions, type AuditContext } from './auditService';
 import { AppError } from '../utils/errors';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
+
+const PASSWORD_SALT_ROUNDS = 12;
 
 export interface AdminUserFilter extends UserFilterOptions {
   organizationId?: string;
@@ -43,6 +46,14 @@ export interface UpdateUserInput {
   avatarUrl?: string | null;
 }
 
+export interface CreateUserInput {
+  email: string;
+  name: string;
+  organizationId: string;
+  role?: string;
+  password?: string; // If not provided, generates a temporary one
+}
+
 export interface ImpersonationToken {
   token: string;
   userId: string;
@@ -75,6 +86,56 @@ class AdminUserService {
     return {
       ...result,
       data: result.data.map((user) => this.toUserDetails(user)),
+    };
+  }
+
+  /**
+   * Create a new user
+   */
+  async createUser(
+    input: CreateUserInput,
+    context: AuditContext
+  ): Promise<{ user: UserDetails; temporaryPassword?: string }> {
+    // Check if email is already in use
+    const existingUser = await userRepository.findByEmail(input.email);
+    if (existingUser) {
+      throw new AppError('Email already in use', 400, 'EMAIL_EXISTS');
+    }
+
+    // Generate temporary password if not provided
+    const temporaryPassword = input.password || crypto.randomBytes(8).toString('hex');
+    const passwordHash = await bcrypt.hash(temporaryPassword, PASSWORD_SALT_ROUNDS);
+
+    // Create user with Prisma directly to include password
+    const user = await prisma.user.create({
+      data: {
+        email: input.email,
+        name: input.name,
+        organizationId: input.organizationId,
+        role: input.role || 'member',
+        password: passwordHash,
+        emailVerified: new Date(), // Mark as verified since admin created
+      },
+      include: {
+        organization: true,
+      },
+    });
+
+    await auditService.log(context, {
+      action: AuditActions.USER_CREATED,
+      entityType: 'user',
+      entityId: user.id,
+      newData: {
+        email: user.email,
+        name: user.name,
+        organizationId: user.organizationId,
+        role: user.role,
+      },
+    });
+
+    return {
+      user: this.toUserDetails(user),
+      temporaryPassword: input.password ? undefined : temporaryPassword,
     };
   }
 

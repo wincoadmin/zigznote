@@ -11,15 +11,23 @@ export async function GET() {
   try {
     const session = await auth();
 
-    if (!session?.user?.id) {
+    if (!session?.user?.id && !session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user with organization
-    const user = await prisma.user.findUnique({
+    // Get user with organization - try by ID first, then by email as fallback
+    let user = await prisma.user.findUnique({
       where: { id: session.user.id },
       include: { organization: true },
     });
+
+    // Fallback to email lookup if ID doesn't match (stale session)
+    if (!user && session.user.email) {
+      user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        include: { organization: true },
+      });
+    }
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -69,14 +77,21 @@ export async function PATCH(request: Request) {
   try {
     const session = await auth();
 
-    if (!session?.user?.id) {
+    if (!session?.user?.id && !session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user and check admin role
-    const user = await prisma.user.findUnique({
+    // Get user and check admin role - try by ID first, then by email as fallback
+    let user = await prisma.user.findUnique({
       where: { id: session.user.id },
     });
+
+    // Fallback to email lookup if ID doesn't match (stale session)
+    if (!user && session.user.email) {
+      user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+      });
+    }
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -181,14 +196,21 @@ export async function DELETE() {
   try {
     const session = await auth();
 
-    if (!session?.user?.id) {
+    if (!session?.user?.id && !session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user and check admin role
-    const user = await prisma.user.findUnique({
+    // Get user and check admin role - try by ID first, then by email as fallback
+    let user = await prisma.user.findUnique({
       where: { id: session.user.id },
     });
+
+    // Fallback to email lookup if ID doesn't match (stale session)
+    if (!user && session.user.email) {
+      user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+      });
+    }
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });

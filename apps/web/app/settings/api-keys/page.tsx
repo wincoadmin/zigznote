@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Key, Copy, Trash2, Plus, Check } from 'lucide-react';
+import { Key, Copy, Trash2, Plus, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -29,24 +29,15 @@ export default function ApiKeysPage() {
   const router = useRouter();
   const isAdmin = (session?.user as any)?.role === 'admin';
 
-  // All hooks must be declared before any early returns
-  const [keys, setKeys] = useState<ApiKey[]>([
-    {
-      id: '1',
-      name: 'Zapier Integration',
-      keyPrefix: 'sk_live_abc123',
-      scopes: ['meetings:read', 'transcripts:read'],
-      createdAt: '2026-01-01T00:00:00Z',
-      lastUsedAt: '2026-01-05T12:00:00Z',
-      expiresAt: null,
-    },
-  ]);
-
+  const [keys, setKeys] = useState<ApiKey[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newKeyName, setNewKeyName] = useState('');
   const [selectedScopes, setSelectedScopes] = useState<string[]>([]);
   const [newKey, setNewKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Redirect non-admins to profile page
   useEffect(() => {
@@ -54,6 +45,29 @@ export default function ApiKeysPage() {
       router.replace('/settings/profile');
     }
   }, [status, isAdmin, router]);
+
+  const loadKeys = useCallback(async () => {
+    try {
+      const res = await fetch('/api/api-keys');
+      const data = await res.json();
+      if (data.success) {
+        setKeys(data.data);
+      } else {
+        setError(data.error || 'Failed to load API keys');
+      }
+    } catch (err) {
+      console.error('Error loading API keys:', err);
+      setError('Failed to load API keys');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (status === 'authenticated' && isAdmin) {
+      loadKeys();
+    }
+  }, [status, isAdmin, loadKeys]);
 
   // Show loading while checking auth
   if (status === 'loading' || (status === 'authenticated' && !isAdmin)) {
@@ -70,31 +84,61 @@ export default function ApiKeysPage() {
     );
   };
 
-  const handleCreateKey = () => {
+  const handleCreateKey = async () => {
     if (!newKeyName || selectedScopes.length === 0) return;
 
-    const generatedKey = `sk_live_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+    setCreating(true);
+    setError(null);
 
-    const newApiKey: ApiKey = {
-      id: Math.random().toString(36).substring(7),
-      name: newKeyName,
-      keyPrefix: generatedKey.substring(0, 15),
-      scopes: selectedScopes,
-      createdAt: new Date().toISOString(),
-      lastUsedAt: null,
-      expiresAt: null,
-    };
+    try {
+      const res = await fetch('/api/api-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newKeyName,
+          scopes: selectedScopes,
+        }),
+      });
 
-    setKeys(prev => [...prev, newApiKey]);
-    setNewKey(generatedKey);
-    setShowCreateForm(false);
-    setNewKeyName('');
-    setSelectedScopes([]);
+      const data = await res.json();
+
+      if (data.success) {
+        setNewKey(data.data.key);
+        setShowCreateForm(false);
+        setNewKeyName('');
+        setSelectedScopes([]);
+        loadKeys();
+      } else {
+        setError(data.error || 'Failed to create API key');
+      }
+    } catch (err) {
+      console.error('Error creating API key:', err);
+      setError('Failed to create API key');
+    } finally {
+      setCreating(false);
+    }
   };
 
-  const handleRevokeKey = (id: string) => {
-    if (confirm('Are you sure you want to revoke this API key? This cannot be undone.')) {
-      setKeys(prev => prev.filter(k => k.id !== id));
+  const handleRevokeKey = async (id: string) => {
+    if (!confirm('Are you sure you want to revoke this API key? This cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/api-keys/${id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        loadKeys();
+      } else {
+        setError(data.error || 'Failed to revoke API key');
+      }
+    } catch (err) {
+      console.error('Error revoking API key:', err);
+      setError('Failed to revoke API key');
     }
   };
 
@@ -127,6 +171,16 @@ export default function ApiKeysPage() {
           Create API Key
         </Button>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
+          {error}
+          <button onClick={() => setError(null)} className="ml-2 text-red-600 hover:text-red-800">
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* New Key Display */}
       {newKey && (
@@ -220,8 +274,9 @@ export default function ApiKeysPage() {
               </Button>
               <Button
                 onClick={handleCreateKey}
-                disabled={!newKeyName || selectedScopes.length === 0}
+                disabled={!newKeyName || selectedScopes.length === 0 || creating}
               >
+                {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Create Key
               </Button>
             </div>
@@ -231,7 +286,12 @@ export default function ApiKeysPage() {
 
       {/* Keys List */}
       <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-        {keys.length === 0 ? (
+        {loading ? (
+          <div className="p-8 text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-slate-400 mx-auto" />
+            <p className="text-sm text-slate-500 mt-2">Loading API keys...</p>
+          </div>
+        ) : keys.length === 0 ? (
           <div className="p-8 text-center">
             <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Key className="w-6 h-6 text-slate-400" />

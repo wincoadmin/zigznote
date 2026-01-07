@@ -109,8 +109,8 @@ export const usersApi = {
 
   get: (id: string) => adminApi.get(`/users/${id}`),
 
-  create: (data: { email: string; name: string; organizationId: string }) =>
-    adminApi.post('/users', data),
+  create: (data: { email: string; name: string; organizationId: string; role?: string; password?: string }) =>
+    adminApi.post<{ id: string; email: string; name: string; temporaryPassword?: string }>('/users', data),
 
   update: (id: string, data: unknown) => adminApi.patch(`/users/${id}`, data),
 
@@ -230,4 +230,24 @@ export const operationsApi = {
 
   maintenance: (tasks: string[]) =>
     adminApi.post('/operations/maintenance', { tasks }),
+};
+
+// Integrations endpoints
+export const integrationsApi = {
+  list: () => adminApi.get('/integrations'),
+
+  get: (provider: string) => adminApi.get(`/integrations/${provider}`),
+
+  configure: (provider: string, data: {
+    clientId: string;
+    clientSecret: string;
+    redirectUri?: string;
+    additionalConfig?: Record<string, string>;
+    enabled: boolean;
+  }) => adminApi.post(`/integrations/${provider}`, data),
+
+  toggle: (provider: string, enabled: boolean) =>
+    adminApi.patch(`/integrations/${provider}/toggle`, { enabled }),
+
+  test: (provider: string) => adminApi.post(`/integrations/${provider}/test`),
 };

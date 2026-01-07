@@ -195,26 +195,38 @@ export const authConfig: NextAuthConfig = {
       },
     }),
 
-    // Google OAuth
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      allowDangerousEmailAccountLinking: true,
-    }),
+    // Google OAuth (only if configured)
+    ...(process.env.GOOGLE_CLIENT_ID &&
+        process.env.GOOGLE_CLIENT_SECRET &&
+        !process.env.GOOGLE_CLIENT_ID.includes('your_') ? [
+      GoogleProvider({
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        allowDangerousEmailAccountLinking: true,
+      }),
+    ] : []),
 
-    // GitHub OAuth
-    GitHubProvider({
-      clientId: process.env.GITHUB_CLIENT_ID!,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-      allowDangerousEmailAccountLinking: true,
-    }),
+    // GitHub OAuth (only if configured)
+    ...(process.env.GITHUB_CLIENT_ID &&
+        process.env.GITHUB_CLIENT_SECRET &&
+        !process.env.GITHUB_CLIENT_ID.includes('your_') ? [
+      GitHubProvider({
+        clientId: process.env.GITHUB_CLIENT_ID,
+        clientSecret: process.env.GITHUB_CLIENT_SECRET,
+        allowDangerousEmailAccountLinking: true,
+      }),
+    ] : []),
 
-    // Microsoft OAuth
-    MicrosoftEntraID({
-      clientId: process.env.MICROSOFT_CLIENT_ID!,
-      clientSecret: process.env.MICROSOFT_CLIENT_SECRET!,
-      allowDangerousEmailAccountLinking: true,
-    }),
+    // Microsoft OAuth (only if configured)
+    ...(process.env.MICROSOFT_CLIENT_ID &&
+        process.env.MICROSOFT_CLIENT_SECRET &&
+        !process.env.MICROSOFT_CLIENT_ID.includes('your_') ? [
+      MicrosoftEntraID({
+        clientId: process.env.MICROSOFT_CLIENT_ID,
+        clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
+        allowDangerousEmailAccountLinking: true,
+      }),
+    ] : []),
   ],
 
   callbacks: {
@@ -256,17 +268,37 @@ export const authConfig: NextAuthConfig = {
     async jwt({ token, user, account, trigger, session }) {
       // Initial sign-in - add user data to token
       if (user) {
-        token.id = user.id;
         token.email = user.email!;
-        token.firstName = user.firstName;
-        token.lastName = user.lastName;
         token.name = user.name;
-        token.avatarUrl = user.avatarUrl;
-        token.role = user.role;
-        token.organizationId = user.organizationId;
-        token.twoFactorEnabled = user.twoFactorEnabled;
-        token.twoFactorVerified = !user.twoFactorEnabled; // Already verified for credentials
-        token.emailVerified = user.emailVerified;
+
+        // For credentials login, user object has all the data from authorize()
+        if (account?.provider === 'credentials') {
+          token.id = user.id;
+          token.firstName = user.firstName;
+          token.lastName = user.lastName;
+          token.avatarUrl = user.avatarUrl;
+          token.role = user.role;
+          token.organizationId = user.organizationId;
+          token.twoFactorEnabled = user.twoFactorEnabled;
+          token.twoFactorVerified = !user.twoFactorEnabled;
+          token.emailVerified = user.emailVerified;
+        } else {
+          // For OAuth users, always fetch from database to get correct ID
+          const dbUser = await prisma.user.findUnique({
+            where: { email: user.email! },
+          });
+          if (dbUser) {
+            token.id = dbUser.id;
+            token.firstName = dbUser.firstName;
+            token.lastName = dbUser.lastName;
+            token.avatarUrl = dbUser.avatarUrl;
+            token.role = dbUser.role;
+            token.organizationId = dbUser.organizationId;
+            token.twoFactorEnabled = dbUser.twoFactorEnabled;
+            token.twoFactorVerified = true; // OAuth doesn't require 2FA
+            token.emailVerified = dbUser.emailVerified;
+          }
+        }
       }
 
       // Handle session updates
@@ -281,7 +313,7 @@ export const authConfig: NextAuthConfig = {
         if (session.avatarUrl !== undefined) token.avatarUrl = session.avatarUrl;
       }
 
-      // For OAuth users, fetch organization data if missing
+      // Fallback: sync from database if organizationId is missing (e.g., stale token)
       if (!token.organizationId && token.email) {
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email },
@@ -294,7 +326,7 @@ export const authConfig: NextAuthConfig = {
           token.lastName = dbUser.lastName;
           token.avatarUrl = dbUser.avatarUrl;
           token.twoFactorEnabled = dbUser.twoFactorEnabled;
-          token.twoFactorVerified = true; // OAuth doesn't require 2FA for now
+          token.twoFactorVerified = true;
         }
       }
 

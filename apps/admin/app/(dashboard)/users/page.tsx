@@ -14,8 +14,11 @@ import {
   ChevronLeft,
   ChevronRight,
   PlayCircle,
+  X,
+  Copy,
+  Check,
 } from 'lucide-react';
-import { usersApi } from '@/lib/api';
+import { usersApi, organizationsApi } from '@/lib/api';
 
 interface UserData {
   id: string;
@@ -38,6 +41,11 @@ interface Pagination {
   totalPages: number;
 }
 
+interface OrganizationOption {
+  id: string;
+  name: string;
+}
+
 const roleColors: Record<string, string> = {
   owner: 'bg-purple-100 text-purple-700',
   admin: 'bg-blue-100 text-blue-700',
@@ -54,6 +62,21 @@ export default function UsersPage() {
   const [selectedRole, setSelectedRole] = useState('all');
   const [page, setPage] = useState(1);
   const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
+
+  // Add User Modal state
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
+  const [addUserForm, setAddUserForm] = useState({
+    email: '',
+    name: '',
+    organizationId: '',
+    role: 'member',
+    password: '',
+  });
+  const [addUserLoading, setAddUserLoading] = useState(false);
+  const [addUserError, setAddUserError] = useState<string | null>(null);
+  const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
+  const [passwordCopied, setPasswordCopied] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -91,6 +114,22 @@ export default function UsersPage() {
     fetchUsers();
   }, [fetchUsers]);
 
+  // Fetch organizations when modal opens
+  useEffect(() => {
+    if (showAddModal && organizations.length === 0) {
+      organizationsApi.list({ limit: 100 }).then((response) => {
+        if (response.success && response.data) {
+          const data = response.data as { data?: OrganizationOption[] } | OrganizationOption[];
+          const orgs = Array.isArray(data) ? data : (data.data || []);
+          setOrganizations(orgs);
+          if (orgs.length > 0 && !addUserForm.organizationId) {
+            setAddUserForm((prev) => ({ ...prev, organizationId: orgs[0].id }));
+          }
+        }
+      });
+    }
+  }, [showAddModal, organizations.length, addUserForm.organizationId]);
+
   useEffect(() => {
     const handleClickOutside = () => setActionMenuOpen(null);
     if (actionMenuOpen) {
@@ -98,6 +137,59 @@ export default function UsersPage() {
       return () => document.removeEventListener('click', handleClickOutside);
     }
   }, [actionMenuOpen]);
+
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddUserLoading(true);
+    setAddUserError(null);
+
+    try {
+      const response = await usersApi.create({
+        email: addUserForm.email,
+        name: addUserForm.name,
+        organizationId: addUserForm.organizationId,
+        role: addUserForm.role,
+        password: addUserForm.password || undefined,
+      });
+
+      if (response.success) {
+        const responseData = response.data as { temporaryPassword?: string };
+        if (responseData?.temporaryPassword) {
+          setTemporaryPassword(responseData.temporaryPassword);
+        } else {
+          // Close modal and refresh users list
+          setShowAddModal(false);
+          setAddUserForm({ email: '', name: '', organizationId: organizations[0]?.id || '', role: 'member', password: '' });
+          fetchUsers();
+        }
+      } else {
+        setAddUserError(response.error?.message || 'Failed to create user');
+      }
+    } catch {
+      setAddUserError('Failed to create user');
+    } finally {
+      setAddUserLoading(false);
+    }
+  };
+
+  const handleCopyPassword = () => {
+    if (temporaryPassword) {
+      navigator.clipboard.writeText(temporaryPassword);
+      setPasswordCopied(true);
+      setTimeout(() => setPasswordCopied(false), 2000);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowAddModal(false);
+    setAddUserForm({ email: '', name: '', organizationId: organizations[0]?.id || '', role: 'member', password: '' });
+    setAddUserError(null);
+    setTemporaryPassword(null);
+    setPasswordCopied(false);
+    if (temporaryPassword) {
+      fetchUsers(); // Refresh if a user was created
+    }
+  };
 
   const handleSuspend = async (userId: string) => {
     try {
@@ -162,7 +254,10 @@ export default function UsersPage() {
           <h1 className="text-2xl font-bold text-slate-900">Users</h1>
           <p className="text-slate-500 mt-1">Manage user accounts across all organizations</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+        >
           <Plus className="w-4 h-4" />
           Add User
         </button>
@@ -390,6 +485,175 @@ export default function UsersPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Add User Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200">
+              <h2 className="text-lg font-semibold text-slate-900">
+                {temporaryPassword ? 'User Created' : 'Add New User'}
+              </h2>
+              <button
+                onClick={handleCloseModal}
+                className="p-1 hover:bg-slate-100 rounded"
+              >
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+
+            {temporaryPassword ? (
+              <div className="p-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                  <p className="text-green-800 font-medium">User created successfully!</p>
+                  <p className="text-green-700 text-sm mt-1">
+                    A temporary password has been generated. Please share it securely with the user.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">
+                    Temporary Password
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 px-3 py-2 bg-slate-100 rounded-lg font-mono text-sm">
+                      {temporaryPassword}
+                    </code>
+                    <button
+                      onClick={handleCopyPassword}
+                      className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50"
+                    >
+                      {passwordCopied ? (
+                        <Check className="w-4 h-4 text-green-600" />
+                      ) : (
+                        <Copy className="w-4 h-4 text-slate-500" />
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    The user should change this password after their first login.
+                  </p>
+                </div>
+
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={handleCloseModal}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleAddUser} className="p-4 space-y-4">
+                {addUserError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                    {addUserError}
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={addUserForm.email}
+                    onChange={(e) => setAddUserForm({ ...addUserForm, email: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="user@example.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={addUserForm.name}
+                    onChange={(e) => setAddUserForm({ ...addUserForm, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="John Doe"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Organization *
+                  </label>
+                  <select
+                    required
+                    value={addUserForm.organizationId}
+                    onChange={(e) => setAddUserForm({ ...addUserForm, organizationId: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="">Select organization</option>
+                    {organizations.map((org) => (
+                      <option key={org.id} value={org.id}>
+                        {org.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Role
+                  </label>
+                  <select
+                    value={addUserForm.role}
+                    onChange={(e) => setAddUserForm({ ...addUserForm, role: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="viewer">Viewer</option>
+                    <option value="member">Member</option>
+                    <option value="admin">Admin</option>
+                    <option value="owner">Owner</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Password (optional)
+                  </label>
+                  <input
+                    type="password"
+                    value={addUserForm.password}
+                    onChange={(e) => setAddUserForm({ ...addUserForm, password: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="Leave empty to generate temporary password"
+                    minLength={8}
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    If empty, a temporary password will be generated.
+                  </p>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={handleCloseModal}
+                    className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-lg"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={addUserLoading}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                  >
+                    {addUserLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                    Create User
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

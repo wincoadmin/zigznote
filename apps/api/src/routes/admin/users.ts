@@ -31,6 +31,16 @@ const listSchema = {
   }),
 };
 
+const createSchema = {
+  body: z.object({
+    email: z.string().email(),
+    name: z.string().min(1).max(100),
+    organizationId: z.string().uuid(),
+    role: z.enum(['owner', 'admin', 'member', 'viewer']).optional(),
+    password: z.string().min(8).max(100).optional(),
+  }),
+};
+
 const updateSchema = {
   params: z.object({
     id: z.string().uuid(),
@@ -74,6 +84,35 @@ usersRouter.get(
       success: true,
       data: result.data,
       pagination: result.pagination,
+    });
+  })
+);
+
+/**
+ * @route POST /api/admin/users
+ * @description Create a new user (requires admin role)
+ */
+usersRouter.post(
+  '/',
+  requireAdminRoleLevel,
+  validateRequest(createSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const adminReq = req as AdminAuthenticatedRequest;
+    const input = req.body as z.infer<typeof createSchema.body>;
+
+    const result = await adminUserService.createUser(input, {
+      adminId: adminReq.adminAuth!.adminId,
+      ipAddress: req.ip || 'unknown',
+      userAgent: req.headers['user-agent'],
+    });
+
+    res.status(201).json({
+      success: true,
+      data: result.user,
+      temporaryPassword: result.temporaryPassword,
+      message: result.temporaryPassword
+        ? 'User created with temporary password'
+        : 'User created successfully',
     });
   })
 );
