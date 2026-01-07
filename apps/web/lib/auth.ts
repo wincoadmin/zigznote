@@ -277,6 +277,7 @@ export const authConfig: NextAuthConfig = {
         }
         if (session.firstName !== undefined) token.firstName = session.firstName;
         if (session.lastName !== undefined) token.lastName = session.lastName;
+        if (session.name !== undefined) token.name = session.name;
         if (session.avatarUrl !== undefined) token.avatarUrl = session.avatarUrl;
       }
 

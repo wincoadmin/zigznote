@@ -42,7 +42,12 @@ export default function ProfilePage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        await update();
+        // Pass updated data to refresh session
+        await update({
+          firstName: data.data.firstName,
+          lastName: data.data.lastName,
+          name: data.data.name,
+        });
         setMessage('Profile updated successfully!');
         setIsError(false);
         setTimeout(() => setMessage(''), 3000);
@@ -98,7 +103,8 @@ export default function ProfilePage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        await update();
+        // Pass updated avatar URL to refresh session
+        await update({ avatarUrl: data.data.avatarUrl });
         setMessage('Avatar updated successfully!');
         setIsError(false);
         setTimeout(() => setMessage(''), 3000);
@@ -134,7 +140,8 @@ export default function ProfilePage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        await update();
+        // Clear avatar in session
+        await update({ avatarUrl: null });
         setMessage('Avatar removed successfully!');
         setIsError(false);
         setTimeout(() => setMessage(''), 3000);

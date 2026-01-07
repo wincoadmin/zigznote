@@ -3,21 +3,27 @@
  * POST - Change the current user's password
  */
 
-import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { NextRequest, NextResponse } from 'next/server';
+import { getToken } from 'next-auth/jwt';
 import { prisma } from '@zigznote/database';
-import { hashPassword, verifyPassword } from '@/lib/password';
 
-export async function POST(request: Request) {
+// Ensure this route runs in Node.js runtime (not Edge)
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
+    // Use getToken directly for more reliable JWT access
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
 
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    if (!token?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const userId = token.id as string;
 
     const body = await request.json();
     const { currentPassword, newPassword } = body;
@@ -29,7 +35,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate new password
     if (newPassword.length < 8) {
       return NextResponse.json(
         { error: 'New password must be at least 8 characters' },
@@ -39,7 +44,7 @@ export async function POST(request: Request) {
 
     // Get user with password
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: {
         id: true,
         password: true,
@@ -47,10 +52,7 @@ export async function POST(request: Request) {
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     if (!user.password) {
@@ -60,8 +62,11 @@ export async function POST(request: Request) {
       );
     }
 
+    // Import bcrypt dynamically (same pattern as two-factor route)
+    const bcrypt = await import('bcrypt');
+
     // Verify current password
-    const isValid = await verifyPassword(currentPassword, user.password);
+    const isValid = await bcrypt.compare(currentPassword, user.password);
     if (!isValid) {
       return NextResponse.json(
         { error: 'Current password is incorrect' },
@@ -70,11 +75,11 @@ export async function POST(request: Request) {
     }
 
     // Hash new password
-    const hashedPassword = await hashPassword(newPassword);
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
 
     // Update password
     await prisma.user.update({
-      where: { id: session.user.id },
+      where: { id: userId },
       data: {
         password: hashedPassword,
         passwordChangedAt: new Date(),

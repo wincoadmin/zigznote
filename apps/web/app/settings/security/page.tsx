@@ -88,6 +88,7 @@ export default function SecurityPage() {
       const res = await fetch('/api/user/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ currentPassword, newPassword }),
       });
 
