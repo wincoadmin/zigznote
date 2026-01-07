@@ -31,6 +31,8 @@ Thumbs.db
 # Testing
 coverage/
 .nyc_output/
+playwright-report/
+test-results/
 
 # Turbo
 .turbo/
@@ -61,6 +63,10 @@ temp/
 # Next.js
 apps/web/.next/
 apps/web/out/
+apps/admin/.next/
+
+# User uploads
+apps/web/public/uploads/
 
 # Generated files
 *.generated.ts

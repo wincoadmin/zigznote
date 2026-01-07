@@ -95,6 +95,8 @@ adminAuthRouter.post(
       data: {
         user: result.user,
       },
+      // Include token for proxy-based auth (admin panel on different port)
+      token: result.session?.token,
     });
   })
 );
@@ -141,6 +143,8 @@ adminAuthRouter.post(
       data: {
         user: result.user,
       },
+      // Include token for proxy-based auth (admin panel on different port)
+      token: result.session?.token,
     });
   })
 );

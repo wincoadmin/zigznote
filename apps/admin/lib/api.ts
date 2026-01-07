@@ -1,9 +1,11 @@
 /**
  * Admin API client
  * Handles all API calls from the admin panel
+ * Routes through local Next.js API proxy for authentication
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+// Use local proxy instead of direct backend calls
+const API_BASE = '';
 
 interface ApiResponse<T> {
   success: boolean;
