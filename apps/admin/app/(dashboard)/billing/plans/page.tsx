@@ -99,7 +99,7 @@ export default function PlansPage() {
       name: plan.name,
       slug: plan.slug,
       description: plan.description || '',
-      amount: (plan.amount / 100).toString(),
+      amount: plan.amount.toString(), // amount is already in dollars from the backend
       currency: plan.currency,
       interval: plan.interval,
       trialDays: plan.trialDays.toString(),
@@ -196,7 +196,7 @@ export default function PlansPage() {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: currency.toUpperCase(),
-    }).format(amount / 100);
+    }).format(amount); // amount is already in dollars from the backend
   };
 
   return (
