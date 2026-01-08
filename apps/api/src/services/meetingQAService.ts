@@ -6,6 +6,7 @@
 import pino from 'pino';
 import { prisma } from '@zigznote/database';
 import { AI_MODELS } from '@zigznote/shared';
+import { apiKeyProvider, ApiProviders } from './apiKeyProvider';
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 
@@ -207,13 +208,13 @@ export class MeetingQAService {
   private openai: OpenAIClient | null = null;
 
   /**
-   * Get Anthropic client
+   * Get Anthropic client (uses apiKeyProvider for DB + env fallback)
    */
   private async getAnthropicClient(): Promise<AnthropicClient> {
     if (!this.anthropic) {
-      const apiKey = process.env.ANTHROPIC_API_KEY;
+      const apiKey = await apiKeyProvider.getKey(ApiProviders.ANTHROPIC);
       if (!apiKey) {
-        throw new Error('ANTHROPIC_API_KEY not configured');
+        throw new Error('Anthropic API key not configured');
       }
       // Dynamic import to avoid build-time dependency
       // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -224,13 +225,13 @@ export class MeetingQAService {
   }
 
   /**
-   * Get OpenAI client
+   * Get OpenAI client (uses apiKeyProvider for DB + env fallback)
    */
   private async getOpenAIClient(): Promise<OpenAIClient> {
     if (!this.openai) {
-      const apiKey = process.env.OPENAI_API_KEY;
+      const apiKey = await apiKeyProvider.getKey(ApiProviders.OPENAI);
       if (!apiKey) {
-        throw new Error('OPENAI_API_KEY not configured');
+        throw new Error('OpenAI API key not configured');
       }
       // Dynamic import to avoid build-time dependency
       // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -411,21 +412,22 @@ export class MeetingQAService {
       question
     );
 
-    // Select model
-    const useAnthropic = preferredModel === 'claude' ||
-      (!preferredModel && process.env.ANTHROPIC_API_KEY);
+    // Select model (check key availability via apiKeyProvider)
+    const hasAnthropicKey = await apiKeyProvider.hasKey(ApiProviders.ANTHROPIC);
+    const hasOpenAIKey = await apiKeyProvider.hasKey(ApiProviders.OPENAI);
+    const useAnthropic = preferredModel === 'claude' || (!preferredModel && hasAnthropicKey);
 
     let answer: string;
     let tokensUsed: number;
     let modelUsed: string;
 
     try {
-      if (useAnthropic && process.env.ANTHROPIC_API_KEY) {
+      if (useAnthropic && hasAnthropicKey) {
         const result = await this.askWithAnthropic(messages);
         answer = result.answer;
         tokensUsed = result.tokensUsed;
         modelUsed = result.model;
-      } else if (process.env.OPENAI_API_KEY) {
+      } else if (hasOpenAIKey) {
         const result = await this.askWithOpenAI(messages);
         answer = result.answer;
         tokensUsed = result.tokensUsed;

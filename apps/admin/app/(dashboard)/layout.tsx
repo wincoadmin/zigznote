@@ -15,12 +15,14 @@ import {
   X,
   Flag,
   Plug,
+  CreditCard,
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Users', href: '/users', icon: Users },
   { name: 'Organizations', href: '/organizations', icon: Building2 },
+  { name: 'Billing', href: '/billing', icon: CreditCard },
   { name: 'API Keys', href: '/api-keys', icon: Key },
   { name: 'Feature Flags', href: '/feature-flags', icon: Flag },
   { name: 'Integrations', href: '/integrations', icon: Plug },

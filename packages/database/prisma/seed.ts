@@ -23,6 +23,8 @@ import {
   seedUsersBatch,
   seedMeetingsBatch,
   seedAchievements,
+  seedBilling,
+  clearBillingData,
   randomElement,
 } from './seeders';
 
@@ -41,6 +43,9 @@ const SCALE_CONFIG = {
  */
 async function clearDatabase(): Promise<void> {
   console.info('Clearing existing data...');
+  // Clear billing first (foreign key dependencies)
+  await clearBillingData(prisma);
+  // Clear other data
   await prisma.actionItem.deleteMany();
   await prisma.summary.deleteMany();
   await prisma.transcript.deleteMany();
@@ -116,6 +121,9 @@ async function seedDetailed(config: { orgs: number; usersPerOrg: number; meeting
     console.info('  ✓ Created sample integration');
   }
 
+  // Seed billing data
+  const billingData = await seedBilling(prisma, organizations);
+
   // Summary
   console.info(`\n📊 Summary:`);
   console.info(`   Organizations: ${organizations.length}`);
@@ -124,6 +132,10 @@ async function seedDetailed(config: { orgs: number; usersPerOrg: number; meeting
   console.info(`   Transcripts: ${transcriptCount}`);
   console.info(`   Action Items: ${actionItemCount}`);
   console.info(`   Achievements: ${achievementCount}`);
+  console.info(`   Billing Plans: ${billingData.plans.length}`);
+  console.info(`   Subscriptions: ${billingData.subscriptions.length}`);
+  console.info(`   Invoices: ${billingData.invoices.length}`);
+  console.info(`   Payments: ${billingData.payments.length}`);
 }
 
 /**

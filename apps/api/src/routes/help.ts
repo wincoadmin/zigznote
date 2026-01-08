@@ -249,7 +249,7 @@ helpRouter.get(
     res.json({
       success: true,
       data: {
-        aiAssistantAvailable: helpAssistantService.isAvailable(),
+        aiAssistantAvailable: await helpAssistantService.isAvailable(),
         articlesCount: helpCategories.reduce((sum, c) => sum + c.articles.length, 0),
         faqsCount: faqs.length,
         categoriesCount: helpCategories.length,

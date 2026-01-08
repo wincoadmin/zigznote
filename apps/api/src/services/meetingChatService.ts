@@ -29,23 +29,45 @@ try {
 
 import { prisma } from '@zigznote/database';
 import { createLogger } from '@zigznote/shared';
-import { config } from '../config';
 import { embeddingService } from './embeddingService';
+import { apiKeyProvider, ApiProviders } from './apiKeyProvider';
 
 const logger = createLogger({ component: 'meetingChatService' });
 
-// AI client configuration
+// AI client instances (lazy initialized)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-let anthropic: any = null;
+let anthropicClient: any = null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-let openai: any = null;
+let openaiClient: any = null;
 
-if (config.anthropicApiKey && Anthropic) {
-  anthropic = new Anthropic({ apiKey: config.anthropicApiKey });
+/**
+ * Get or create Anthropic client
+ */
+async function getAnthropicClient(): Promise<typeof anthropicClient> {
+  if (!Anthropic) return null;
+
+  const apiKey = await apiKeyProvider.getKey(ApiProviders.ANTHROPIC);
+  if (!apiKey) return null;
+
+  if (!anthropicClient) {
+    anthropicClient = new Anthropic({ apiKey });
+  }
+  return anthropicClient;
 }
 
-if (config.openaiApiKey && OpenAI) {
-  openai = new OpenAI({ apiKey: config.openaiApiKey });
+/**
+ * Get or create OpenAI client
+ */
+async function getOpenAIClient(): Promise<typeof openaiClient> {
+  if (!OpenAI) return null;
+
+  const apiKey = await apiKeyProvider.getKey(ApiProviders.OPENAI);
+  if (!apiKey) return null;
+
+  if (!openaiClient) {
+    openaiClient = new OpenAI({ apiKey });
+  }
+  return openaiClient;
 }
 
 const DEFAULT_MODEL = 'claude-3-5-sonnet-20241022';
@@ -359,6 +381,7 @@ CONTEXT:
 ${context}`;
 
     // Try Claude first
+    const anthropic = await getAnthropicClient();
     if (anthropic) {
       try {
         const messages = [
@@ -390,6 +413,7 @@ ${context}`;
     }
 
     // Fallback to GPT
+    const openai = await getOpenAIClient();
     if (openai) {
       const messages = [
         { role: 'system' as const, content: systemPrompt },

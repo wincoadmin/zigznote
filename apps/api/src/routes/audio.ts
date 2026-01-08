@@ -228,7 +228,7 @@ audioRouter.post(
     }
 
     // Check if service is configured
-    if (!inlineTranscriptionService.isConfigured()) {
+    if (!(await inlineTranscriptionService.isConfigured())) {
       res.status(503).json({
         success: false,
         error: { code: 'NOT_CONFIGURED', message: 'Transcription service not configured' },

@@ -3,7 +3,6 @@
  */
 
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -23,10 +22,13 @@ export async function POST(request: Request) {
       return NextResponse.json(data, { status: response.status });
     }
 
-    // If login successful and we got a token, set it as a cookie
-    if (data.token) {
-      const cookieStore = await cookies();
-      cookieStore.set('admin_token', data.token, {
+    // Return response without token (it's in the cookie now)
+    const { token, ...responseWithoutToken } = data;
+    const res = NextResponse.json(responseWithoutToken);
+
+    // If login successful and we got a token, set it as a cookie on the response
+    if (token) {
+      res.cookies.set('admin_token', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
@@ -35,9 +37,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // Return response without token (it's in the cookie now)
-    const { token, ...responseWithoutToken } = data;
-    return NextResponse.json(responseWithoutToken);
+    return res;
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(

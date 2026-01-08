@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@zigznote/database';
 import { hashPassword, generateRandomPassword } from '@/lib/password';
+import { sendTeamMemberWelcomeEmail } from '@/lib/email';
 
 export async function POST(request: Request) {
   try {
@@ -104,14 +105,18 @@ export async function POST(request: Request) {
       },
     });
 
-    // TODO: Send welcome email with credentials if sendWelcomeEmail is true
-    // await sendWelcomeEmail({
-    //   to: email,
-    //   firstName,
-    //   organizationName: user.organization?.name,
-    //   temporaryPassword: password,
-    //   loginUrl: `${process.env.NEXTAUTH_URL}/sign-in`,
-    // });
+    // Send welcome email with credentials
+    try {
+      await sendTeamMemberWelcomeEmail(
+        email,
+        newUser.name || firstName,
+        user.organization?.name || 'your organization',
+        password
+      );
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError);
+      // Don't fail the request if email fails - user is still created
+    }
 
     return NextResponse.json({
       success: true,

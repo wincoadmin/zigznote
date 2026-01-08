@@ -25,6 +25,8 @@ import { notificationsRouter } from './notifications';
 import { activityRouter } from './activity';
 // Team Member Management
 import { membersRouter } from './members';
+// Billing
+import billingRouter from './billing';
 // Integrations
 import {
   slackRoutes,
@@ -73,6 +75,8 @@ apiRouter.use('/v1/notifications', notificationsRouter);
 apiRouter.use('/v1/activity', activityRouter);
 // Team Member Management
 apiRouter.use('/v1/members', membersRouter);
+// Billing
+apiRouter.use('/v1/billing', billingRouter);
 // Integrations
 apiRouter.use('/v1/integrations/slack', slackRoutes);
 apiRouter.use('/v1/integrations/hubspot', hubspotRoutes);

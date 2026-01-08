@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@zigznote/database';
 import crypto from 'crypto';
+import { sendInvitationEmail } from '@/lib/email';
 
 export async function POST(
   request: Request,
@@ -43,6 +44,9 @@ export async function POST(
         organizationId: user.organizationId,
         status: 'pending',
       },
+      include: {
+        organization: { select: { name: true } },
+      },
     });
 
     if (!invitation) {
@@ -61,7 +65,19 @@ export async function POST(
       data: { token, expiresAt },
     });
 
-    // TODO: Send invitation email
+    // Send invitation email
+    try {
+      await sendInvitationEmail(
+        invitation.email,
+        user.name || 'A team member',
+        invitation.organization?.name || 'the organization',
+        invitation.role,
+        token
+      );
+    } catch (emailError) {
+      console.error('Failed to resend invitation email:', emailError);
+      // Don't fail the request if email fails
+    }
 
     return NextResponse.json({
       success: true,

@@ -14,6 +14,7 @@ import {
   Key,
   Puzzle,
   Webhook,
+  CreditCard,
 } from 'lucide-react';
 
 interface SettingsLayoutProps {
@@ -27,9 +28,10 @@ const settingsNav = [
   { name: 'Security', href: '/settings/security', icon: Shield, adminOnly: false, section: 'personal' },
   { name: 'Notifications', href: '/settings/notifications', icon: Bell, adminOnly: false, section: 'personal' },
 
-  // Organization section - admin only (except Integrations)
+  // Organization section - admin only (except Integrations and Billing view)
   { name: 'Organization', href: '/settings', icon: Building2, adminOnly: true, exact: true, section: 'organization' },
   { name: 'Team Members', href: '/settings/team', icon: Users, adminOnly: true, section: 'organization' },
+  { name: 'Billing', href: '/settings/billing', icon: CreditCard, adminOnly: false, section: 'organization' },
   { name: 'Integrations', href: '/settings/integrations', icon: Puzzle, adminOnly: false, section: 'organization' },
   { name: 'API Keys', href: '/settings/api-keys', icon: Key, adminOnly: true, section: 'organization' },
   { name: 'Webhooks', href: '/settings/webhooks', icon: Webhook, adminOnly: true, section: 'organization' },

@@ -204,7 +204,18 @@
       "Bash(apps/web/app/settings/api-keys/page.tsx )",
       "Bash(apps/web/app/api/api-keys/ )",
       "Bash(project_docs/PHASE_11_NEXTAUTH_PROMPT.md )",
-      "Bash(project_docs/PHASE_11_NEXTAUTH_SPEC.md)"
+      "Bash(project_docs/PHASE_11_NEXTAUTH_SPEC.md)",
+      "Bash(cmd.exe /c \"taskkill /F /PID 39472\")",
+      "Bash(del test-invite.ts check-user.ts)",
+      "Bash(cmd.exe /c \"del test-minio.ts test-invite.ts check-user.ts 2>nul\")",
+      "Bash(cmd.exe /c \"del test-deepgram.ts test-anthropic.ts test-openai.ts test-resend.ts test-recall.ts test-stripe.ts 2>nul\")",
+      "Bash(del /f \"C:\\\\Dev\\\\zigznote\\\\test-deepgram.ts\" \"C:\\\\Dev\\\\zigznote\\\\test-anthropic.ts\" \"C:\\\\Dev\\\\zigznote\\\\test-openai.ts\" \"C:\\\\Dev\\\\zigznote\\\\test-resend.ts\" \"C:\\\\Dev\\\\zigznote\\\\test-recall.ts\" \"C:\\\\Dev\\\\zigznote\\\\test-stripe.ts\" \"C:\\\\Dev\\\\zigznote\\\\test-invite.ts\" \"C:\\\\Dev\\\\zigznote\\\\test-minio.ts\" \"C:\\\\Dev\\\\zigznote\\\\test-collaboration.ts\")",
+      "Bash(cmd.exe /c \"ping localhost -n 8 >nul && curl -s http://localhost:3001/api/v1/billing/plans\")",
+      "Bash(cmd.exe /c \"taskkill /F /PID 37896\")",
+      "Bash(cmd.exe /c \"for /f \"\"tokens=5\"\" %a in \\(''netstat -aon ^| findstr :3001 ^| findstr LISTENING''\\) do taskkill /F /PID %a\")",
+      "Bash(cmd.exe /c \"netstat -aon | findstr :3001\")",
+      "Bash(cmd.exe /c \"netstat -aon | findstr 3001\")",
+      "Bash(cmd.exe /c \"tasklist | findstr node\")"
     ]
   }
 }

@@ -6,6 +6,7 @@
 
 import pino from 'pino';
 import { config } from '../config';
+import { apiKeyProvider, ApiProviders } from './apiKeyProvider';
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 
@@ -38,27 +39,34 @@ interface DeepgramResponse {
 }
 
 class InlineTranscriptionService {
-  private readonly apiKey: string;
   private readonly baseUrl: string;
   private readonly maxFileSizeMB = 25; // Limit inline transcription to 25MB
 
   constructor() {
-    this.apiKey = config.deepgram.apiKey;
     this.baseUrl = config.deepgram.baseUrl;
+  }
+
+  /**
+   * Get Deepgram API key (from DB or env)
+   */
+  private async getApiKey(): Promise<string | null> {
+    return apiKeyProvider.getKey(ApiProviders.DEEPGRAM);
   }
 
   /**
    * Check if the service is configured
    */
-  isConfigured(): boolean {
-    return Boolean(this.apiKey);
+  async isConfigured(): Promise<boolean> {
+    const apiKey = await this.getApiKey();
+    return Boolean(apiKey);
   }
 
   /**
    * Transcribe an audio buffer directly
    */
   async transcribe(buffer: Buffer, mimeType: string): Promise<TranscriptionResult> {
-    if (!this.isConfigured()) {
+    const apiKey = await this.getApiKey();
+    if (!apiKey) {
       throw new Error('Deepgram API key not configured');
     }
 
@@ -74,7 +82,7 @@ class InlineTranscriptionService {
       const response = await fetch(`${this.baseUrl}/listen?model=nova-2&smart_format=true&language=en`, {
         method: 'POST',
         headers: {
-          Authorization: `Token ${this.apiKey}`,
+          Authorization: `Token ${apiKey}`,
           'Content-Type': mimeType,
         },
         body: new Uint8Array(buffer),

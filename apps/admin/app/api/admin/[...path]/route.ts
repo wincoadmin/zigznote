@@ -2,21 +2,27 @@
  * Admin API Proxy - Forwards all /api/admin/* requests to backend with auth token
  */
 
-import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
+
+// Force dynamic to prevent caching
+export const dynamic = 'force-dynamic';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 async function proxyRequest(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
   try {
     const { path } = await params;
-    const cookieStore = await cookies();
-    const adminToken = cookieStore.get('admin_token')?.value;
+
+    // Read token from request cookies (more reliable than cookies() API)
+    const adminToken = request.cookies.get('admin_token')?.value;
+
+    console.log('[Admin Proxy] Path:', path.join('/'), '| Token present:', !!adminToken);
 
     if (!adminToken) {
+      console.log('[Admin Proxy] No token found in cookies');
       return NextResponse.json(
         { success: false, error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } },
         { status: 401 }
@@ -60,7 +66,7 @@ async function proxyRequest(
 
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error('Proxy error:', error);
+    console.error('[Admin Proxy] Error:', error);
     return NextResponse.json(
       { success: false, error: { message: 'Request failed' } },
       { status: 500 }
@@ -69,35 +75,35 @@ async function proxyRequest(
 }
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   context: { params: Promise<{ path: string[] }> }
 ) {
   return proxyRequest(request, context);
 }
 
 export async function POST(
-  request: Request,
+  request: NextRequest,
   context: { params: Promise<{ path: string[] }> }
 ) {
   return proxyRequest(request, context);
 }
 
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   context: { params: Promise<{ path: string[] }> }
 ) {
   return proxyRequest(request, context);
 }
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   context: { params: Promise<{ path: string[] }> }
 ) {
   return proxyRequest(request, context);
 }
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   context: { params: Promise<{ path: string[] }> }
 ) {
   return proxyRequest(request, context);

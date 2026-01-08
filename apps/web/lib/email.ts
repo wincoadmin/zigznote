@@ -366,3 +366,107 @@ export async function send2FADisabledEmail(
 
   await sendEmailViaSES(email, `Two-factor authentication disabled on ${APP_NAME}`, baseTemplate(content));
 }
+
+/**
+ * Send team invitation email
+ */
+export async function sendInvitationEmail(
+  email: string,
+  inviterName: string,
+  organizationName: string,
+  role: string,
+  inviteToken: string
+): Promise<void> {
+  const inviteUrl = `${APP_URL}/invite/${inviteToken}`;
+  const roleLabel = role === 'admin' ? 'an administrator' : 'a team member';
+
+  const content = `
+    <h2 style="margin: 0 0 16px; font-size: 24px; color: ${THEME.text};">
+      You've been invited to join ${organizationName}
+    </h2>
+    <p style="margin: 0 0 24px; font-size: 16px; color: ${THEME.textMuted}; line-height: 1.6;">
+      Hi there,<br><br>
+      <strong>${inviterName}</strong> has invited you to join <strong>${organizationName}</strong> as ${roleLabel} on ${APP_NAME}.
+    </p>
+    <p style="margin: 0 0 24px; font-size: 16px; color: ${THEME.textMuted}; line-height: 1.6;">
+      ${APP_NAME} helps teams capture, transcribe, and summarize meetings automatically.
+    </p>
+    <p style="margin: 0 0 24px;">
+      <a href="${inviteUrl}" style="${buttonStyle()}">
+        Accept Invitation
+      </a>
+    </p>
+    <p style="margin: 0 0 24px; font-size: 14px; color: ${THEME.textMuted};">
+      Or copy and paste this link into your browser:
+    </p>
+    <p style="margin: 0 0 24px; font-size: 14px; color: ${THEME.primary}; word-break: break-all;">
+      ${inviteUrl}
+    </p>
+    <p style="margin: 0; font-size: 14px; color: ${THEME.textMuted};">
+      This invitation will expire in 7 days. If you didn't expect this invitation, you can safely ignore this email.
+    </p>
+  `;
+
+  await sendEmailViaSES(
+    email,
+    `You've been invited to join ${organizationName} on ${APP_NAME}`,
+    baseTemplate(content)
+  );
+}
+
+/**
+ * Send welcome email to team member created by admin (with temp password)
+ */
+export async function sendTeamMemberWelcomeEmail(
+  email: string,
+  name: string,
+  organizationName: string,
+  temporaryPassword: string
+): Promise<void> {
+  const loginUrl = `${APP_URL}/login`;
+
+  const content = `
+    <h2 style="margin: 0 0 16px; font-size: 24px; color: ${THEME.text};">
+      Welcome to ${organizationName}!
+    </h2>
+    <p style="margin: 0 0 24px; font-size: 16px; color: ${THEME.textMuted}; line-height: 1.6;">
+      Hi ${name || 'there'},<br><br>
+      An account has been created for you on ${APP_NAME} for <strong>${organizationName}</strong>.
+    </p>
+    <p style="margin: 0 0 16px; font-size: 16px; color: ${THEME.textMuted}; line-height: 1.6;">
+      Here are your login credentials:
+    </p>
+    <table style="margin: 0 0 24px; width: 100%; max-width: 400px; border-collapse: collapse;">
+      <tr>
+        <td style="padding: 12px; border: 1px solid ${THEME.border}; font-size: 14px; color: ${THEME.textMuted}; background-color: #f9fafb;">
+          <strong>Email:</strong>
+        </td>
+        <td style="padding: 12px; border: 1px solid ${THEME.border}; font-size: 14px; color: ${THEME.text};">
+          ${email}
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 12px; border: 1px solid ${THEME.border}; font-size: 14px; color: ${THEME.textMuted}; background-color: #f9fafb;">
+          <strong>Temporary Password:</strong>
+        </td>
+        <td style="padding: 12px; border: 1px solid ${THEME.border}; font-size: 14px; color: ${THEME.text}; font-family: monospace;">
+          ${temporaryPassword}
+        </td>
+      </tr>
+    </table>
+    <p style="margin: 0 0 24px;">
+      <a href="${loginUrl}" style="${buttonStyle()}">
+        Sign In Now
+      </a>
+    </p>
+    <p style="margin: 0; font-size: 14px; color: ${THEME.textMuted};">
+      <strong>Important:</strong> Please change your password after your first login for security.
+    </p>
+  `;
+
+  await sendEmailViaSES(
+    email,
+    `Your ${APP_NAME} account for ${organizationName}`,
+    baseTemplate(content)
+  );
+}

@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@zigznote/database';
 import crypto from 'crypto';
+import { sendInvitationEmail } from '@/lib/email';
 
 export async function POST(request: Request) {
   try {
@@ -116,7 +117,19 @@ export async function POST(request: Request) {
       },
     });
 
-    // TODO: Send invitation email
+    // Send invitation email
+    try {
+      await sendInvitationEmail(
+        invitation.email,
+        invitation.invitedBy?.name || 'A team member',
+        invitation.organization?.name || 'the organization',
+        invitation.role,
+        invitation.token
+      );
+    } catch (emailError) {
+      console.error('Failed to send invitation email:', emailError);
+      // Don't fail the request if email fails - invitation is still created
+    }
 
     return NextResponse.json({
       success: true,

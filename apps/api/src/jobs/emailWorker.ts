@@ -8,20 +8,22 @@ import { Resend } from 'resend';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 import { getBullMQConnection, type EmailJobData } from './queues';
+import { apiKeyProvider } from '../services/apiKeyProvider';
 
 let resend: Resend | null = null;
 let emailWorker: Worker<EmailJobData> | null = null;
 
 /**
- * Get or create Resend client
+ * Get or create Resend client (uses apiKeyProvider for DB + env fallback)
  */
-function getResendClient(): Resend | null {
-  if (!config.resend?.apiKey) {
+async function getResendClient(): Promise<Resend | null> {
+  const apiKey = await apiKeyProvider.getKey('resend');
+  if (!apiKey) {
     return null;
   }
 
   if (!resend) {
-    resend = new Resend(config.resend.apiKey);
+    resend = new Resend(apiKey);
   }
 
   return resend;
@@ -32,7 +34,7 @@ function getResendClient(): Resend | null {
  */
 async function processEmailJob(job: Job<EmailJobData>): Promise<void> {
   const { to, subject, html, from } = job.data;
-  const client = getResendClient();
+  const client = await getResendClient();
 
   if (!client) {
     // If Resend is not configured, log and skip (for development)
@@ -72,8 +74,10 @@ async function processEmailJob(job: Job<EmailJobData>): Promise<void> {
 /**
  * Start the email worker
  */
-export function startEmailWorker(): Worker<EmailJobData> | null {
-  if (!config.resend?.apiKey) {
+export async function startEmailWorker(): Promise<Worker<EmailJobData> | null> {
+  // Check if Resend is configured (via DB or env)
+  const hasResendKey = await apiKeyProvider.hasKey('resend');
+  if (!hasResendKey) {
     logger.info('Email worker not started - Resend API key not configured');
     return null;
   }

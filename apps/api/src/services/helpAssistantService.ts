@@ -8,8 +8,8 @@
  */
 
 import { createLogger } from '@zigznote/shared';
-import { config } from '../config';
 import { faqs, searchArticles } from '../help/helpContent';
+import { apiKeyProvider, ApiProviders } from './apiKeyProvider';
 
 const logger = createLogger({ component: 'helpAssistant' });
 
@@ -121,18 +121,26 @@ BLOCKED TOPICS - Always redirect to support:
 - Admin tools or internal systems`;
 
 class HelpAssistantService {
-  private anthropicApiKey: string | null;
-  private openaiApiKey: string | null;
+  // Cached API keys (lazy loaded)
+  private anthropicApiKey: string | null = null;
+  private openaiApiKey: string | null = null;
+  private keysLoaded = false;
 
-  constructor() {
-    this.anthropicApiKey = config.anthropicApiKey || null;
-    this.openaiApiKey = config.openaiApiKey || null;
+  /**
+   * Load API keys from provider (DB + env fallback)
+   */
+  private async loadKeys(): Promise<void> {
+    if (this.keysLoaded) return;
+    this.anthropicApiKey = await apiKeyProvider.getKey(ApiProviders.ANTHROPIC);
+    this.openaiApiKey = await apiKeyProvider.getKey(ApiProviders.OPENAI);
+    this.keysLoaded = true;
   }
 
   /**
    * Check if the assistant is available
    */
-  isAvailable(): boolean {
+  async isAvailable(): Promise<boolean> {
+    await this.loadKeys();
     return !!(this.anthropicApiKey || this.openaiApiKey);
   }
 
@@ -288,7 +296,7 @@ class HelpAssistantService {
     }
 
     // Use AI for more complex questions
-    if (this.isAvailable()) {
+    if (await this.isAvailable()) {
       try {
         const aiResponse = await this.getAIResponse(message, context, history);
         const filteredResponse = this.filterResponse(aiResponse);
@@ -377,6 +385,9 @@ class HelpAssistantService {
     context: HelpContext,
     history: ChatMessage[]
   ): Promise<string> {
+    // Ensure keys are loaded
+    await this.loadKeys();
+
     const relevantDocs = this.getRelevantDocs(message);
 
     const contextInfo = `

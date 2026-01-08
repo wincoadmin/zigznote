@@ -19,6 +19,7 @@ import { checkAndMarkProcessed } from '../utils/webhookIdempotency';
 import { logger } from '../utils/logger';
 import { queueEmailJob } from '../jobs/queues';
 import { paymentFailedTemplates, type PaymentFailedTemplateKey } from '../email/templates/payment-failed';
+import { apiKeyProvider, ApiProviders } from '../services/apiKeyProvider';
 
 interface BillingCustomer {
   id: string;
@@ -81,20 +82,21 @@ interface CheckoutSessionInput {
 
 export class BillingService {
   private providers: Map<PaymentProviderType, PaymentProvider> = new Map();
-
-  constructor() {
-    this.initializeProviders();
-  }
+  private providersInitialized = false;
 
   /**
-   * Initialize payment providers based on configuration
+   * Initialize payment providers based on configuration (lazy loaded)
+   * Uses apiKeyProvider for DB + env fallback
    */
-  private initializeProviders(): void {
+  private async initializeProviders(): Promise<void> {
+    if (this.providersInitialized) return;
+
     // Initialize Stripe if configured
-    if (config.stripe?.secretKey) {
+    const stripeKey = await apiKeyProvider.getKey(ApiProviders.STRIPE);
+    if (stripeKey) {
       const stripeProvider = createPaymentProvider('stripe');
       const stripeConfig: ProviderConfig = {
-        apiKey: config.stripe.secretKey,
+        apiKey: stripeKey,
         webhookSecret: config.stripe.webhookSecret,
       };
       stripeProvider.initialize(stripeConfig);
@@ -102,22 +104,26 @@ export class BillingService {
     }
 
     // Initialize Flutterwave if configured
-    if (config.flutterwave?.secretKey) {
+    const flutterwaveKey = await apiKeyProvider.getKey('flutterwave');
+    if (flutterwaveKey) {
       const flutterwaveProvider = createPaymentProvider('flutterwave');
       const flutterwaveConfig: ProviderConfig = {
         apiKey: config.flutterwave.publicKey || '',
-        secretKey: config.flutterwave.secretKey,
+        secretKey: flutterwaveKey,
         webhookSecret: config.flutterwave.webhookSecret,
       };
       flutterwaveProvider.initialize(flutterwaveConfig);
       this.providers.set('flutterwave', flutterwaveProvider);
     }
+
+    this.providersInitialized = true;
   }
 
   /**
-   * Get a provider by type
+   * Get a provider by type (ensures providers are initialized)
    */
-  private getProvider(type: PaymentProviderType): PaymentProvider {
+  private async getProvider(type: PaymentProviderType): Promise<PaymentProvider> {
+    await this.initializeProviders();
     const provider = this.providers.get(type);
     if (!provider) {
       throw new Error(`Payment provider ${type} not configured`);
@@ -150,10 +156,10 @@ export class BillingService {
     }
 
     // Determine provider
-    const provider = preferredProvider || this.getDefaultProvider();
+    const provider = preferredProvider || await this.getDefaultProvider();
 
     // Create customer in payment provider
-    const providerInstance = this.getProvider(provider);
+    const providerInstance = await this.getProvider(provider);
     const result = await providerInstance.createCustomer({
       email,
       name,
@@ -264,7 +270,7 @@ export class BillingService {
     );
 
     const provider = input.provider || customer.defaultProvider;
-    const providerInstance = this.getProvider(provider);
+    const providerInstance = await this.getProvider(provider);
 
     // Get provider-specific plan ID
     const providerPlanId = provider === 'stripe' ? plan.stripePriceId : plan.flutterwavePlan;
@@ -371,7 +377,7 @@ export class BillingService {
     );
 
     const provider = input.provider || customer.defaultProvider;
-    const providerInstance = this.getProvider(provider);
+    const providerInstance = await this.getProvider(provider);
 
     // Get provider-specific plan ID
     const providerPlanId = provider === 'stripe' ? plan.stripePriceId : plan.flutterwavePlan;
@@ -421,7 +427,7 @@ export class BillingService {
       throw new Error('Subscription not found');
     }
 
-    const provider = this.getProvider(subscription.provider as PaymentProviderType);
+    const provider = await this.getProvider(subscription.provider as PaymentProviderType);
 
     const result = await provider.cancelSubscription(subscription.providerSubId, immediately);
 
@@ -468,7 +474,7 @@ export class BillingService {
       throw new Error('Subscription is not scheduled for cancellation');
     }
 
-    const provider = this.getProvider(subscription.provider as PaymentProviderType);
+    const provider = await this.getProvider(subscription.provider as PaymentProviderType);
 
     const result = await provider.resumeSubscription(subscription.providerSubId);
 
@@ -603,7 +609,7 @@ export class BillingService {
     payload: string | Buffer,
     signature: string
   ): Promise<{ received: boolean; duplicate?: boolean }> {
-    const providerInstance = this.getProvider(provider);
+    const providerInstance = await this.getProvider(provider);
 
     const result = await providerInstance.constructWebhookEvent(payload, signature);
 
@@ -659,7 +665,8 @@ export class BillingService {
   /**
    * Get the default payment provider
    */
-  private getDefaultProvider(): PaymentProviderType {
+  private async getDefaultProvider(): Promise<PaymentProviderType> {
+    await this.initializeProviders();
     if (this.providers.has('stripe')) return 'stripe';
     if (this.providers.has('flutterwave')) return 'flutterwave';
     throw new Error('No payment providers configured');

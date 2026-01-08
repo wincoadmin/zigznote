@@ -253,3 +253,64 @@ export const integrationsApi = {
 
   test: (provider: string) => adminApi.post(`/integrations/${provider}/test`),
 };
+
+// Billing endpoints
+export const billingApi = {
+  stats: () => adminApi.get('/billing/stats'),
+
+  revenueChart: () => adminApi.get('/billing/revenue-chart'),
+
+  recentActivity: () => adminApi.get('/billing/recent-activity'),
+
+  subscriptions: (params?: { status?: string; plan?: string; search?: string; page?: number; limit?: number }) =>
+    adminApi.get(`/billing/subscriptions?${new URLSearchParams(params as Record<string, string>).toString()}`),
+
+  getSubscription: (id: string) => adminApi.get(`/billing/subscriptions/${id}`),
+
+  cancelSubscription: (id: string, data: { immediately?: boolean; reason?: string }) =>
+    adminApi.post(`/billing/subscriptions/${id}/cancel`, data),
+
+  resumeSubscription: (id: string) =>
+    adminApi.post(`/billing/subscriptions/${id}/resume`),
+
+  extendTrial: (id: string, days: number) =>
+    adminApi.post(`/billing/subscriptions/${id}/extend-trial`, { days }),
+
+  invoices: (params?: { status?: string; search?: string; page?: number; limit?: number }) =>
+    adminApi.get(`/billing/invoices?${new URLSearchParams(params as Record<string, string>).toString()}`),
+
+  refund: (data: { paymentId: string; amount?: number; reason?: string }) =>
+    adminApi.post('/billing/refund', data),
+
+  plans: () => adminApi.get('/billing/plans'),
+
+  createPlan: (data: {
+    name: string;
+    slug: string;
+    description?: string;
+    amount: number;
+    currency?: string;
+    interval?: string;
+    trialDays?: number;
+    features?: string[];
+    limits?: Record<string, number>;
+    stripePriceId?: string;
+  }) => adminApi.post('/billing/plans', data),
+
+  updatePlan: (id: string, data: {
+    name?: string;
+    description?: string;
+    features?: string[];
+    limits?: Record<string, number>;
+    isActive?: boolean;
+    stripePriceId?: string;
+  }) => adminApi.put(`/billing/plans/${id}`, data),
+
+  archivePlan: (id: string) => adminApi.delete(`/billing/plans/${id}`),
+
+  failedPayments: (params?: { page?: number; limit?: number }) =>
+    adminApi.get(`/billing/failed-payments?${new URLSearchParams(params as Record<string, string>).toString()}`),
+
+  extendGrace: (id: string, days: number) =>
+    adminApi.post(`/billing/failed-payments/${id}/extend-grace`, { days }),
+};
