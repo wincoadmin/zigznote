@@ -314,3 +314,23 @@ export const billingApi = {
   extendGrace: (id: string, days: number) =>
     adminApi.post(`/billing/failed-payments/${id}/extend-grace`, { days }),
 };
+
+// Backups endpoints
+export const backupsApi = {
+  list: (params?: { page?: number; limit?: number; type?: string; status?: string }) =>
+    adminApi.get(`/backups?${new URLSearchParams(params as Record<string, string>).toString()}`),
+
+  getLatest: () => adminApi.get('/backups/latest'),
+
+  create: (type: 'FULL' | 'MANUAL' | 'PRE_MIGRATION' = 'MANUAL') =>
+    adminApi.post('/backups', { type }),
+
+  verify: (id: string) => adminApi.post(`/backups/${id}/verify`),
+
+  restore: (id: string, dryRun: boolean = true) =>
+    adminApi.post(`/backups/${id}/restore`, { dryRun, confirmRestore: true }),
+
+  delete: (id: string) => adminApi.delete(`/backups/${id}`),
+
+  cleanup: () => adminApi.post('/backups/cleanup'),
+};

@@ -28,6 +28,7 @@ export async function POST(request: Request) {
 
     // If login successful and we got a token, set it as a cookie on the response
     if (token) {
+      console.log('[Login] Setting admin_token cookie, token length:', token.length);
       res.cookies.set('admin_token', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -35,6 +36,8 @@ export async function POST(request: Request) {
         maxAge: 60 * 60 * 24, // 24 hours
         path: '/',
       });
+    } else {
+      console.log('[Login] WARNING: No token in response from backend');
     }
 
     return res;

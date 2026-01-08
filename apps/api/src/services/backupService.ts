@@ -11,6 +11,7 @@ import { promisify } from 'util';
 import { createReadStream, createWriteStream, existsSync, mkdirSync, statSync, unlinkSync } from 'fs';
 import { createHash } from 'crypto';
 import { pipeline } from 'stream/promises';
+import { createGzip, createGunzip } from 'zlib';
 import { prisma, Prisma } from '@zigznote/database';
 
 type BackupType = 'FULL' | 'INCREMENTAL' | 'SCHEDULED' | 'MANUAL' | 'PRE_MIGRATION';
@@ -90,20 +91,39 @@ class BackupService {
 
       // Build pg_dump command
       const isWindows = process.platform === 'win32';
-      const envPrefix = isWindows
-        ? `set PGPASSWORD=${password}&&`
-        : `PGPASSWORD="${password}"`;
+      const tempPath = localPath.replace('.gz', '');
 
-      const dumpCommand = `${envPrefix} pg_dump -h ${host} -p ${port} -U ${username} -d ${database} --format=plain --no-owner --no-acl`;
+      // Try to find container name from environment or use default
+      const containerName = process.env.POSTGRES_CONTAINER || 'zigznote-postgres';
 
-      if (isWindows) {
-        // Windows: use PowerShell for piping
-        await execAsync(`powershell -Command "${dumpCommand} | gzip > '${localPath}'"`, {
-          shell: 'cmd.exe',
-        });
+      // Check if we should use Docker (when pg_dump not available locally)
+      const useDocker = await this.shouldUseDocker();
+
+      if (useDocker) {
+        // Use Docker to run pg_dump inside the container
+        logger.info({ containerName }, 'Using Docker for pg_dump');
+        const dockerCmd = `docker exec -e PGPASSWORD=${password} ${containerName} pg_dump -h localhost -U ${username} -d ${database} --format=plain --no-owner --no-acl`;
+        const { stdout } = await execAsync(dockerCmd);
+        // Write output to temp file
+        const { writeFileSync } = await import('fs');
+        writeFileSync(tempPath, stdout);
+      } else if (isWindows) {
+        // Windows: Use cmd.exe with proper syntax
+        const dumpCmd = `set PGPASSWORD=${password}&& pg_dump -h ${host} -p ${port} -U ${username} -d ${database} --format=plain --no-owner --no-acl -f "${tempPath}"`;
+        await execAsync(dumpCmd, { shell: 'cmd.exe' });
       } else {
-        await execAsync(`${dumpCommand} | gzip -${BACKUP_CONFIG.compressionLevel} > "${localPath}"`);
+        const envPrefix = `PGPASSWORD="${password}"`;
+        const dumpCommand = `${envPrefix} pg_dump -h ${host} -p ${port} -U ${username} -d ${database} --format=plain --no-owner --no-acl`;
+        await execAsync(`${dumpCommand} > "${tempPath}"`);
       }
+
+      // Compress using Node.js zlib
+      await pipeline(
+        createReadStream(tempPath),
+        createGzip({ level: BACKUP_CONFIG.compressionLevel }),
+        createWriteStream(localPath)
+      );
+      unlinkSync(tempPath);
 
       const stats = statSync(localPath);
       const size = stats.size;
@@ -196,15 +216,38 @@ class BackupService {
 
     const url = new URL(dbUrl);
     const isWindows = process.platform === 'win32';
-    const envPrefix = isWindows
-      ? `set PGPASSWORD=${url.password}&&`
-      : `PGPASSWORD="${url.password}"`;
+    const useDocker = await this.shouldUseDocker();
 
-    const restoreCommand = isWindows
-      ? `powershell -Command "gunzip -c '${localPath}' | ${envPrefix} psql -h ${url.hostname} -p ${url.port || '5432'} -U ${url.username} -d ${url.pathname.slice(1)}"`
-      : `gunzip -c "${localPath}" | ${envPrefix} psql -h ${url.hostname} -p ${url.port || '5432'} -U ${url.username} -d ${url.pathname.slice(1)}`;
+    // Decompress to temp file first
+    const tempPath = localPath.replace('.gz', '.tmp.sql');
+    await pipeline(
+      createReadStream(localPath),
+      createGunzip(),
+      createWriteStream(tempPath)
+    );
 
-    await execAsync(restoreCommand);
+    try {
+      if (useDocker) {
+        // Use Docker to run psql inside the container
+        const containerName = process.env.POSTGRES_CONTAINER || 'zigznote-postgres';
+        logger.info({ containerName }, 'Using Docker for psql restore');
+
+        // Copy the SQL file into the container and run psql
+        await execAsync(`docker cp "${tempPath}" ${containerName}:/tmp/restore.sql`);
+        const dockerCmd = `docker exec -e PGPASSWORD=${url.password} ${containerName} psql -U ${url.username} -d ${url.pathname.slice(1)} -f /tmp/restore.sql`;
+        await execAsync(dockerCmd);
+        await execAsync(`docker exec ${containerName} rm /tmp/restore.sql`);
+      } else if (isWindows) {
+        const restoreCmd = `set PGPASSWORD=${url.password}&& psql -h ${url.hostname} -p ${url.port || '5432'} -U ${url.username} -d ${url.pathname.slice(1)} -f "${tempPath}"`;
+        await execAsync(restoreCmd, { shell: 'cmd.exe' });
+      } else {
+        const envPrefix = `PGPASSWORD="${url.password}"`;
+        const restoreCommand = `${envPrefix} psql -h ${url.hostname} -p ${url.port || '5432'} -U ${url.username} -d ${url.pathname.slice(1)} -f "${tempPath}"`;
+        await execAsync(restoreCommand);
+      }
+    } finally {
+      unlinkSync(tempPath);
+    }
 
     logger.info({ backupId }, 'Database restore completed');
   }
@@ -281,12 +324,17 @@ class BackupService {
     // Verify file format
     try {
       const isWindows = process.platform === 'win32';
-      const headCommand = isWindows
-        ? `powershell -Command "gunzip -c '${localPath}' | Select-Object -First 20"`
-        : `gunzip -c "${localPath}" | head -20`;
+      let header: string;
 
-      const { stdout } = await execAsync(headCommand);
-      if (!stdout.includes('PostgreSQL database dump') && !stdout.includes('SET statement_timeout')) {
+      if (isWindows) {
+        // Windows: Use Node.js to decompress and read header
+        header = await this.readGzipHeader(localPath);
+      } else {
+        const { stdout } = await execAsync(`gunzip -c "${localPath}" | head -20`);
+        header = stdout;
+      }
+
+      if (!header.includes('PostgreSQL database dump') && !header.includes('SET statement_timeout')) {
         return { valid: false, message: 'Invalid backup format' };
       }
     } catch {
@@ -344,6 +392,48 @@ class BackupService {
   }
 
   /**
+   * Read first ~20 lines from a gzipped file (for Windows verification)
+   */
+  private async readGzipHeader(filePath: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      let lineCount = 0;
+      const maxLines = 20;
+
+      const gunzipStream = createGunzip();
+      const fileStream = createReadStream(filePath);
+
+      gunzipStream.on('data', (chunk: Buffer) => {
+        if (lineCount < maxLines) {
+          chunks.push(chunk);
+          lineCount += chunk.toString().split('\n').length - 1;
+          if (lineCount >= maxLines) {
+            fileStream.destroy();
+            gunzipStream.destroy();
+          }
+        }
+      });
+
+      gunzipStream.on('end', () => {
+        const content = Buffer.concat(chunks).toString();
+        const lines = content.split('\n').slice(0, maxLines);
+        resolve(lines.join('\n'));
+      });
+
+      gunzipStream.on('close', () => {
+        const content = Buffer.concat(chunks).toString();
+        const lines = content.split('\n').slice(0, maxLines);
+        resolve(lines.join('\n'));
+      });
+
+      gunzipStream.on('error', reject);
+      fileStream.on('error', reject);
+
+      fileStream.pipe(gunzipStream);
+    });
+  }
+
+  /**
    * Upload backup to cloud storage
    */
   private async uploadToStorage(localPath: string, filename: string): Promise<string> {
@@ -390,6 +480,32 @@ class BackupService {
     }
 
     return { tableCounts: counts, timestamp: new Date().toISOString() };
+  }
+
+  /**
+   * Check if we should use Docker for database commands
+   * Returns true if pg_dump is not available locally but Docker is
+   */
+  private async shouldUseDocker(): Promise<boolean> {
+    const isWindows = process.platform === 'win32';
+
+    // Check if pg_dump is available locally
+    try {
+      const checkCmd = isWindows ? 'where pg_dump' : 'which pg_dump';
+      await execAsync(checkCmd);
+      return false; // pg_dump available locally
+    } catch {
+      // pg_dump not available, check for Docker
+    }
+
+    // Check if Docker is available and container is running
+    try {
+      const containerName = process.env.POSTGRES_CONTAINER || 'zigznote-postgres';
+      await execAsync(`docker ps --filter "name=${containerName}" --filter "status=running" -q`);
+      return true; // Docker available
+    } catch {
+      throw new Error('pg_dump not available locally and Docker container not running');
+    }
   }
 
   /**

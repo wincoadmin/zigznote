@@ -16,10 +16,15 @@ async function proxyRequest(
   try {
     const { path } = await params;
 
-    // Read token from request cookies (more reliable than cookies() API)
-    const adminToken = request.cookies.get('admin_token')?.value;
+    // Debug: Log all cookies and headers
+    const cookieHeader = request.headers.get('cookie');
+    const allCookies = request.cookies.getAll();
+    console.log('[Admin Proxy] Path:', path.join('/'));
+    console.log('[Admin Proxy] Cookie header:', cookieHeader);
+    console.log('[Admin Proxy] All cookies:', JSON.stringify(allCookies));
 
-    console.log('[Admin Proxy] Path:', path.join('/'), '| Token present:', !!adminToken);
+    // Read token from request cookies
+    const adminToken = request.cookies.get('admin_token')?.value;
 
     if (!adminToken) {
       console.log('[Admin Proxy] No token found in cookies');

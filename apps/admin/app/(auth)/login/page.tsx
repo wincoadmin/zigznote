@@ -23,6 +23,7 @@ export default function LoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        credentials: 'include',
       });
 
       const data = await res.json();
@@ -34,7 +35,8 @@ export default function LoginPage() {
       if (data.requiresTwoFactor) {
         setStep('2fa');
       } else {
-        router.push('/');
+        // Force a hard navigation to ensure cookie is applied
+        window.location.href = '/';
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -61,7 +63,8 @@ export default function LoginPage() {
         throw new Error(data.error?.message || 'Invalid code');
       }
 
-      router.push('/');
+      // Force a hard navigation to ensure cookie is applied
+      window.location.href = '/';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verification failed');
     } finally {
