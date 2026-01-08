@@ -55,6 +55,7 @@ membersRouter.get(
           lastName: true,
           avatarUrl: true,
           role: true,
+          isActive: true,
           createdAt: true,
           lastLoginAt: true,
         },
@@ -401,6 +402,149 @@ membersRouter.delete(
       res.json({
         success: true,
         message: 'Member removed from organization',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/v1/members/:id/reset-password
+ * Reset a member's password (admin only)
+ * Generates a temporary password that user must change on next login
+ */
+membersRouter.post(
+  '/:id/reset-password',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.auth?.userId;
+      const organizationId = authReq.auth?.organizationId;
+      const userRole = authReq.auth?.role;
+      const { id } = req.params;
+
+      if (!userId || !organizationId) {
+        throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
+      }
+
+      // Only admins can reset passwords
+      if (userRole !== 'admin') {
+        throw new AppError('Admin role required to reset passwords', 403, 'FORBIDDEN');
+      }
+
+      // Can't reset own password through this endpoint
+      if (id === userId) {
+        throw new AppError('Use the profile settings to change your own password', 400, 'CANNOT_RESET_OWN_PASSWORD');
+      }
+
+      // Check member exists in same org
+      const member = await prisma.user.findFirst({
+        where: {
+          id,
+          organizationId,
+          deletedAt: null,
+        },
+      });
+
+      if (!member) {
+        throw new AppError('Member not found', 404, 'NOT_FOUND');
+      }
+
+      // Generate a temporary password
+      const tempPassword = crypto.randomBytes(12).toString('base64').slice(0, 16);
+
+      // Hash the password using bcrypt
+      const bcrypt = await import('bcrypt');
+      const hashedPassword = await bcrypt.hash(tempPassword, 12);
+
+      // Update user's password and set flag to force password change
+      await prisma.user.update({
+        where: { id },
+        data: {
+          password: hashedPassword,
+          passwordChangedAt: new Date(),
+        },
+      });
+
+      // TODO: Send email with temporary password
+      // For now, return the temp password (in production, send via email only)
+
+      res.json({
+        success: true,
+        message: 'Password has been reset',
+        data: {
+          email: member.email,
+          temporaryPassword: tempPassword,
+          note: 'Please share this temporary password securely with the user. They should change it immediately after logging in.',
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/v1/members/:id/toggle-status
+ * Enable or disable a member (admin only)
+ * Disabled members cannot log in but remain in the organization
+ */
+membersRouter.post(
+  '/:id/toggle-status',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.auth?.userId;
+      const organizationId = authReq.auth?.organizationId;
+      const userRole = authReq.auth?.role;
+      const { id } = req.params;
+
+      if (!userId || !organizationId) {
+        throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
+      }
+
+      // Only admins can toggle member status
+      if (userRole !== 'admin') {
+        throw new AppError('Admin role required to change member status', 403, 'FORBIDDEN');
+      }
+
+      // Can't disable yourself
+      if (id === userId) {
+        throw new AppError('Cannot disable your own account', 400, 'CANNOT_DISABLE_SELF');
+      }
+
+      // Check member exists in same org
+      const member = await prisma.user.findFirst({
+        where: {
+          id,
+          organizationId,
+          deletedAt: null,
+        },
+      });
+
+      if (!member) {
+        throw new AppError('Member not found', 404, 'NOT_FOUND');
+      }
+
+      // Toggle the isActive status
+      const newStatus = !member.isActive;
+
+      const updatedMember = await prisma.user.update({
+        where: { id },
+        data: { isActive: newStatus },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          isActive: true,
+        },
+      });
+
+      res.json({
+        success: true,
+        message: newStatus ? 'Member has been enabled' : 'Member has been disabled',
+        data: updatedMember,
       });
     } catch (error) {
       next(error);

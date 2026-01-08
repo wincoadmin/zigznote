@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
-import { Users, UserPlus, Shield, Mail, MoreVertical, Clock, Trash2, RefreshCw, Check } from 'lucide-react';
+import { Users, UserPlus, Shield, Mail, MoreVertical, Clock, Trash2, RefreshCw, Check, Key, Ban, CheckCircle } from 'lucide-react';
 
 interface Member {
   id: string;
@@ -16,6 +16,7 @@ interface Member {
   lastName: string | null;
   avatarUrl: string | null;
   role: string;
+  isActive: boolean;
   createdAt: string;
   lastLoginAt: string | null;
 }
@@ -63,6 +64,27 @@ export default function TeamMembersPage() {
   });
   const [creating, setCreating] = useState(false);
   const [createdUser, setCreatedUser] = useState<{ email: string; temporaryPassword: string } | null>(null);
+  const [resetPasswordResult, setResetPasswordResult] = useState<{ email: string; temporaryPassword: string } | null>(null);
+
+  // Ref for dropdown click-outside detection
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setActionMemberId(null);
+      }
+    };
+
+    if (actionMemberId) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [actionMemberId]);
 
   // Redirect non-admins to profile page
   useEffect(() => {
@@ -275,6 +297,76 @@ export default function TeamMembersPage() {
     }
   };
 
+  const handleResetPassword = async (memberId: string, memberEmail: string) => {
+    if (!confirm(`Are you sure you want to reset the password for ${memberEmail}? A new temporary password will be generated.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/members/${memberId}/reset-password`, {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setResetPasswordResult({
+          email: data.data.email,
+          temporaryPassword: data.data.temporaryPassword,
+        });
+        addToast({
+          type: 'success',
+          title: 'Password Reset',
+          description: 'A new temporary password has been generated',
+        });
+      } else {
+        throw new Error(data.error?.message || data.error || 'Failed to reset password');
+      }
+    } catch (error) {
+      console.error('Failed to reset password:', error);
+      addToast({
+        type: 'error',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to reset password',
+      });
+    }
+    setActionMemberId(null);
+  };
+
+  const handleToggleStatus = async (memberId: string, currentlyActive: boolean) => {
+    const action = currentlyActive ? 'disable' : 'enable';
+    if (!confirm(`Are you sure you want to ${action} this user? ${currentlyActive ? 'They will not be able to log in.' : 'They will be able to log in again.'}`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/members/${memberId}/toggle-status`, {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        addToast({
+          type: 'success',
+          title: data.data.isActive ? 'User Enabled' : 'User Disabled',
+          description: data.message,
+        });
+        fetchData();
+      } else {
+        throw new Error(data.error?.message || data.error || 'Failed to toggle user status');
+      }
+    } catch (error) {
+      console.error('Failed to toggle user status:', error);
+      addToast({
+        type: 'error',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to toggle user status',
+      });
+    }
+    setActionMemberId(null);
+  };
+
   const getInitials = (member: Member) => {
     if (member.firstName && member.lastName) {
       return `${member.firstName[0]}${member.lastName[0]}`.toUpperCase();
@@ -448,6 +540,12 @@ export default function TeamMembersPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
+                  {member.isActive === false && (
+                    <span className="px-2 py-1 text-xs rounded font-medium bg-red-100 text-red-700 flex items-center gap-1">
+                      <Ban className="h-3 w-3" />
+                      Disabled
+                    </span>
+                  )}
                   <span
                     className={`px-2 py-1 text-xs rounded font-medium ${
                       member.role === 'admin'
@@ -459,7 +557,7 @@ export default function TeamMembersPage() {
                     {member.role}
                   </span>
                   {isAdmin && member.id !== currentUserId && (
-                    <div className="relative">
+                    <div className="relative" ref={actionMemberId === member.id ? dropdownRef : undefined}>
                       <button
                         onClick={() =>
                           setActionMemberId(actionMemberId === member.id ? null : member.id)
@@ -469,7 +567,7 @@ export default function TeamMembersPage() {
                         <MoreVertical className="h-5 w-5 text-slate-400" />
                       </button>
                       {actionMemberId === member.id && (
-                        <div className="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-md shadow-lg z-10">
+                        <div className="absolute right-0 mt-1 w-56 bg-white border border-slate-200 rounded-md shadow-lg z-50">
                           <div className="py-1">
                             <button
                               onClick={() =>
@@ -478,14 +576,40 @@ export default function TeamMembersPage() {
                                   member.role === 'admin' ? 'member' : 'admin'
                                 )
                               }
-                              className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                              className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
                             >
+                              <Shield className="h-4 w-4" />
                               Make {member.role === 'admin' ? 'Member' : 'Admin'}
                             </button>
                             <button
-                              onClick={() => handleRemoveMember(member.id)}
-                              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                              onClick={() => handleResetPassword(member.id, member.email)}
+                              className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
                             >
+                              <Key className="h-4 w-4" />
+                              Reset Password
+                            </button>
+                            <button
+                              onClick={() => handleToggleStatus(member.id, member.isActive !== false)}
+                              className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                            >
+                              {member.isActive !== false ? (
+                                <>
+                                  <Ban className="h-4 w-4" />
+                                  Disable User
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="h-4 w-4" />
+                                  Enable User
+                                </>
+                              )}
+                            </button>
+                            <div className="border-t border-slate-100 my-1" />
+                            <button
+                              onClick={() => handleRemoveMember(member.id)}
+                              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            >
+                              <Trash2 className="h-4 w-4" />
                               Remove from Organization
                             </button>
                           </div>
@@ -757,10 +881,50 @@ export default function TeamMembersPage() {
         </div>
       )}
 
-      {/* Click outside to close dropdown */}
-      {actionMemberId && (
-        <div className="fixed inset-0 z-0" onClick={() => setActionMemberId(null)} />
+      {/* Show Reset Password Result */}
+      {resetPasswordResult && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Key className="h-6 w-6 text-green-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900">Password Reset Successfully</h3>
+              <p className="text-sm text-slate-500 mt-1">
+                Share these credentials with the user securely.
+              </p>
+            </div>
+
+            <div className="mt-6 p-4 bg-slate-50 rounded-lg space-y-3">
+              <div>
+                <p className="text-xs text-slate-500">Email</p>
+                <p className="font-mono text-sm">{resetPasswordResult.email}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Temporary Password</p>
+                <p className="font-mono text-sm bg-white px-2 py-1 rounded border">
+                  {resetPasswordResult.temporaryPassword}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-sm text-amber-800">
+                This password will only be shown once. Make sure to copy it now.
+                The user should change their password after logging in.
+              </p>
+            </div>
+
+            <Button
+              className="w-full mt-6"
+              onClick={() => setResetPasswordResult(null)}
+            >
+              Done
+            </Button>
+          </div>
+        </div>
       )}
+
     </div>
   );
 }

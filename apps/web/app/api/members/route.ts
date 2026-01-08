@@ -36,6 +36,7 @@ export async function GET() {
         lastName: true,
         avatarUrl: true,
         role: true,
+        isActive: true,
         createdAt: true,
         lastLoginAt: true,
       },
