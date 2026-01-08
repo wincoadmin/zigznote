@@ -90,10 +90,10 @@ export default function BillingPage() {
   const fetchBillingData = async () => {
     try {
       const [subRes, plansRes, usageRes, invoicesRes] = await Promise.all([
-        fetch('/api/v1/billing/subscription'),
-        fetch('/api/v1/billing/plans'),
-        fetch('/api/v1/billing/usage'),
-        fetch('/api/v1/billing/invoices'),
+        fetch('/api/billing/subscription'),
+        fetch('/api/billing/plans'),
+        fetch('/api/billing/usage'),
+        fetch('/api/billing/invoices'),
       ]);
 
       if (subRes.ok) {
@@ -125,7 +125,7 @@ export default function BillingPage() {
   const handleUpgrade = async (planSlug: string) => {
     setUpgrading(planSlug);
     try {
-      const res = await fetch('/api/v1/billing/checkout', {
+      const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ planSlug }),
@@ -151,7 +151,7 @@ export default function BillingPage() {
 
     setCanceling(true);
     try {
-      const res = await fetch('/api/v1/billing/cancel', {
+      const res = await fetch('/api/billing/cancel', {
         method: 'POST',
       });
 
@@ -168,7 +168,7 @@ export default function BillingPage() {
   const handleResume = async () => {
     setResuming(true);
     try {
-      const res = await fetch('/api/v1/billing/resume', {
+      const res = await fetch('/api/billing/resume', {
         method: 'POST',
       });
 
