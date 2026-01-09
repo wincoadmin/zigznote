@@ -56,6 +56,14 @@ docker/data/
 .cache/
 tmp/
 temp/
+nul
+
+# Cookie/session files
+*_cookies.txt
+cookies.txt
+
+# Claude Code local settings
+.claude/settings.local.json
 
 # Vercel
 .vercel/
