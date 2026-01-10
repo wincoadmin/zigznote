@@ -3,7 +3,7 @@
  * Processes summarization jobs from the BullMQ queue
  */
 
-import { Worker } from 'bullmq';
+import { Worker, type ConnectionOptions } from 'bullmq';
 import Redis from 'ioredis';
 import pino from 'pino';
 import dotenv from 'dotenv';
@@ -57,7 +57,7 @@ function startWorker(): void {
     QUEUE_NAMES.SUMMARIZATION,
     processSummarizationJob,
     {
-      connection,
+      connection: connection as unknown as ConnectionOptions,
       concurrency: CONCURRENCY,
       lockDuration: 300000, // 5 minutes for long summaries
     }

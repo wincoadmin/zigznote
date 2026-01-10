@@ -161,7 +161,7 @@ export default function AuditLogsPage() {
       if (selectedEntityType !== 'all') params.entityType = selectedEntityType;
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/admin/audit-logs/export?${new URLSearchParams(params)}`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001'}/api/admin/audit-logs/export?${new URLSearchParams(params)}`,
         { credentials: 'include' }
       );
       const data = await response.json();

@@ -32,7 +32,7 @@ export async function GET() {
     });
 
     // Parse user agent to get browser/device info
-    const sessions = loginHistory.map((entry) => {
+    const sessions = loginHistory.map((entry: typeof loginHistory[number]) => {
       const ua = entry.userAgent || '';
       let browser = 'Unknown';
       let device = 'Unknown';

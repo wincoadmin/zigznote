@@ -7,9 +7,17 @@ import { renderHook } from '@testing-library/react';
 import { OnboardingProvider, useOnboarding } from './onboarding-context';
 
 // Mock localStorage
-const localStorageMock = {
+interface LocalStorageMock {
+  store: Record<string, string>;
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+  removeItem: (key: string) => void;
+  clear: () => void;
+}
+
+const localStorageMock: LocalStorageMock = {
   store: {} as Record<string, string>,
-  getItem: jest.fn((key: string) => localStorageMock.store[key] || null),
+  getItem: jest.fn((key: string): string | null => localStorageMock.store[key] || null),
   setItem: jest.fn((key: string, value: string) => {
     localStorageMock.store[key] = value;
   }),

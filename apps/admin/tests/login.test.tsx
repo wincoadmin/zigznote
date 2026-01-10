@@ -15,10 +15,26 @@ jest.mock('next/navigation', () => ({
   }),
 }));
 
+// Mock window.location
+const originalLocation = window.location;
+
 describe('LoginPage', () => {
   beforeEach(() => {
     mockFetch.mockClear();
     mockPush.mockClear();
+    // Mock window.location.href
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { ...originalLocation, href: '' },
+    });
+  });
+
+  afterAll(() => {
+    // Restore original window.location
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: originalLocation,
+    });
   });
 
   it('should render login form', () => {
@@ -51,11 +67,12 @@ describe('LoginPage', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: 'admin@test.com', password: 'password123' }),
+        credentials: 'include',
       });
     });
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/');
+      expect(window.location.href).toBe('/');
     });
   });
 
@@ -147,7 +164,7 @@ describe('LoginPage', () => {
     });
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/');
+      expect(window.location.href).toBe('/');
     });
   });
 });

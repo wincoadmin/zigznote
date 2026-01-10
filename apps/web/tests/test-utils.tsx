@@ -40,11 +40,11 @@ export * from '@testing-library/react';
 export { customRender as render };
 
 // Mock data factories - defined here to avoid MSW import issues
-export const createMockMeeting = (overrides = {}) => ({
+export const createMockMeeting = (overrides: Record<string, unknown> = {}) => ({
   id: 'meeting-1',
   title: 'Weekly Standup',
-  status: 'completed',
-  platform: 'zoom',
+  status: 'completed' as const,
+  platform: 'zoom' as const,
   startTime: '2026-01-05T10:00:00Z',
   endTime: '2026-01-05T11:00:00Z',
   durationSeconds: 3600,
@@ -60,7 +60,7 @@ export const createMockMeeting = (overrides = {}) => ({
   ...overrides,
 });
 
-export const createMockTranscript = (meetingId: string, overrides = {}) => ({
+export const createMockTranscript = (meetingId: string, overrides: Record<string, unknown> = {}) => ({
   id: 'transcript-1',
   meetingId,
   segments: [
@@ -86,7 +86,7 @@ export const createMockTranscript = (meetingId: string, overrides = {}) => ({
   ...overrides,
 });
 
-export const createMockSummary = (meetingId: string, overrides = {}) => ({
+export const createMockSummary = (meetingId: string, overrides: Record<string, unknown> = {}) => ({
   id: 'summary-1',
   meetingId,
   content: {
@@ -98,6 +98,10 @@ export const createMockSummary = (meetingId: string, overrides = {}) => ({
     decisions: [
       'Proceed with the current design approach',
       'Schedule a demo for Friday',
+    ],
+    questions: [
+      'What is the timeline for the demo?',
+      'Do we need additional resources?',
     ],
   },
   modelUsed: 'claude-3-sonnet',

@@ -46,7 +46,7 @@ export async function GET() {
 
     // Mark expired invitations
     const now = new Date();
-    const result = invitations.map((inv) => ({
+    const result = invitations.map((inv: typeof invitations[number]) => ({
       ...inv,
       isExpired: inv.expiresAt < now,
     }));

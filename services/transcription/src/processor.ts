@@ -14,7 +14,7 @@ import {
   customVocabularyRepository,
 } from '@zigznote/database';
 import { QUEUE_NAMES } from '@zigznote/shared';
-import { Queue } from 'bullmq';
+import { Queue, type ConnectionOptions } from 'bullmq';
 import Redis from 'ioredis';
 import {
   TranscriptPostProcessor,
@@ -51,7 +51,7 @@ function getRedisConnection(): Redis {
 function getSummarizationQueue(): Queue {
   if (!summarizationQueue) {
     summarizationQueue = new Queue(QUEUE_NAMES.SUMMARIZATION, {
-      connection: getRedisConnection(),
+      connection: getRedisConnection() as unknown as ConnectionOptions,
     });
   }
   return summarizationQueue;

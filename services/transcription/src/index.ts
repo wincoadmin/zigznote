@@ -3,7 +3,7 @@
  * Processes audio files through Deepgram for transcription with speaker diarization
  */
 
-import { Worker } from 'bullmq';
+import { Worker, type ConnectionOptions } from 'bullmq';
 import Redis from 'ioredis';
 import pino from 'pino';
 import dotenv from 'dotenv';
@@ -39,7 +39,7 @@ function startWorker(): void {
     QUEUE_NAME,
     processTranscriptionJob,
     {
-      connection,
+      connection: connection as unknown as ConnectionOptions,
       concurrency: CONCURRENCY,
       // Job lock settings
       lockDuration: 300000, // 5 minutes - transcription can take time

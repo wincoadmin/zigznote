@@ -4,8 +4,8 @@ import { MeetingCard } from './MeetingCard';
 describe('MeetingCard', () => {
   const defaultMeeting = createMockMeeting();
   const defaultParticipants = [
-    { id: 'p1', name: 'John Doe', email: 'john@example.com' },
-    { id: 'p2', name: 'Jane Smith', email: 'jane@example.com' },
+    { id: 'p1', name: 'John Doe', email: 'john@example.com', meetingId: 'meeting-1', isHost: true, speakerLabel: undefined },
+    { id: 'p2', name: 'Jane Smith', email: 'jane@example.com', meetingId: 'meeting-1', isHost: false, speakerLabel: undefined },
   ];
 
   it('should render meeting title', () => {
@@ -71,7 +71,7 @@ describe('MeetingCard', () => {
   });
 
   it('should display singular participant text for single participant', () => {
-    const singleParticipant = [{ id: 'p1', name: 'John Doe', email: 'john@example.com' }];
+    const singleParticipant = [{ id: 'p1', name: 'John Doe', email: 'john@example.com', meetingId: 'meeting-1', isHost: true, speakerLabel: undefined }];
     render(<MeetingCard meeting={defaultMeeting} participants={singleParticipant} />);
     expect(screen.getByText('1 participant')).toBeInTheDocument();
   });

@@ -13,10 +13,12 @@ import {
 
 describe('search utilities', () => {
   describe('escapeSearchQuery', () => {
-    it('should escape special characters', () => {
+    it('should escape special characters and join with tsquery AND operator', () => {
       const result = escapeSearchQuery('test & query | with (special) chars!');
 
-      expect(result).not.toContain('&');
+      // Special characters from input are removed, words are joined with ' & ' for tsquery
+      expect(result).toBe('test & query & with & special & chars');
+      // Verify the raw special chars from input don't appear as standalone tokens
       expect(result).not.toContain('|');
       expect(result).not.toContain('(');
       expect(result).not.toContain(')');

@@ -52,7 +52,7 @@ export interface Meeting {
   startTime: Date | null;
   endTime: Date | null;
   durationSeconds: number | null;
-  status: MeetingStatus;
+  status: 'scheduled' | 'recording' | 'processing' | 'completed' | 'failed' | 'cancelled';
   botId: string | null;
   calendarEventId: string | null;
   metadata: Record<string, unknown>;
@@ -62,12 +62,6 @@ export interface Meeting {
 
 export type MeetingPlatform = 'zoom' | 'meet' | 'teams' | 'webex' | 'other';
 
-export type MeetingStatus =
-  | 'scheduled'
-  | 'recording'
-  | 'processing'
-  | 'completed'
-  | 'failed';
 
 export interface MeetingParticipant {
   id: string;

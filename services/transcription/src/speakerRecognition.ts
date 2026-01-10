@@ -238,8 +238,8 @@ class SpeakerRecognitionService {
 
     return new Map(
       profiles
-        .filter(p => p.email)
-        .map(p => [p.email!, { id: p.id, displayName: p.displayName }])
+        .filter((p: { email: string | null }) => p.email !== null)
+        .map((p: { email: string | null; id: string; displayName: string }) => [p.email!, { id: p.id, displayName: p.displayName }])
     );
   }
 

@@ -17,8 +17,8 @@ export const MAX_LIMIT = 100;
  * @returns Normalized pagination options
  */
 export function normalizePaginationOptions(options: PaginationOptions = {}): Required<Omit<PaginationOptions, 'cursor'>> & { cursor?: string } {
-  const page = Math.max(1, options.page || DEFAULT_PAGE);
-  const limit = Math.min(MAX_LIMIT, Math.max(1, options.limit || DEFAULT_LIMIT));
+  const page = Math.max(1, options.page ?? DEFAULT_PAGE);
+  const limit = Math.min(MAX_LIMIT, Math.max(1, options.limit ?? DEFAULT_LIMIT));
 
   return {
     page,

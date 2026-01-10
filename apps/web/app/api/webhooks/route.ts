@@ -45,7 +45,7 @@ export async function GET() {
       },
     });
 
-    const formattedWebhooks = webhooks.map((w) => ({
+    const formattedWebhooks = webhooks.map((w: typeof webhooks[number]) => ({
       id: w.id,
       name: w.name,
       url: w.url,

@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // Force dynamic to prevent caching
 export const dynamic = 'force-dynamic';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
 
 async function proxyRequest(
   request: NextRequest,

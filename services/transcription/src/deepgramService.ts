@@ -155,7 +155,7 @@ class DeepgramService {
           'Authorization': `Token ${this.apiKey}`,
           'Content-Type': mimeType,
         },
-        body: audioBuffer,
+        body: new Uint8Array(audioBuffer),
       });
 
       if (!response.ok) {
