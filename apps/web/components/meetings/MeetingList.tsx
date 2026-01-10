@@ -56,6 +56,8 @@ export function MeetingList({
             <Input
               placeholder="Search meetings..."
               className="pl-9"
+              value={searchQuery}
+              onChange={() => {}}
               disabled
             />
           </div>
