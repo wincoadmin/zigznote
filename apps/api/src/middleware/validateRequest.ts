@@ -4,6 +4,7 @@
 
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { z, ZodError, ZodSchema } from 'zod';
+import { createErrorResponse, ErrorCodes } from '../utils/errorResponse';
 
 /**
  * Schema configuration for request validation
@@ -77,14 +78,11 @@ export function validateRequest(schemas: ValidationSchemas): RequestHandler {
           ? `Validation error: ${firstError.path.join('.')} ${firstError.message}`
           : 'Validation error';
 
-        res.status(400).json({
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message,
+        res.status(400).json(
+          createErrorResponse(ErrorCodes.VALIDATION_ERROR, message, {
             details: validationErrors,
-          },
-        });
+          })
+        );
         return;
       }
 

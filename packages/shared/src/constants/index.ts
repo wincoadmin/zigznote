@@ -159,3 +159,9 @@ export const SUPPORTED_LANGUAGES = [
 ] as const;
 
 export const DEFAULT_LANGUAGE = 'en';
+
+// ============================================
+// Centralized Status Constants
+// ============================================
+
+export * from './statuses';

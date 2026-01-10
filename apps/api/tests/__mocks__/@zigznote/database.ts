@@ -527,10 +527,61 @@ export const userApiKeyRepository = {
   }),
 };
 
+export const userRepository = {
+  findById: jest.fn(),
+  findByClerkId: jest.fn(),
+  findByEmail: jest.fn(),
+  create: jest.fn(),
+  update: jest.fn(),
+  softDelete: jest.fn(),
+};
+
+export const organizationRepository = {
+  findById: jest.fn(),
+  findByClerkId: jest.fn(),
+  create: jest.fn(),
+  update: jest.fn(),
+  softDelete: jest.fn(),
+};
+
 export const prisma = {
   $queryRaw: jest.fn(async () => [{ '?column?': 1 }]),
   $connect: jest.fn(async () => undefined),
   $disconnect: jest.fn(async () => undefined),
+  $transaction: jest.fn(async (callback: (tx: unknown) => Promise<unknown>) => callback(prisma)),
+  organization: {
+    create: jest.fn(),
+    update: jest.fn(),
+    findUnique: jest.fn(),
+  },
+  user: {
+    create: jest.fn(),
+    update: jest.fn(),
+    findUnique: jest.fn(),
+  },
+  billingCustomer: {
+    findUnique: jest.fn(),
+    create: jest.fn(),
+  },
+  billingPlan: {
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+  },
+  subscription: {
+    create: jest.fn(),
+    findFirst: jest.fn(),
+    findUnique: jest.fn(),
+    update: jest.fn(),
+  },
+  payment: {
+    findMany: jest.fn(),
+  },
+  invoice: {
+    findMany: jest.fn(),
+  },
+  usageRecord: {
+    findUnique: jest.fn(),
+  },
 };
 
 // Reset function for tests
@@ -541,6 +592,27 @@ export function __resetMocks() {
   actionItemsStore.clear();
   apiKeysStore.clear();
   idCounter = 1;
+
+  // Reset userRepository mocks
+  Object.values(userRepository).forEach((fn) => {
+    if (typeof fn === 'function' && 'mockReset' in fn) {
+      (fn as jest.Mock).mockReset();
+    }
+  });
+
+  // Reset organizationRepository mocks
+  Object.values(organizationRepository).forEach((fn) => {
+    if (typeof fn === 'function' && 'mockReset' in fn) {
+      (fn as jest.Mock).mockReset();
+    }
+  });
+
+  // Reset prisma mocks
+  Object.values(prisma).forEach((fn) => {
+    if (typeof fn === 'function' && 'mockReset' in fn) {
+      (fn as jest.Mock).mockReset();
+    }
+  });
 
   jest.clearAllMocks();
 }

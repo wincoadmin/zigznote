@@ -5,6 +5,7 @@
 import rateLimit from 'express-rate-limit';
 import type { Request } from 'express';
 import { config } from '../config';
+import { createErrorResponse, ErrorCodes } from '../utils/errorResponse';
 
 /**
  * Standard rate limit for API endpoints
@@ -13,13 +14,10 @@ import { config } from '../config';
 export const standardRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 100,
-  message: {
-    success: false,
-    error: {
-      code: 'RATE_LIMIT_EXCEEDED',
-      message: 'Too many requests, please try again later',
-    },
-  },
+  message: createErrorResponse(
+    ErrorCodes.RATE_LIMIT_EXCEEDED,
+    'Too many requests, please try again later'
+  ),
   standardHeaders: true,
   legacyHeaders: false,
   skip: () => config.nodeEnv === 'test',
@@ -36,13 +34,10 @@ export const standardRateLimit = rateLimit({
 export const strictRateLimit = rateLimit({
   windowMs: 60 * 1000,
   max: 20,
-  message: {
-    success: false,
-    error: {
-      code: 'RATE_LIMIT_EXCEEDED',
-      message: 'Too many requests to this endpoint',
-    },
-  },
+  message: createErrorResponse(
+    ErrorCodes.RATE_LIMIT_EXCEEDED,
+    'Too many requests to this endpoint'
+  ),
   standardHeaders: true,
   legacyHeaders: false,
   skip: () => config.nodeEnv === 'test',
@@ -55,13 +50,10 @@ export const strictRateLimit = rateLimit({
 export const expensiveRateLimit = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
-  message: {
-    success: false,
-    error: {
-      code: 'RATE_LIMIT_EXCEEDED',
-      message: 'Too many requests for this resource-intensive operation',
-    },
-  },
+  message: createErrorResponse(
+    ErrorCodes.RATE_LIMIT_EXCEEDED,
+    'Too many requests for this resource-intensive operation'
+  ),
   standardHeaders: true,
   legacyHeaders: false,
   skip: () => config.nodeEnv === 'test',

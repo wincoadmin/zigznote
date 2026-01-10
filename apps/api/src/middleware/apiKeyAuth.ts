@@ -9,6 +9,7 @@ import { apiKeyService, type ApiKeyScope, type ValidatedApiKey } from '../servic
 import { UnauthorizedError, TooManyRequestsError } from '@zigznote/shared';
 import { logger } from '../utils/logger';
 import type { AuthenticatedRequest } from './auth';
+import { createErrorResponse, ErrorCodes } from '../utils/errorResponse';
 
 // Extend AuthenticatedRequest to include API key info
 export interface ApiKeyAuthenticatedRequest extends AuthenticatedRequest {
@@ -139,10 +140,9 @@ export const optionalApiKeyAuth = async (
     } catch (error) {
       // Phase 8.95: Handle brute force error with 429 response
       if (error instanceof TooManyRequestsError) {
-        res.status(429).json({
-          success: false,
-          error: { code: 'TOO_MANY_REQUESTS', message: error.message },
-        });
+        res.status(429).json(
+          createErrorResponse(ErrorCodes.RATE_LIMIT_EXCEEDED, error.message)
+        );
         return;
       }
 
@@ -195,10 +195,9 @@ export const requireApiKeyAuth = async (
   } catch (error) {
     // Phase 8.95: Handle brute force error with 429 response
     if (error instanceof TooManyRequestsError) {
-      res.status(429).json({
-        success: false,
-        error: { code: 'TOO_MANY_REQUESTS', message: error.message },
-      });
+      res.status(429).json(
+        createErrorResponse(ErrorCodes.RATE_LIMIT_EXCEEDED, error.message)
+      );
       return;
     }
 

@@ -6,9 +6,7 @@
  * @last-reviewed 2026-01-04
  */
 
-import { clerkClient } from '@clerk/express';
 import { userRepository, organizationRepository, prisma } from '@zigznote/database';
-import type { User } from '@zigznote/database';
 import { logger } from '../utils/logger';
 
 /**
@@ -92,79 +90,6 @@ interface ClerkOrgData {
  * Service for authentication-related operations
  */
 export class AuthService {
-  /**
-   * Gets or creates a user from their Clerk ID
-   * @param clerkId - Clerk user ID
-   */
-  async getUserFromClerk(clerkId: string): Promise<User | null> {
-    // First try to find in our database
-    let user = await userRepository.findByClerkId(clerkId);
-
-    if (user) {
-      return user;
-    }
-
-    // If not found, fetch from Clerk and create
-    try {
-      const clerkUser = await clerkClient.users.getUser(clerkId);
-
-      if (!clerkUser) {
-        return null;
-      }
-
-      // Get org memberships
-      const orgMemberships = await clerkClient.users.getOrganizationMembershipList({
-        userId: clerkId,
-      });
-
-      if (orgMemberships.data.length === 0) {
-        logger.warn({ clerkId }, 'User has no organization memberships');
-        return null;
-      }
-
-      // Use first org
-      const firstMembership = orgMemberships.data[0];
-      const clerkOrgId = firstMembership?.organization?.id;
-      const clerkOrgName = firstMembership?.organization?.name || 'Unnamed Organization';
-
-      if (!clerkOrgId) {
-        logger.warn({ clerkId }, 'Invalid organization membership');
-        return null;
-      }
-
-      // Find or create org
-      let org = await organizationRepository.findByClerkId(clerkOrgId);
-      if (!org) {
-        org = await organizationRepository.create({
-          name: clerkOrgName,
-          clerkId: clerkOrgId,
-        });
-        logger.info({ orgId: org.id, clerkOrgId }, 'Created organization from Clerk');
-      }
-
-      // Create user
-      const primaryEmail = clerkUser.emailAddresses.find(
-        (e) => e.id === clerkUser.primaryEmailAddressId
-      );
-
-      const fullName = `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim();
-      user = await userRepository.create({
-        organizationId: org.id,
-        email: primaryEmail?.emailAddress || clerkUser.emailAddresses[0]?.emailAddress || '',
-        name: fullName || undefined,
-        clerkId: clerkId,
-        avatarUrl: clerkUser.imageUrl || undefined,
-        role: 'member',
-      });
-
-      logger.info({ userId: user.id, clerkId }, 'Created user from Clerk');
-      return user;
-    } catch (error) {
-      logger.error({ error, clerkId }, 'Failed to fetch user from Clerk');
-      return null;
-    }
-  }
-
   /**
    * Syncs a user from a Clerk webhook event
    * @param event - Clerk webhook event
@@ -320,7 +245,8 @@ export class AuthService {
 
   /**
    * Handles organizationMembership.created webhook
-   * Uses transaction to ensure org and user are created atomically
+   * Creates org if needed and updates user org membership if user exists
+   * Note: User creation from membership webhooks is no longer supported (Clerk integration removed)
    */
   private async handleMembershipCreated(
     data: OrganizationMembershipCreatedEvent['data']
@@ -328,7 +254,7 @@ export class AuthService {
     const clerkUserId = data.public_user_data.user_id;
     const clerkOrgId = data.organization.id;
 
-    // Check if user already exists (before starting transaction)
+    // Check if user and org already exist
     const existingUser = await userRepository.findByClerkId(clerkUserId);
     const existingOrg = await organizationRepository.findByClerkId(clerkOrgId);
 
@@ -344,58 +270,35 @@ export class AuthService {
       return;
     }
 
-    // Use transaction for atomic org + user creation
-    await prisma.$transaction(async (tx) => {
-      // Find or create org within transaction
-      let org = existingOrg;
-      if (!org) {
-        org = await tx.organization.create({
-          data: {
-            name: data.organization.name,
-            clerkId: clerkOrgId,
-            plan: 'free',
-          },
-        });
-        logger.info({ orgId: org.id, clerkOrgId }, 'Created organization from membership webhook');
-      }
-
-      // If user already exists (in a different org), just update
-      if (existingUser) {
-        await tx.user.update({
-          where: { id: existingUser.id },
-          data: {
-            organizationId: org.id,
-            role: data.role === 'admin' ? 'admin' : 'member',
-          },
-        });
-        logger.info({ userId: existingUser.id, orgId: org.id }, 'Updated user organization');
-        return;
-      }
-
-      // Create user - fetch from Clerk for email/name
-      const clerkUser = await clerkClient.users.getUser(clerkUserId);
-
-      const primaryEmail = clerkUser.emailAddresses.find(
-        (e) => e.id === clerkUser.primaryEmailAddressId
-      );
-
-      const memberFullName = `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim();
-      const newUser = await tx.user.create({
+    // Create org if it doesn't exist
+    let org = existingOrg;
+    if (!org) {
+      org = await prisma.organization.create({
         data: {
-          organizationId: org.id,
-          email: primaryEmail?.emailAddress || clerkUser.emailAddresses[0]?.emailAddress || '',
-          name: memberFullName || undefined,
-          clerkId: clerkUserId,
-          avatarUrl: clerkUser.imageUrl || undefined,
-          role: data.role === 'admin' ? 'admin' : 'member',
+          name: data.organization.name,
+          clerkId: clerkOrgId,
+          plan: 'free',
         },
       });
+      logger.info({ orgId: org.id, clerkOrgId }, 'Created organization from membership webhook');
+    }
 
-      logger.info({ userId: newUser.id, orgId: org.id, clerkUserId }, 'Created user from membership webhook');
-    }, {
-      maxWait: 5000,
-      timeout: 10000,
-    });
+    // If user exists (in a different org), update their org
+    if (existingUser) {
+      await userRepository.update(existingUser.id, {
+        organizationId: org.id,
+        role: data.role === 'admin' ? 'admin' : 'member',
+      });
+      logger.info({ userId: existingUser.id, orgId: org.id }, 'Updated user organization');
+      return;
+    }
+
+    // User doesn't exist - cannot create without email data
+    // User should be created via user.created webhook or direct registration
+    logger.warn(
+      { clerkUserId, clerkOrgId },
+      'Cannot create user from membership webhook - user does not exist. User should be created via user.created webhook first.'
+    );
   }
 
   /**

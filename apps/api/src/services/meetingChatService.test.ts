@@ -46,7 +46,31 @@ jest.mock('../config', () => ({
   config: {
     anthropicApiKey: 'test-anthropic-key',
     openaiApiKey: 'test-openai-key',
+    nodeEnv: 'test',
+    logLevel: 'info',
   },
+}));
+
+// Mock the utils/logger to prevent pino initialization issues
+jest.mock('../utils/logger', () => ({
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+    child: jest.fn().mockReturnValue({
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
+    }),
+  },
+  createLogger: jest.fn().mockReturnValue({
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  }),
 }));
 
 // Mock embedding service

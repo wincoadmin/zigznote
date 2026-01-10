@@ -14,7 +14,7 @@ import { logger } from '../utils/logger';
 const SALT_ROUNDS = 12;
 const SESSION_DURATION_HOURS = 8;
 const MAX_FAILED_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MINUTES = 30;
+const LOCKOUT_DURATION_MINUTES = 5;
 
 export interface LoginResult {
   success: boolean;

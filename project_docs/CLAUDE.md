@@ -230,10 +230,10 @@ FLUTTERWAVE_PUBLIC_KEY=
 FLUTTERWAVE_SECRET_KEY=
 FLUTTERWAVE_WEBHOOK_SECRET=
 
-# App URLs
-API_URL=http://localhost:3001
-WEB_URL=http://localhost:3000
-ADMIN_URL=http://localhost:3002
+# App URLs (use 400X range to avoid conflicts)
+API_URL=http://localhost:4001
+WEB_URL=http://localhost:4000
+ADMIN_URL=http://localhost:4002
 
 # Encryption (for storing API keys in database)
 ENCRYPTION_KEY=                 # 32-byte key for AES-256 encryption
@@ -416,6 +416,20 @@ Before every commit:
 
 ---
 
+## 🔌 Local Development Ports
+
+**IMPORTANT**: This project uses the **400X port range** to avoid conflicts with other projects.
+
+| Service | Port | URL |
+|---------|------|-----|
+| Web App | 4000 | http://localhost:4000 |
+| API Server | 4001 | http://localhost:4001 |
+| Admin Panel | 4002 | http://localhost:4002 |
+
+Do NOT use ports 3000-3099 as they are reserved for other projects.
+
+---
+
 ## ⚠️ Important Notes
 
 1. **Read GOVERNANCE.md first** - Follow development discipline rules
@@ -426,3 +440,4 @@ Before every commit:
 6. **Use ultrathink** - For architecture decisions and complex debugging
 7. **80%+ coverage** - Non-negotiable minimum for all code
 8. **Check for duplicates** - Before writing new code, verify it doesn't exist
+9. **Use 400X ports** - Web=4000, API=4001, Admin=4002 (avoid 3000-3099)

@@ -13,6 +13,7 @@ import {
   createLogger,
 } from '@zigznote/shared';
 import { config } from '../config';
+import { createErrorResponse, ErrorCodes } from '../utils/errorResponse';
 
 const logger = createLogger({ component: 'errorHandler' });
 
@@ -50,64 +51,52 @@ export const errorHandler: ErrorRequestHandler = (
 
   // Handle Zod validation errors
   if (err instanceof ZodError) {
-    res.status(400).json({
-      success: false,
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: 'Invalid request data',
+    res.status(400).json(
+      createErrorResponse(ErrorCodes.VALIDATION_ERROR, 'Invalid request data', {
         details: err.errors.map((e) => ({
           field: e.path.join('.'),
           message: e.message,
         })),
-      },
-      traceId,
-      requestId,
-    });
+        traceId,
+        requestId,
+      })
+    );
     return;
   }
 
   // Handle shared ValidationError
   if (err instanceof SharedValidationError) {
-    res.status(err.statusCode).json({
-      success: false,
-      error: {
-        code: err.code,
-        message: err.message,
+    res.status(err.statusCode).json(
+      createErrorResponse(err.code, err.message, {
         validationErrors: err.validationErrors,
-      },
-      traceId: err.context.traceId,
-      requestId,
-    });
+        traceId: err.context.traceId,
+        requestId,
+      })
+    );
     return;
   }
 
   // Handle RateLimitError with Retry-After header
   if (err instanceof RateLimitError) {
     res.setHeader('Retry-After', err.retryAfter.toString());
-    res.status(err.statusCode).json({
-      success: false,
-      error: {
-        code: err.code,
-        message: err.message,
+    res.status(err.statusCode).json(
+      createErrorResponse(err.code, err.message, {
         retryAfter: err.retryAfter,
-      },
-      traceId: err.context.traceId,
-      requestId,
-    });
+        traceId: err.context.traceId,
+        requestId,
+      })
+    );
     return;
   }
 
   // Handle custom AppError
   if (err instanceof AppError) {
-    res.status(err.statusCode).json({
-      success: false,
-      error: {
-        code: err.code,
-        message: err.message,
-      },
-      traceId: err.context.traceId,
-      requestId,
-    });
+    res.status(err.statusCode).json(
+      createErrorResponse(err.code, err.message, {
+        traceId: err.context.traceId,
+        requestId,
+      })
+    );
     return;
   }
 
@@ -118,14 +107,11 @@ export const errorHandler: ErrorRequestHandler = (
       ? 'An unexpected error occurred'
       : err.message || 'Internal server error';
 
-  res.status(statusCode).json({
-    success: false,
-    error: {
-      code: 'INTERNAL_ERROR',
-      message,
-      ...(config.nodeEnv !== 'production' && { stack: err.stack }),
-    },
-    traceId,
-    requestId,
-  });
+  res.status(statusCode).json(
+    createErrorResponse(ErrorCodes.INTERNAL_ERROR, message, {
+      details: config.nodeEnv !== 'production' ? { stack: err.stack } : undefined,
+      traceId,
+      requestId,
+    })
+  );
 };
