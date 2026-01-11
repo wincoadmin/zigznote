@@ -175,14 +175,14 @@ export const featureFlagsApi = {
 
 // System config endpoints
 export const systemConfigApi = {
-  list: () => adminApi.get('/system/config'),
+  list: () => adminApi.get('/system-config'),
 
-  get: (key: string) => adminApi.get(`/system/config/${key}`),
+  get: (key: string) => adminApi.get(`/system-config/${key}`),
 
   set: (key: string, value: unknown) =>
-    adminApi.put(`/system/config/${key}`, { value }),
+    adminApi.put(`/system-config/${key}`, { value }),
 
-  delete: (key: string) => adminApi.delete(`/system/config/${key}`),
+  delete: (key: string) => adminApi.delete(`/system-config/${key}`),
 };
 
 // Audit logs endpoints
